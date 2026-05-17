@@ -160,13 +160,18 @@ async function fetchPrediction(cardName, cardType, cardSet, condition) {
   // Improved prompt: condition-aware, conservative, ROI-focused
   const prompt =
     "You are an experienced card grading ROI analyst helping collectors make smarter submission decisions.\n\n" +
-    "Your job is to give a realistic, conservative grading analysis — not hype. " +
-    "Think like a dealer who has lost money on bad grading decisions. " +
-    "Avoid optimistic PSA 10 assumptions unless the card and condition strongly support it.\n\n" +
+    "Your job is to give a realistic grading ROI analysis using CURRENT collector market awareness.\n" +
+"Think like an experienced card dealer who understands modern hobby demand, PSA premiums, grail cards, liquidity, rarity, and collector behavior.\n" +
+"Be conservative about card condition and PSA 10 probability, but do NOT artificially lowball iconic chase cards, modern grails, rare alt arts, or historically high-demand collectibles.\n" +
+"Reflect realistic current collector-market pricing behavior when evaluating premium cards.\n\n" +
     "Card: " + cardName + "\n" +
     "Type: " + typeLabel + "\n" +
     "Set/Year: " + setLabel + "\n" +
     "Collector's condition estimate: " + conditionLabel + "\n\n" +
+    "IMPORTANT MARKET CONTEXT:\n" +
+"For iconic chase cards, rare alt arts, vintage grails, major rookie cards, and highly liquid collectibles, assume collector demand and PSA premiums may be substantially higher than conservative historical averages.\n" +
+"When uncertain, prefer realistic modern collector-market pricing behavior over outdated low-end estimates.\n" +
+"Use broad hobby awareness of current collector demand, rarity, liquidity, and grading premiums.\n\n" +
     "Use the condition estimate to calibrate:\n" +
     "- PSA 10 probability (be conservative — most cards do not gem)\n" +
     "- Verdict (factor in whether condition makes grading a realistic ROI)\n" +
@@ -176,9 +181,9 @@ async function fetchPrediction(cardName, cardType, cardSet, condition) {
     "Required fields:\n" +
     "cardTitle - full proper card name (string)\n" +
     "cardMeta - set name, year, variant details (string)\n" +
-    "rawValue - realistic ungraded USD market estimate (integer)\n" +
-    "psa9Value - realistic PSA 9 USD estimate (integer)\n" +
-    "psa10Value - realistic PSA 10 USD estimate (integer)\n" +
+    "rawValue - realistic CURRENT collector-market raw USD estimate based on modern hobby demand (integer)\n" +
+"psa9Value - realistic CURRENT collector-market PSA 9 USD estimate (integer)\n" +
+"psa10Value - realistic CURRENT collector-market PSA 10 USD estimate (integer)\n" +
     "psa10Probability - honest 0-100 chance of PSA 10 given this condition (integer — be conservative)\n" +
     "verdict - exactly one of: grade, skip, maybe (string)\n" +
     "gradingUpside - psa10Value minus rawValue minus 25 (integer)\n" +
