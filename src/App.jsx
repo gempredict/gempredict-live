@@ -32,6 +32,13 @@ const VERDICT_USE_CASE = {
   skip:  "Best to sell raw, hold, or trade rather than submit.",
 };
 
+const RATING_COLORS = {
+  excellent: { color: "#15803d", bg: "#f0fdf4", label: "Excellent" },
+  good:      { color: "#1a56db", bg: "#eff6ff", label: "Good"      },
+  fair:      { color: "#b45309", bg: "#fffbeb", label: "Fair"      },
+  poor:      { color: "#b91c1c", bg: "#fef2f2", label: "Poor"      },
+};
+
 const C = {
   cream: "#f5f3ee", white: "#ffffff", ink: "#0e0f0c",
   inkMid: "#3d3d39", inkSoft: "#7a7a74", border: "#e2dfd8",
@@ -101,6 +108,7 @@ const GLOBAL_CSS = `
   .gp-field-row      { display: grid; grid-template-columns: 1fr 1fr; gap: 0.9rem; }
   .gp-search-row     { display: grid; grid-template-columns: 1fr auto; gap: 0.9rem; align-items: end; }
   .gp-value-grid     { display: grid; grid-template-columns: repeat(3,1fr); gap: 0.85rem; }
+  .gp-vision-grid    { display: grid; grid-template-columns: repeat(2,1fr); gap: 0.75rem; }
   .gp-nav-links      { display: flex; gap: 1.5rem; align-items: center; }
   .gp-trust-grid     { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 1rem; }
   .gp-collector-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 3rem; align-items: start; margin-bottom: 3.5rem; }
@@ -108,12 +116,15 @@ const GLOBAL_CSS = `
   .gp-faq-item summary { list-style: none; cursor: pointer; }
   .gp-faq-item summary::-webkit-details-marker { display: none; }
   .gp-hero-logo { width: 180px; }
+  .gp-img-upload-zone { border: 2px dashed #e2dfd8; border-radius: 14px; padding: 1.25rem 1rem; text-align: center; cursor: pointer; transition: border-color 0.15s, background 0.15s; }
+  .gp-img-upload-zone:hover { border-color: #c9a84c; background: #fdf6e3; }
   button, input, select { font-family: inherit; }
   @media (max-width: 680px) {
     .gp-field-row      { grid-template-columns: 1fr !important; }
     .gp-search-row     { grid-template-columns: 1fr !important; }
     .gp-search-row button { width: 100% !important; }
     .gp-value-grid     { grid-template-columns: 1fr !important; }
+    .gp-vision-grid    { grid-template-columns: 1fr !important; }
     .gp-nav-links      { display: none !important; }
     .gp-collector-grid { grid-template-columns: 1fr !important; gap: 1.5rem !important; }
     .gp-trust-grid     { grid-template-columns: 1fr 1fr !important; }
@@ -129,6 +140,119 @@ const inputSt = { width: "100%", padding: "0.85rem 1rem", border: "1.5px solid "
 const labelSt = { display: "block", fontSize: "0.7rem", fontWeight: 700, letterSpacing: "0.07em", textTransform: "uppercase", color: C.inkSoft, marginBottom: "0.45rem" };
 const eyebrowSt = { fontSize: "0.7rem", fontWeight: 700, letterSpacing: "0.12em", textTransform: "uppercase", color: C.gold, marginBottom: "0.6rem" };
 const sectionH2St = { fontFamily: "'Playfair Display', serif", fontSize: "clamp(1.8rem, 3vw, 2.4rem)", fontWeight: 900, letterSpacing: "-0.02em", lineHeight: 1.1, marginBottom: "0.75rem" };
+
+// ─── Image Analysis Result component ─────────────────────────────────────────
+function ImageAnalysisCard({ data }) {
+  if (!data) return null;
+
+  function RatingPill({ rating, label }) {
+    const r = RATING_COLORS[rating] || RATING_COLORS.fair;
+    return (
+      <span style={{ display: "inline-block", fontSize: "0.65rem", fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.06em", color: r.color, background: r.bg, padding: "0.15rem 0.5rem", borderRadius: 100 }}>
+        {label || r.label}
+      </span>
+    );
+  }
+
+  const overallR = RATING_COLORS[
+    data.overallScore >= 9 ? "excellent" :
+    data.overallScore >= 7 ? "good" :
+    data.overallScore >= 5 ? "fair" : "poor"
+  ] || RATING_COLORS.fair;
+
+  const worthColor  = data.worthGrading === true ? C.green : data.worthGrading === false ? C.red : C.amber;
+  const worthBg     = data.worthGrading === true ? C.greenLight : data.worthGrading === false ? C.redLight : "#fffbeb";
+  const worthBorder = data.worthGrading === true ? "#86efac" : data.worthGrading === false ? "#fca5a5" : "#fde68a";
+  const worthLabel  = data.worthGrading === true ? "Worth Grading" : data.worthGrading === false ? "Not Worth Grading" : "Borderline";
+
+  const attributes = [
+    { key: "centering", label: "Centering", note: data.centeringNote },
+    { key: "corners",   label: "Corners",   note: data.cornersNote   },
+    { key: "edges",     label: "Edges",     note: data.edgesNote     },
+    { key: "surface",   label: "Surface",   note: data.surfaceNote   },
+  ];
+
+  return (
+    <div style={{ background: C.white, border: "1px solid " + C.border, borderRadius: 18, overflow: "hidden", boxShadow: "0 2px 16px rgba(0,0,0,0.06)", marginTop: "1.25rem", animation: "fadeUp 0.4s ease both" }}>
+      {/* Header */}
+      <div style={{ background: "#0d1117", borderBottom: "1px solid rgba(201,168,76,0.2)", padding: "0.85rem 1.25rem", display: "flex", alignItems: "center", justifyContent: "space-between", flexWrap: "wrap", gap: "0.5rem" }}>
+        <div style={{ display: "flex", alignItems: "center", gap: "0.5rem" }}>
+          <span style={{ fontSize: "1rem" }}>📷</span>
+          <span style={{ fontSize: "0.72rem", fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.09em", color: C.gold }}>
+            AI Photo Grading Analysis
+          </span>
+          <span style={{ fontSize: "0.6rem", fontWeight: 700, background: C.gold, color: C.ink, padding: "0.1rem 0.4rem", borderRadius: 4, letterSpacing: "0.06em" }}>BETA</span>
+        </div>
+        <div style={{ display: "flex", alignItems: "center", gap: "0.6rem" }}>
+          <span style={{ fontSize: "0.72rem", color: "rgba(255,255,255,0.4)" }}>Est. Grade:</span>
+          <span style={{ fontSize: "0.82rem", fontWeight: 700, color: C.gold }}>{data.estimatedGrade || "—"}</span>
+        </div>
+      </div>
+
+      <div style={{ padding: "1.1rem 1.25rem" }}>
+        {/* Image summary */}
+        <p style={{ fontSize: "0.875rem", color: C.inkMid, lineHeight: 1.7, marginBottom: "1rem", fontStyle: "italic" }}>
+          {data.imageSummary}
+        </p>
+
+        {/* Worth grading verdict from image */}
+        <div style={{ background: worthBg, border: "1px solid " + worthBorder, borderRadius: 10, padding: "0.7rem 1rem", marginBottom: "1rem", display: "flex", alignItems: "flex-start", gap: "0.6rem" }}>
+          <span style={{ fontSize: "0.85rem", color: worthColor, fontWeight: 800, flexShrink: 0 }}>
+            {data.worthGrading === true ? "✓" : data.worthGrading === false ? "✕" : "~"}
+          </span>
+          <div>
+            <div style={{ fontSize: "0.7rem", fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.07em", color: worthColor, marginBottom: "0.2rem" }}>
+              {worthLabel} — based on visible condition
+            </div>
+            <div style={{ fontSize: "0.84rem", color: C.inkMid }}>{data.worthGradingReason}</div>
+          </div>
+        </div>
+
+        {/* 4 attribute ratings */}
+        <div className="gp-vision-grid" style={{ marginBottom: "1rem" }}>
+          {attributes.map(function(attr) {
+            const rating = data[attr.key] || "fair";
+            const rc = RATING_COLORS[rating] || RATING_COLORS.fair;
+            return (
+              <div key={attr.key} style={{ background: C.cream, border: "1px solid " + C.border, borderRadius: 12, padding: "0.85rem 0.9rem" }}>
+                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "0.35rem" }}>
+                  <span style={{ fontSize: "0.7rem", fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.06em", color: C.inkSoft }}>{attr.label}</span>
+                  <RatingPill rating={rating} />
+                </div>
+                <p style={{ fontSize: "0.78rem", color: C.inkMid, lineHeight: 1.55, margin: 0 }}>{attr.note || "—"}</p>
+              </div>
+            );
+          })}
+        </div>
+
+        {/* Overall score bar */}
+        <div style={{ background: C.cream, borderRadius: 10, padding: "0.85rem 1rem", marginBottom: "1rem" }}>
+          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "0.45rem" }}>
+            <span style={{ fontSize: "0.72rem", fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.05em", color: C.inkSoft }}>Estimated PSA Grade</span>
+            <span style={{ fontFamily: "'Playfair Display', serif", fontSize: "1.3rem", fontWeight: 700, color: overallR.color }}>
+              {data.overallScore != null ? data.overallScore + " / 10" : "—"}
+            </span>
+          </div>
+          {data.overallScore != null && (
+            <div style={{ background: C.border, borderRadius: 100, height: 8, overflow: "hidden" }}>
+              <div style={{ height: "100%", borderRadius: 100, background: overallR.color, width: (data.overallScore * 10) + "%", transition: "width 0.9s cubic-bezier(.4,0,.2,1)" }} />
+            </div>
+          )}
+        </div>
+
+        {/* Grading risk */}
+        <div style={{ background: C.cream, border: "1px solid " + C.border, borderRadius: 10, padding: "0.75rem 1rem" }}>
+          <div style={{ fontSize: "0.65rem", fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.08em", color: C.inkSoft, marginBottom: "0.35rem" }}>Grading Risk</div>
+          <p style={{ fontSize: "0.84rem", color: C.inkMid, lineHeight: 1.65, margin: 0 }}>{data.gradingRisk}</p>
+        </div>
+
+        <p style={{ fontSize: "0.7rem", color: C.inkSoft, marginTop: "0.9rem", fontStyle: "italic" }}>
+          Photo analysis is based on visible card condition only. Lighting, angle, and image quality affect accuracy. Always verify in person before submitting.
+        </p>
+      </div>
+    </div>
+  );
+}
 
 // ─── Sub-components ───────────────────────────────────────────────────────────
 function FAQItem({ q, a }) {
@@ -239,23 +363,17 @@ function ResultCard({ data, index, onSave, isSaved }) {
         </div>
         {/* Population Report */}
         {(data.psa9Pop != null || data.psa10Pop != null) && (function() {
-          // Scarcity signal: PSA 10 pop low relative to PSA 9 = scarce = positive tone
           const scarce = data.psa9Pop != null && data.psa10Pop != null && data.psa10Pop < data.psa9Pop * 0.3;
           const common = data.psa9Pop != null && data.psa10Pop != null && data.psa10Pop > data.psa9Pop * 0.6;
           const accentColor  = scarce ? C.green  : common ? C.amber  : C.inkSoft;
           const accentBg     = scarce ? C.greenLight : common ? C.goldLight : C.cream;
-          const accentBorder = scarce ? "#86efac" : common ? C.gold    : C.border;
           const scarcityNote = scarce ? "Lower PSA 10 population supports scarcity." : null;
           return (
             <div style={{ background: C.white, border: "1px solid " + C.border, borderRadius: 14, overflow: "hidden", marginBottom: "0.9rem" }}>
-              {/* Header */}
               <div style={{ padding: "0.65rem 1rem", borderBottom: "1px solid " + C.border, display: "flex", alignItems: "center", justifyContent: "space-between" }}>
-                <span style={{ fontSize: "0.65rem", fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.09em", color: C.inkSoft }}>
-                  Population Report
-                </span>
+                <span style={{ fontSize: "0.65rem", fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.09em", color: C.inkSoft }}>Population Report</span>
                 <span style={{ fontSize: "0.65rem", color: C.inkSoft, fontStyle: "italic" }}>AI estimate</span>
               </div>
-              {/* Pop count row — both columns always render; missing values show — */}
               <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", borderBottom: "1px solid " + C.border }}>
                 {[
                   { label: "PSA 9 Population",  val: data.psa9Pop,  featured: false },
@@ -264,35 +382,19 @@ function ResultCard({ data, index, onSave, isSaved }) {
                   const display = p.val != null ? p.val.toLocaleString() : "—";
                   const numColor = p.val == null ? C.inkSoft : (p.featured ? accentColor : C.inkMid);
                   return (
-                    <div key={p.label} style={{
-                      padding: "1rem",
-                      background: p.featured ? accentBg : C.cream,
-                      borderLeft: idx === 1 ? "1px solid " + C.border : "none",
-                      textAlign: "center",
-                    }}>
-                      <div style={{ fontSize: "0.62rem", fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.07em", color: p.featured ? accentColor : C.inkSoft, marginBottom: "0.35rem" }}>
-                        {p.label}
-                      </div>
-                      <div style={{ fontFamily: "'Playfair Display', serif", fontSize: "1.4rem", fontWeight: 700, color: numColor, lineHeight: 1 }}>
-                        {display}
-                      </div>
+                    <div key={p.label} style={{ padding: "1rem", background: p.featured ? accentBg : C.cream, borderLeft: idx === 1 ? "1px solid " + C.border : "none", textAlign: "center" }}>
+                      <div style={{ fontSize: "0.62rem", fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.07em", color: p.featured ? accentColor : C.inkSoft, marginBottom: "0.35rem" }}>{p.label}</div>
+                      <div style={{ fontFamily: "'Playfair Display', serif", fontSize: "1.4rem", fontWeight: 700, color: numColor, lineHeight: 1 }}>{display}</div>
                       {p.featured && scarcityNote && p.val != null && (
-                        <div style={{ fontSize: "0.68rem", color: accentColor, fontWeight: 600, marginTop: "0.3rem" }}>
-                          {scarcityNote}
-                        </div>
+                        <div style={{ fontSize: "0.68rem", color: accentColor, fontWeight: 600, marginTop: "0.3rem" }}>{scarcityNote}</div>
                       )}
                     </div>
                   );
                 })}
               </div>
-              {/* Insight row — always renders with a default if missing */}
               <div style={{ padding: "0.75rem 1rem", display: "flex", gap: "0.6rem", alignItems: "flex-start" }}>
-                <span style={{ fontSize: "0.65rem", fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.08em", color: C.inkSoft, flexShrink: 0, paddingTop: "0.1rem" }}>
-                  Collector Insight
-                </span>
-                <span style={{ fontSize: "0.82rem", color: C.inkMid, lineHeight: 1.65 }}>
-                  {data.populationInsight || "Population data helps indicate how scarce top grades may be."}
-                </span>
+                <span style={{ fontSize: "0.65rem", fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.08em", color: C.inkSoft, flexShrink: 0, paddingTop: "0.1rem" }}>Collector Insight</span>
+                <span style={{ fontSize: "0.82rem", color: C.inkMid, lineHeight: 1.65 }}>{data.populationInsight || "Population data helps indicate how scarce top grades may be."}</span>
               </div>
             </div>
           );
@@ -355,9 +457,8 @@ export default function App() {
   const [email,           setEmail]           = useState("");
   const [waitlistEmail,   setWaitlistEmail]   = useState("");
   const [loading,         setLoading]         = useState(false);
-  const [selectedImage, setSelectedImage] = useState(null);
-  const [imagePreview, setImagePreview] = useState(null);
   const [results,         setResults]         = useState([]);
+  const [imageAnalysis,   setImageAnalysis]   = useState(null);   // latest image analysis result
   const [error,           setError]           = useState("");
   const [rateLimitMsg,    setRateLimitMsg]    = useState("");
   const [emailConfirm,    setEmailConfirm]    = useState(false);
@@ -366,6 +467,11 @@ export default function App() {
   const [history,         setHistory]         = useState([]);
   const [savedReports,    setSavedReports]    = useState([]);
 
+  // Image upload state
+  const [imageFile,       setImageFile]       = useState(null);   // File object
+  const [imagePreview,    setImagePreview]    = useState(null);   // Object URL for preview
+  const fileInputRef = useRef(null);
+
   const cardNameRef = useRef(null);
   const emailRef    = useRef(null);
 
@@ -373,6 +479,38 @@ export default function App() {
     setHistory(lsGet(LS_HISTORY) || []);
     setSavedReports(lsGet(LS_SAVED) || []);
   }, []);
+
+  // Revoke object URLs on unmount to avoid memory leaks
+  useEffect(function() {
+    return function() {
+      if (imagePreview) URL.revokeObjectURL(imagePreview);
+    };
+  }, [imagePreview]);
+
+  function handleImageSelect(file) {
+    if (!file) return;
+    // Only allow images
+    if (!file.type.startsWith("image/")) { setError("Please select an image file (JPEG, PNG, WebP, etc.)"); return; }
+    // 5 MB client-side guard
+    if (file.size > 5 * 1024 * 1024) { setError("Image must be under 5 MB."); return; }
+    if (imagePreview) URL.revokeObjectURL(imagePreview);
+    setImageFile(file);
+    setImagePreview(URL.createObjectURL(file));
+    setError("");
+  }
+
+  function handleImageDrop(e) {
+    e.preventDefault();
+    const file = e.dataTransfer.files && e.dataTransfer.files[0];
+    if (file) handleImageSelect(file);
+  }
+
+  function clearImage() {
+    if (imagePreview) URL.revokeObjectURL(imagePreview);
+    setImageFile(null);
+    setImagePreview(null);
+    if (fileInputRef.current) fileInputRef.current.value = "";
+  }
 
   function addToHistory(name, type, set) {
     setHistory(function(prev) {
@@ -399,26 +537,45 @@ export default function App() {
 
   function fillExample(ex) {
     setCardName(ex.name); setCardType(ex.type || "pokemon"); setCardSet(ex.set || "");
-    setResults([]); setError(""); setRateLimitMsg("");
+    setResults([]); setImageAnalysis(null); setError(""); setRateLimitMsg("");
   }
 
   async function handleSubmit() {
     if (!cardName.trim()) return;
     if (email && !isValidEmail(email)) { setError("Please enter a valid email address."); return; }
-    setLoading(true); setError(""); setRateLimitMsg(""); setEmailConfirm(false);
+    setLoading(true); setError(""); setRateLimitMsg(""); setEmailConfirm(false); setImageAnalysis(null);
+
     try {
-      const res = await fetch("/api/predict", {
-        method: "POST", headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ cardName: cardName.trim(), cardType, cardSet: cardSet.trim(), condition, email: email.trim() || undefined }),
-      });
+      let res;
+      if (imageFile) {
+        // Multipart/form-data when image is present
+        const formData = new FormData();
+        formData.append("cardName",  cardName.trim());
+        formData.append("cardType",  cardType);
+        formData.append("cardSet",   cardSet.trim());
+        formData.append("condition", condition);
+        if (email.trim()) formData.append("email", email.trim());
+        formData.append("image", imageFile);
+        res = await fetch("/api/predict", { method: "POST", body: formData });
+      } else {
+        // JSON when no image
+        res = await fetch("/api/predict", {
+          method: "POST", headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ cardName: cardName.trim(), cardType, cardSet: cardSet.trim(), condition, email: email.trim() || undefined }),
+        });
+      }
+
       const data = await res.json();
       if (res.status === 429) { setRateLimitMsg(data.message || "Rate limit exceeded. Please try again later."); setLoading(false); return; }
       if (!res.ok) { setError(data.error || "Something went wrong. Please try again."); setLoading(false); return; }
+
       setResults(function(prev) { return [data.prediction, ...prev].slice(0, 5); });
+      if (data.imageAnalysis) setImageAnalysis(data.imageAnalysis);
       if (data.remaining != null) setRemaining(data.remaining);
       if (data.emailSaved) { setEmailConfirm(true); track("waitlist_signup"); }
       addToHistory(cardName.trim(), cardType, cardSet.trim());
-      track("prediction_submitted", { cardType, condition });
+      track("prediction_submitted", { cardType, condition, hasImage: !!imageFile });
+
     } catch { setError("Network error — check your connection and try again."); }
     finally   { setLoading(false); }
   }
@@ -453,71 +610,30 @@ export default function App() {
         </div>
       </nav>
 
-      {/* ── HERO — dark gradient, logo + headline + subtext ─────────────────── */}
-      <div style={{
-        background: "linear-gradient(160deg, #0d1117 0%, #111827 50%, #0a0f1e 100%)",
-        padding: "4rem 1.5rem 4.5rem",
-        textAlign: "center",
-        borderBottom: "1px solid rgba(201,168,76,0.18)",
-      }}>
+      {/* ── HERO ────────────────────────────────────────────────────────────── */}
+      <div style={{ background: "linear-gradient(160deg, #0d1117 0%, #111827 50%, #0a0f1e 100%)", padding: "4rem 1.5rem 4.5rem", textAlign: "center", borderBottom: "1px solid rgba(201,168,76,0.18)" }}>
         <div style={{ maxWidth: 620, margin: "0 auto", display: "flex", flexDirection: "column", alignItems: "center", gap: 0 }}>
-
-          {/* Logo */}
-          <img
-            src="/gempredict-logo.png"
-            alt="GemPredict"
-            className="gp-hero-logo"
-            style={{ marginTop: 40, marginBottom: 28, borderRadius: 20, display: "block" }}
-          />
-
-          {/* Eyebrow */}
-          <p style={{ fontSize: "0.7rem", fontWeight: 700, letterSpacing: "0.14em", textTransform: "uppercase", color: C.gold, marginBottom: "0.75rem" }}>
-            AI Grading Decision Tool
-          </p>
-
-          {/* Headline */}
-          <h1 style={{
-            fontFamily: "'Playfair Display', serif",
-            fontSize: "clamp(2.2rem, 5vw, 3.4rem)",
-            fontWeight: 900, lineHeight: 1.08, letterSpacing: "-0.025em",
-            color: "#ffffff", marginBottom: "1rem",
-          }}>
+          <img src="/gempredict-logo.png" alt="GemPredict" className="gp-hero-logo" style={{ marginTop: 40, marginBottom: 28, borderRadius: 20, display: "block" }} />
+          <p style={{ fontSize: "0.7rem", fontWeight: 700, letterSpacing: "0.14em", textTransform: "uppercase", color: C.gold, marginBottom: "0.75rem" }}>AI Grading Decision Tool</p>
+          <h1 style={{ fontFamily: "'Playfair Display', serif", fontSize: "clamp(2.2rem, 5vw, 3.4rem)", fontWeight: 900, lineHeight: 1.08, letterSpacing: "-0.025em", color: "#ffffff", marginBottom: "1rem" }}>
             Stop Guessing. Know If Your<br />
             <em style={{ color: C.gold, fontStyle: "italic" }}>Card Is Worth Grading.</em>
           </h1>
-
-          {/* Sub-headline */}
           <p style={{ fontSize: "1.05rem", color: "rgba(255,255,255,0.65)", fontWeight: 300, lineHeight: 1.75, maxWidth: 480, marginBottom: "0.6rem" }}>
             Get a clear Grade / Skip verdict with realistic PSA values and risk-adjusted upside — before you spend money on grading fees.
           </p>
-
-          {/* Small print */}
           <p style={{ fontSize: "0.78rem", color: "rgba(255,255,255,0.35)", marginBottom: "2rem" }}>
             Built for collectors, flippers, eBay sellers, and grading submitters. AI estimates only — not affiliated with PSA.
           </p>
-
-          {/* CTA */}
-          <a href="#tool" style={{
-            display: "inline-flex", alignItems: "center", gap: "0.45rem",
-            background: C.gold, color: C.ink,
-            padding: "0.9rem 2rem", borderRadius: 100,
-            textDecoration: "none", fontSize: "0.95rem", fontWeight: 800,
-            boxShadow: "0 4px 20px rgba(201,168,76,0.35)",
-          }}>
+          <a href="#tool" style={{ display: "inline-flex", alignItems: "center", gap: "0.45rem", background: C.gold, color: C.ink, padding: "0.9rem 2rem", borderRadius: 100, textDecoration: "none", fontSize: "0.95rem", fontWeight: 800, boxShadow: "0 4px 20px rgba(201,168,76,0.35)" }}>
             Analyze My Card →
           </a>
-
-          {/* Trust note */}
-          <p style={{ fontSize: "0.73rem", color: "rgba(255,255,255,0.35)", marginTop: "0.85rem" }}>
-            Avoid wasted grading fees. Spot real gem candidates.
-          </p>
-          <p style={{ fontSize: "0.7rem", color: "rgba(255,255,255,0.2)", marginTop: "0.35rem" }}>
-            Free to use · No account needed · 5 predictions per hour
-          </p>
+          <p style={{ fontSize: "0.73rem", color: "rgba(255,255,255,0.35)", marginTop: "0.85rem" }}>Avoid wasted grading fees. Spot real gem candidates.</p>
+          <p style={{ fontSize: "0.7rem", color: "rgba(255,255,255,0.2)", marginTop: "0.35rem" }}>Free to use · No account needed · 5 predictions per hour</p>
         </div>
       </div>
 
-      {/* ── POSITIONING: Most Cards Should NOT Be Graded ─────────────────────── */}
+      {/* ── POSITIONING SECTIONS ─────────────────────────────────────────────── */}
       <div style={{ background: C.ink, padding: "3rem 1.5rem" }}>
         <div style={{ maxWidth: 680, margin: "0 auto", textAlign: "center" }}>
           <h2 style={{ fontFamily: "'Playfair Display', serif", fontSize: "clamp(1.5rem, 3vw, 2rem)", fontWeight: 900, letterSpacing: "-0.02em", color: "#fff", marginBottom: "0.75rem" }}>
@@ -528,8 +644,6 @@ export default function App() {
           </p>
         </div>
       </div>
-
-      {/* ── POSITIONING: Not Another Pricing Tool ────────────────────────────── */}
       <div style={{ background: "#0d1117", borderBottom: "1px solid rgba(201,168,76,0.12)", padding: "2.5rem 1.5rem" }}>
         <div style={{ maxWidth: 680, margin: "0 auto", textAlign: "center" }}>
           <h2 style={{ fontFamily: "'Playfair Display', serif", fontSize: "clamp(1.3rem, 2.5vw, 1.75rem)", fontWeight: 900, letterSpacing: "-0.02em", color: "#fff", marginBottom: "0.65rem" }}>
@@ -540,8 +654,6 @@ export default function App() {
           </p>
         </div>
       </div>
-
-      {/* ── VALUE STRIP: 3-item ──────────────────────────────────────────────── */}
       <div style={{ background: C.cream, borderBottom: "1px solid " + C.border, padding: "2.5rem 1.5rem" }}>
         <div style={{ maxWidth: 860, margin: "0 auto", display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(220px, 1fr))", gap: "1rem" }}>
           {[
@@ -569,13 +681,12 @@ export default function App() {
           <p style={{ fontSize: "0.9rem", color: C.inkSoft, fontWeight: 300, marginBottom: "0.5rem" }}>
             Enter any card below. Get a Grade / Skip verdict with raw, PSA 9, PSA 10 values, and real grading upside.
           </p>
-          {/* Trust line */}
           <p style={{ fontSize: "0.78rem", color: C.inkSoft, fontStyle: "italic", marginBottom: "1.75rem", maxWidth: 520 }}>
             Most raw cards don't gem. This helps you find the ones that do.
           </p>
 
           <div style={{ background: C.cream, border: "1.5px solid " + C.border, borderRadius: 20, padding: "1.75rem", boxShadow: "0 4px 24px rgba(0,0,0,0.06)" }}>
-            {/* Row 1 */}
+            {/* Row 1: type + set */}
             <div className="gp-field-row" style={{ marginBottom: "0.9rem" }}>
               <div>
                 <label style={labelSt}>Card Type</label>
@@ -588,45 +699,13 @@ export default function App() {
                 <input value={cardSet} onChange={function(e) { setCardSet(e.target.value); }} onKeyDown={function(e) { if (e.key === "Enter") handleSubmit(); }} placeholder="e.g. 1999 Base Set, 2003 Topps Chrome" style={inputSt} />
               </div>
             </div>
-            {/* Row 2 */}
+            {/* Row 2: name + button */}
             <div className="gp-search-row" style={{ marginBottom: "0.9rem" }}>
               <div>
                 <label style={labelSt}>Card Name</label>
                 <input ref={cardNameRef} value={cardName} onChange={function(e) { setCardName(e.target.value); }} onKeyDown={function(e) { if (e.key === "Enter") handleSubmit(); }} placeholder="e.g. Charizard Holo, LeBron Rookie, Black Lotus" style={inputSt} />
               </div>
-              <div style={{ marginTop: "20px" }}>
-  <label>Upload Card Image (Optional)</label>
-
-  
-                <input
-  type="file"
-  accept="image/*"
-  onChange={(e) => {
-    const file = e.target.files[0];
-
-    setSelectedImage(file);
-
-    if (file) {
-      setImagePreview(URL.createObjectURL(file));
-    }
-  }}
-/>
-
-{imagePreview && (
-  <div style={{ marginTop: "20px" }}>
-    <img
-      src={imagePreview}
-      alt="Card Preview"
-      style={{
-        width: "250px",
-        borderRadius: "12px",
-        border: "2px solid #444",
-      }}
-    />
-  </div>
-)}
-</div>
-              <button onClick={handleSubmit} disabled={loading || !cardName.trim()} style={{ padding: "0.85rem 1.75rem", background: loading || !cardName.trim() ? "#94a3b8" : C.ink, color: "#fff", border: "none", borderRadius: 12, fontSize: "1rem", fontWeight: 700, cursor: loading || !cardName.trim() ? "not-allowed" : "pointer", whiteSpace: "nowrap", minWidth: 145, display: "flex", alignItems: "center", justifyContent: "center", gap: "0.5rem" }}>
+              <button onClick={handleSubmit} disabled={loading || !cardName.trim()} style={{ padding: "0.85rem 1.75rem", background: loading || !cardName.trim() ? "#94a3b8" : C.ink, color: "#fff", border: "none", borderRadius: 12, fontSize: "1rem", fontWeight: 700, cursor: loading || !cardName.trim() ? "not-allowed" : "pointer", whiteSpace: "nowrap", minWidth: 155, display: "flex", alignItems: "center", justifyContent: "center", gap: "0.5rem" }}>
                 {loading ? (<><span style={{ width: 18, height: 18, border: "2px solid rgba(255,255,255,0.4)", borderTopColor: "#fff", borderRadius: "50%", animation: "spin 0.7s linear infinite", flexShrink: 0 }} />Analyzing...</>) : "Analyze My Card"}
               </button>
             </div>
@@ -642,7 +721,51 @@ export default function App() {
                 <option value="gem">Gem Candidate</option>
               </select>
             </div>
+
+            {/* ── IMAGE UPLOAD ──────────────────────────────────────────────── */}
+            <div style={{ marginBottom: "0.9rem" }}>
+              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "0.45rem" }}>
+                <label style={labelSt}>
+                  Card Photo <span style={{ fontWeight: 400, textTransform: "none", letterSpacing: 0, fontSize: "0.68rem", color: C.gold }}>Optional — enables AI photo analysis</span>
+                </label>
+                {imageFile && (
+                  <button onClick={clearImage} style={{ fontSize: "0.72rem", color: C.inkSoft, background: "none", border: "none", cursor: "pointer", textDecoration: "underline" }}>Remove</button>
+                )}
+              </div>
+              {imagePreview ? (
+                <div style={{ display: "flex", gap: "0.9rem", alignItems: "center", background: C.white, border: "1px solid " + C.border, borderRadius: 12, padding: "0.75rem" }}>
+                  <img src={imagePreview} alt="Card preview" style={{ width: 72, height: 100, objectFit: "contain", borderRadius: 6, background: "#f0f0f0", flexShrink: 0 }} />
+                  <div style={{ flex: 1, minWidth: 0 }}>
+                    <div style={{ fontSize: "0.82rem", fontWeight: 600, color: C.ink, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{imageFile.name}</div>
+                    <div style={{ fontSize: "0.72rem", color: C.inkSoft, marginTop: "0.2rem" }}>{(imageFile.size / 1024).toFixed(0)} KB · Photo analysis will run alongside value lookup</div>
+                    <div style={{ marginTop: "0.5rem" }}>
+                      <span style={{ fontSize: "0.68rem", fontWeight: 700, background: C.goldLight, color: C.amber, padding: "0.15rem 0.5rem", borderRadius: 100 }}>📷 Photo Grade Enabled</span>
+                    </div>
+                  </div>
+                </div>
+              ) : (
+                <div
+                  className="gp-img-upload-zone"
+                  onClick={function() { fileInputRef.current && fileInputRef.current.click(); }}
+                  onDrop={handleImageDrop}
+                  onDragOver={function(e) { e.preventDefault(); }}
+                >
+                  <div style={{ fontSize: "1.5rem", marginBottom: "0.4rem" }}>📷</div>
+                  <div style={{ fontSize: "0.85rem", fontWeight: 600, color: C.inkMid, marginBottom: "0.2rem" }}>Upload card photo for AI photo grading</div>
+                  <div style={{ fontSize: "0.75rem", color: C.inkSoft }}>Click to browse or drag and drop · JPEG, PNG, WebP · Max 5 MB</div>
+                </div>
+              )}
+              <input
+                ref={fileInputRef}
+                type="file"
+                accept="image/*"
+                style={{ display: "none" }}
+                onChange={function(e) { handleImageSelect(e.target.files && e.target.files[0]); }}
+              />
+            </div>
+
             {/* Examples */}
+            <p style={{ fontSize: "0.72rem", color: C.inkSoft, marginBottom: "0.75rem" }}>AI estimates raw value, PSA 9, PSA 10, grading upside, and recommendation.</p>
             <div style={{ display: "flex", gap: "0.5rem", flexWrap: "wrap", alignItems: "center" }}>
               <span style={{ fontSize: "0.72rem", color: C.inkSoft, fontWeight: 600 }}>Try:</span>
               {EXAMPLES.map(function(ex, i) {
@@ -680,7 +803,7 @@ export default function App() {
           {loading && (
             <div style={{ textAlign: "center", padding: "2.5rem 1rem" }}>
               <div style={{ width: 40, height: 40, border: "3px solid " + C.border, borderTopColor: C.gold, borderRadius: "50%", animation: "spin 0.7s linear infinite", margin: "0 auto 1rem" }} />
-              <p style={{ color: C.inkSoft, fontSize: "0.9rem" }}>Pulling market data and grading intel...</p>
+              <p style={{ color: C.inkSoft, fontSize: "0.9rem" }}>{imageFile ? "Analyzing card values and photo..." : "Pulling market data and grading intel..."}</p>
             </div>
           )}
           {/* Rate limit */}
@@ -705,6 +828,10 @@ export default function App() {
               <div style={{ display: "flex", flexDirection: "column", gap: "1.25rem" }}>
                 {results.map(function(r, i) { return <ResultCard key={i} data={r} index={i} onSave={saveReport} isSaved={isSavedReport(r)} />; })}
               </div>
+
+              {/* Image analysis — shown below the first result card when present */}
+              {imageAnalysis && <ImageAnalysisCard data={imageAnalysis} />}
+
               <p style={{ fontSize: "0.72rem", color: C.inkSoft, textAlign: "center", marginTop: "1.25rem" }}>
                 AI estimates based on collector market data. Not affiliated with PSA. Always verify with current listings.
               </p>
@@ -844,7 +971,7 @@ export default function App() {
         </p>
         <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(220px, 1fr))", gap: "2rem" }}>
           {[
-            { n: "01", title: "Search Your Card",    body: "Enter card name, type, set, and condition estimate. Covers Pokemon, sports, MTG, Yu-Gi-Oh!, and all major TCGs." },
+            { n: "01", title: "Search Your Card",    body: "Enter card name, type, set, and condition estimate. Optionally upload a photo for AI image analysis." },
             { n: "02", title: "See the Full Picture", body: "Compare raw, PSA 9, and PSA 10 prices with net profit after fees — no spreadsheet needed." },
             { n: "03", title: "Get Your Verdict",     body: "Grade It, Skip It, or Consider It — with a breakdown of why and a clear recommended action." },
           ].map(function(s) {
@@ -872,7 +999,7 @@ export default function App() {
               { icon: "📊", title: "Market-informed estimates",     body: "Values reflect collector market patterns and known grading premiums — not live auction data or guaranteed valuations." },
               { icon: "🎯", title: "ROI-first analysis",            body: "GemPredict factors in the $25 PSA fee and realistic grade probabilities so you see real upside, not optimistic upsell." },
               { icon: "🧠", title: "Condition-aware output",         body: "Tell GemPredict your card's likely condition and the analysis calibrates accordingly — played cards and gem candidates are treated differently." },
-              { icon: "🔍", title: "Best used before you submit",   body: "Use it at the decision point: before you build a submission batch, before you buy a raw card, or before you commit a high-value piece." },
+              { icon: "📷", title: "AI photo analysis (Beta)",       body: "Upload a card photo and GemPredict will assess centering, corners, edges, and surface to estimate grading potential from the image." },
             ].map(function(item) {
               return (
                 <div key={item.title} style={{ background: C.cream, border: "1px solid " + C.border, borderRadius: 16, padding: "1.5rem" }}>
@@ -930,11 +1057,12 @@ export default function App() {
           <FAQItem q="Can I use this for sports cards too?" a="Yes. GemPredict supports Pokemon, sports cards, Magic: The Gathering, Yu-Gi-Oh!, Dragon Ball, One Piece, and other major TCG categories." />
           <FAQItem q="Why does PSA 10 probability matter?" a="The biggest grading profits usually come from PSA 10s. A card with weak gem-rate odds can quickly become a bad submission — even if the PSA 10 value looks attractive." />
           <FAQItem q="What does the condition estimate do?" a="The condition estimate (Risky, Strong Copy, or Gem Candidate) helps GemPredict calibrate PSA 10 probability and grading upside more realistically. A played card and a gem candidate of the same card have very different submission economics." />
-          <FAQItem q="Will photo grading be added?" a="Yes. AI Photo Grading is planned for a future release — estimating PSA 10 potential from front and back card images, covering centering, corners, edges, and surface quality." />
+          <FAQItem q="How does photo analysis work?" a="If you upload a card photo, GemPredict sends it to Claude Vision which inspects centering, corners, edges, and surface quality against PSA grading criteria. It returns an estimated grade range and a worth-grading verdict based on what's visible in the image. Image quality and lighting affect accuracy." />
+          <FAQItem q="Will photo grading be added as a full feature?" a="Yes. AI Photo Grading is planned for a future release — estimating PSA 10 potential from front and back card images, covering centering, corners, edges, and surface quality." />
         </div>
       </div>
 
-      {/* ── WHAT'S COMING / PRO (softened) ───────────────────────────────────── */}
+      {/* ── WHAT'S COMING / PRO ───────────────────────────────────────────────── */}
       <div style={{ background: C.white, borderTop: "1px solid " + C.border, borderBottom: "1px solid " + C.border, padding: "5rem 1.5rem" }}>
         <div style={{ maxWidth: 900, margin: "0 auto" }}>
           <p style={eyebrowSt}>What's Coming</p>
@@ -946,11 +1074,11 @@ export default function App() {
             {[
               {
                 label: "Free Beta", badge: "Available Now", badgeBg: C.greenLight, badgeColor: C.green, border: C.border,
-                items: ["Card value lookup", "AI grading ROI verdict", "Raw / PSA 9 / PSA 10 estimates", "Condition-aware analysis", "Search history (local)", "Save up to 10 reports (local)"],
+                items: ["Card value lookup", "AI grading ROI verdict", "Raw / PSA 9 / PSA 10 estimates", "Condition-aware analysis", "AI photo analysis (Beta)", "Search history (local)", "Save up to 10 reports (local)"],
               },
               {
                 label: "GemPredict Pro", badge: "Coming Soon", badgeBg: C.goldLight, badgeColor: C.amber, border: C.gold,
-                items: ["AI photo grading", "Unlimited saved reports", "Batch submission analysis", "Portfolio tracking", "Market alerts", "Priority support"],
+                items: ["Full AI photo grading (front + back)", "Unlimited saved reports", "Batch submission analysis", "Portfolio tracking", "Market alerts", "Priority support"],
               },
             ].map(function(plan) {
               return (
@@ -983,7 +1111,7 @@ export default function App() {
             Get early access to AI Photo Grading
           </h2>
           <p style={{ fontSize: "0.95rem", color: "rgba(255,255,255,0.5)", fontWeight: 300, lineHeight: 1.8, marginBottom: "2rem" }}>
-            Be first when GemPredict launches image-based grading analysis — centering, corners, edges, surface, and PSA 10 probability from a photo.
+            Be first when GemPredict launches full image-based grading analysis — centering, corners, edges, surface, and PSA 10 probability from front and back photos.
           </p>
           {waitlistConfirm ? (
             <div style={{ background: C.greenLight, border: "1px solid #86efac", borderRadius: 12, padding: "1rem 1.5rem", color: C.green, fontSize: "0.95rem", fontWeight: 600, display: "inline-block" }}>
@@ -1027,7 +1155,7 @@ export default function App() {
           <div style={{ flex: "1 1 320px" }}>
             <p style={{ fontSize: "0.68rem", fontWeight: 700, letterSpacing: "0.1em", textTransform: "uppercase", color: C.gold, marginBottom: "0.4rem" }}>Beta Notice</p>
             <p style={{ fontSize: "0.85rem", color: C.inkMid, fontWeight: 300, lineHeight: 1.8 }}>
-              GemPredict is in beta. Market prices move quickly and final grading outcomes depend on the physical card. Use this as a pre-submission filter — not a guarantee.
+              GemPredict is in beta. Market prices move quickly and final grading outcomes depend on the physical card. Photo analysis accuracy depends on image quality. Use this as a pre-submission filter — not a guarantee.
             </p>
           </div>
           <div style={{ display: "flex", gap: "0.5rem 1.75rem", flexWrap: "wrap", alignItems: "center", paddingTop: "0.25rem" }}>
