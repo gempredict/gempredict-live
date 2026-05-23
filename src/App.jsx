@@ -592,6 +592,14 @@ export default function App() {
                 <label style={labelSt}>Card Name</label>
                 <input ref={cardNameRef} value={cardName} onChange={function(e) { setCardName(e.target.value); }} onKeyDown={function(e) { if (e.key === "Enter") handleSubmit(); }} placeholder="e.g. Charizard Holo, LeBron Rookie, Black Lotus" style={inputSt} />
               </div>
+              <div style={{ marginTop: "20px" }}>
+  <label>Upload Card Image (Optional)</label>
+
+  <input
+    type="file"
+    accept="image/*"
+  />
+</div>
               <button onClick={handleSubmit} disabled={loading || !cardName.trim()} style={{ padding: "0.85rem 1.75rem", background: loading || !cardName.trim() ? "#94a3b8" : C.ink, color: "#fff", border: "none", borderRadius: 12, fontSize: "1rem", fontWeight: 700, cursor: loading || !cardName.trim() ? "not-allowed" : "pointer", whiteSpace: "nowrap", minWidth: 145, display: "flex", alignItems: "center", justifyContent: "center", gap: "0.5rem" }}>
                 {loading ? (<><span style={{ width: 18, height: 18, border: "2px solid rgba(255,255,255,0.4)", borderTopColor: "#fff", borderRadius: "50%", animation: "spin 0.7s linear infinite", flexShrink: 0 }} />Analyzing...</>) : "Analyze My Card"}
               </button>
