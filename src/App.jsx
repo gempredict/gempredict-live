@@ -356,6 +356,7 @@ export default function App() {
   const [waitlistEmail,   setWaitlistEmail]   = useState("");
   const [loading,         setLoading]         = useState(false);
   const [selectedImage, setSelectedImage] = useState(null);
+  const [imagePreview, setImagePreview] = useState(null);
   const [results,         setResults]         = useState([]);
   const [error,           setError]           = useState("");
   const [rateLimitMsg,    setRateLimitMsg]    = useState("");
@@ -599,7 +600,15 @@ export default function App() {
   <input
   type="file"
   accept="image/*"
-  onChange={(e) => setSelectedImage(e.target.files[0])}
+  onChange={(e) => {
+    const file = e.target.files[0];
+
+    setSelectedImage(file);
+
+    if (file) {
+      setImagePreview(URL.createObjectURL(file));
+    }
+  }}
 />
 </div>
               <button onClick={handleSubmit} disabled={loading || !cardName.trim()} style={{ padding: "0.85rem 1.75rem", background: loading || !cardName.trim() ? "#94a3b8" : C.ink, color: "#fff", border: "none", borderRadius: 12, fontSize: "1rem", fontWeight: 700, cursor: loading || !cardName.trim() ? "not-allowed" : "pointer", whiteSpace: "nowrap", minWidth: 145, display: "flex", alignItems: "center", justifyContent: "center", gap: "0.5rem" }}>
