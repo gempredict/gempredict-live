@@ -5,9 +5,20 @@
 //   CLAUDE_API_KEY               — Anthropic API key
 //   NEXT_PUBLIC_SUPABASE_URL     — Supabase project URL
 //   SUPABASE_SERVICE_ROLE_KEY    — Supabase service role secret
+//
+// MULTIPART NOTE:
+//   bodyParser is disabled so formidable can parse multipart/form-data.
+//   Text-only (JSON) requests also work: the handler detects content-type
+//   and falls back to req.body when no image is present.
 
 import Anthropic from "@anthropic-ai/sdk";
 import supabase from "../../lib/supabaseServer";
+import formidable from "formidable";
+import fs from "fs";
+import path from "path";
+
+// ─── Disable Next.js body parser so formidable can handle multipart ───────────
+export const config = { api: { bodyParser: false } };
 
 // ─── Config ───────────────────────────────────────────────────────────────────
 
@@ -16,6 +27,7 @@ const RATE_LIMIT_WINDOW = 60 * 60 * 1000;
 const CARD_NAME_MIN     = 2;
 const CARD_NAME_MAX     = 80;
 const CARD_SET_MAX      = 60;
+const IMAGE_MAX_BYTES   = 5 * 1024 * 1024; // 5 MB hard limit
 
 const VALID_CARD_TYPES = new Set([
   "pokemon", "sports", "mtg", "yugioh", "dragonball", "onepiece", "tcg",
@@ -26,7 +38,6 @@ const CARD_TYPE_LABELS = {
   yugioh: "Yu-Gi-Oh!", dragonball: "Dragon Ball", onepiece: "One Piece", tcg: "Other TCG",
 };
 
-// Condition labels sent from the frontend
 const CONDITION_LABELS = {
   risky:  "Risky / Played — visible wear, likely PSA 6–8 at best",
   strong: "Strong Copy — well-centered, minimal wear, PSA 9 realistic",
@@ -89,6 +100,70 @@ async function logRequest({ ip, cardName, cardType, cardSet, status, errorMessag
   }
 }
 
+// ─── Request parsing ──────────────────────────────────────────────────────────
+// Parses both multipart/form-data (with optional image) and application/json.
+// Returns { fields, imageBuffer, imageMimeType }.
+async function parseRequest(req) {
+  const contentType = req.headers["content-type"] || "";
+
+  // Multipart — use formidable
+  if (contentType.includes("multipart/form-data")) {
+    return new Promise(function(resolve, reject) {
+      const form = formidable({
+        maxFileSize: IMAGE_MAX_BYTES,
+        uploadDir: "/tmp",
+        keepExtensions: true,
+        filter: function(part) {
+          // Only allow image files through
+          return part.mimetype && part.mimetype.startsWith("image/");
+        },
+      });
+
+      form.parse(req, function(err, fields, files) {
+        if (err) { reject(err); return; }
+
+        // formidable v3 returns arrays for all values
+        const flat = {};
+        for (const key of Object.keys(fields)) {
+          flat[key] = Array.isArray(fields[key]) ? fields[key][0] : fields[key];
+        }
+
+        let imageBuffer = null;
+        let imageMimeType = null;
+
+        const imageFile = files.image ? (Array.isArray(files.image) ? files.image[0] : files.image) : null;
+        if (imageFile && imageFile.filepath) {
+          try {
+            imageBuffer = fs.readFileSync(imageFile.filepath);
+            imageMimeType = imageFile.mimetype || "image/jpeg";
+            // Clean up temp file — non-fatal
+            try { fs.unlinkSync(imageFile.filepath); } catch {}
+          } catch (readErr) {
+            console.error("[GemPredict] Image read error:", readErr.message);
+          }
+        }
+
+        resolve({ fields: flat, imageBuffer, imageMimeType });
+      });
+    });
+  }
+
+  // JSON — collect body manually (bodyParser is disabled globally for this route)
+  return new Promise(function(resolve, reject) {
+    let body = "";
+    req.on("data", function(chunk) { body += chunk; });
+    req.on("end", function() {
+      try {
+        const parsed = body ? JSON.parse(body) : {};
+        resolve({ fields: parsed, imageBuffer: null, imageMimeType: null });
+      } catch (e) {
+        reject(new Error("Invalid JSON body"));
+      }
+    });
+    req.on("error", reject);
+  });
+}
+
 // ─── Claude response parsing ──────────────────────────────────────────────────
 function safeInt(val, fallback) {
   const n = typeof val === "string" ? parseFloat(val) : val;
@@ -125,14 +200,10 @@ function normaliseCard(raw) {
   const psa10Value = Math.max(0, safeInt(raw.psa10Value));
   const psa10Prob  = Math.min(100, Math.max(0, safeInt(raw.psa10Probability, 50)));
   const gradingUpside = raw.gradingUpside != null ? safeInt(raw.gradingUpside) : psa10Value - rawValue - 25;
-
-  // Population fields — safe integers, null if missing (frontend renders conditionally)
-  const psa9Pop  = raw.psa9Pop  != null ? Math.max(0, safeInt(raw.psa9Pop))  : null;
-  const psa10Pop = raw.psa10Pop != null ? Math.max(0, safeInt(raw.psa10Pop)) : null;
+  const psa9Pop   = raw.psa9Pop  != null ? Math.max(0, safeInt(raw.psa9Pop))  : null;
+  const psa10Pop  = raw.psa10Pop != null ? Math.max(0, safeInt(raw.psa10Pop)) : null;
   const populationInsight = typeof raw.populationInsight === "string" && raw.populationInsight.trim()
-    ? raw.populationInsight.trim().slice(0, 200)
-    : null;
-
+    ? raw.populationInsight.trim().slice(0, 200) : null;
   return {
     cardTitle:        (typeof raw.cardTitle === "string" && raw.cardTitle.trim() ? raw.cardTitle.trim() : "Unknown Card").slice(0, 120),
     cardMeta:         (typeof raw.cardMeta  === "string" && raw.cardMeta.trim()  ? raw.cardMeta.trim()  : "Details unavailable").slice(0, 200),
@@ -145,11 +216,49 @@ function normaliseCard(raw) {
   };
 }
 
+// Validate and normalise image analysis response from Claude Vision
+function normaliseImageAnalysis(raw) {
+  if (!raw || typeof raw !== "object") return null;
+
+  function safeStr(val, fallback) {
+    return typeof val === "string" && val.trim() ? val.trim().slice(0, 400) : fallback;
+  }
+  function safeScore(val) {
+    const n = safeInt(val, 0);
+    return Math.min(10, Math.max(0, n));
+  }
+  function safeRating(val) {
+    const valid = ["excellent", "good", "fair", "poor"];
+    return typeof val === "string" && valid.includes(val.toLowerCase()) ? val.toLowerCase() : "fair";
+  }
+
+  return {
+    // Per-attribute ratings
+    centering:      safeRating(raw.centering),
+    corners:        safeRating(raw.corners),
+    edges:          safeRating(raw.edges),
+    surface:        safeRating(raw.surface),
+    // Qualitative notes
+    centeringNote:  safeStr(raw.centeringNote,  "Centering not assessed."),
+    cornersNote:    safeStr(raw.cornersNote,     "Corners not assessed."),
+    edgesNote:      safeStr(raw.edgesNote,       "Edges not assessed."),
+    surfaceNote:    safeStr(raw.surfaceNote,     "Surface not assessed."),
+    // Overall
+    overallScore:       safeScore(raw.overallScore),       // 0-10
+    gradingRisk:        safeStr(raw.gradingRisk,        "Grading risk could not be determined from this image."),
+    estimatedGrade:     safeStr(raw.estimatedGrade,     "Unable to estimate."),
+    worthGrading:       typeof raw.worthGrading === "boolean" ? raw.worthGrading : null,
+    worthGradingReason: safeStr(raw.worthGradingReason, "Insufficient image quality to determine."),
+    imageSummary:       safeStr(raw.imageSummary,       "No summary available."),
+  };
+}
+
 // ─── Anthropic client ─────────────────────────────────────────────────────────
 const anthropic = process.env.CLAUDE_API_KEY
   ? new Anthropic({ apiKey: process.env.CLAUDE_API_KEY })
   : null;
 
+// ─── Text-only prediction (existing logic, unchanged) ─────────────────────────
 async function fetchPrediction(cardName, cardType, cardSet, condition) {
   if (!anthropic) throw new Error("NO_API_KEY");
 
@@ -157,21 +266,15 @@ async function fetchPrediction(cardName, cardType, cardSet, condition) {
   const setLabel       = cardSet || "not specified";
   const conditionLabel = CONDITION_LABELS[condition] || CONDITION_LABELS.strong;
 
-  // Improved prompt: condition-aware, conservative, ROI-focused
   const prompt =
     "You are an experienced card grading ROI analyst helping collectors make smarter submission decisions.\n\n" +
-    "Your job is to give a realistic grading ROI analysis using CURRENT collector market awareness.\n" +
-"Think like an experienced card dealer who understands modern hobby demand, PSA premiums, grail cards, liquidity, rarity, and collector behavior.\n" +
-"Be conservative about card condition and PSA 10 probability, but do NOT artificially lowball iconic chase cards, modern grails, rare alt arts, or historically high-demand collectibles.\n" +
-"Reflect realistic current collector-market pricing behavior when evaluating premium cards.\n\n" +
+    "Your job is to give a realistic, conservative grading analysis — not hype. " +
+    "Think like a dealer who has lost money on bad grading decisions. " +
+    "Avoid optimistic PSA 10 assumptions unless the card and condition strongly support it.\n\n" +
     "Card: " + cardName + "\n" +
     "Type: " + typeLabel + "\n" +
     "Set/Year: " + setLabel + "\n" +
     "Collector's condition estimate: " + conditionLabel + "\n\n" +
-    "IMPORTANT MARKET CONTEXT:\n" +
-"For iconic chase cards, rare alt arts, vintage grails, major rookie cards, and highly liquid collectibles, assume collector demand and PSA premiums may be substantially higher than conservative historical averages.\n" +
-"When uncertain, prefer realistic modern collector-market pricing behavior over outdated low-end estimates.\n" +
-"Use broad hobby awareness of current collector demand, rarity, liquidity, and grading premiums.\n\n" +
     "Use the condition estimate to calibrate:\n" +
     "- PSA 10 probability (be conservative — most cards do not gem)\n" +
     "- Verdict (factor in whether condition makes grading a realistic ROI)\n" +
@@ -181,9 +284,9 @@ async function fetchPrediction(cardName, cardType, cardSet, condition) {
     "Required fields:\n" +
     "cardTitle - full proper card name (string)\n" +
     "cardMeta - set name, year, variant details (string)\n" +
-    "rawValue - realistic CURRENT collector-market raw USD estimate based on modern hobby demand (integer)\n" +
-"psa9Value - realistic CURRENT collector-market PSA 9 USD estimate (integer)\n" +
-"psa10Value - realistic CURRENT collector-market PSA 10 USD estimate (integer)\n" +
+    "rawValue - realistic ungraded USD market estimate (integer)\n" +
+    "psa9Value - realistic PSA 9 USD estimate (integer)\n" +
+    "psa10Value - realistic PSA 10 USD estimate (integer)\n" +
     "psa10Probability - honest 0-100 chance of PSA 10 given this condition (integer — be conservative)\n" +
     "verdict - exactly one of: grade, skip, maybe (string)\n" +
     "gradingUpside - psa10Value minus rawValue minus 25 (integer)\n" +
@@ -191,8 +294,7 @@ async function fetchPrediction(cardName, cardType, cardSet, condition) {
     "action - one sentence starting with a verb, specific to this card and condition (string)\n" +
     "psa9Pop - estimated PSA 9 population count based on collector market knowledge (integer)\n" +
     "psa10Pop - estimated PSA 10 population count based on collector market knowledge (integer)\n" +
-    "populationInsight - one concise sentence interpreting the population for collectors: " +
-    "is the PSA 10 scarce relative to PSA 9 (strong premium), common (weaker scarcity), or meaningful for this card's upside? (string)\n\n" +
+    "populationInsight - one concise sentence interpreting the population for collectors (string)\n\n" +
     "Population rules:\n" +
     "- psa9Pop and psa10Pop are whole integers — realistic estimates based on known collector market data\n" +
     "- A low psa10Pop relative to psa9Pop suggests scarcity and stronger grading premium\n" +
@@ -217,6 +319,66 @@ async function fetchPrediction(cardName, cardType, cardSet, condition) {
   return result;
 }
 
+// ─── Vision analysis (new) ────────────────────────────────────────────────────
+// Sends the card image to Claude with a structured grading prompt.
+// Returns a normalised imageAnalysis object, or null on failure (non-fatal).
+async function fetchImageAnalysis(imageBuffer, imageMimeType, cardName, cardType) {
+  if (!anthropic) throw new Error("NO_API_KEY");
+  if (!imageBuffer || imageBuffer.length === 0) return null;
+
+  const typeLabel = CARD_TYPE_LABELS[cardType] || "Card";
+  const base64    = imageBuffer.toString("base64");
+
+  // Validate mime type for Claude — only jpeg, png, gif, webp accepted
+  const VALID_MIME = ["image/jpeg", "image/png", "image/gif", "image/webp"];
+  const mime = VALID_MIME.includes(imageMimeType) ? imageMimeType : "image/jpeg";
+
+  const imagePrompt =
+    "You are a professional card grader inspecting a trading card image for PSA grading potential.\n\n" +
+    "Card name: " + (cardName || "unknown") + "\n" +
+    "Card type: " + typeLabel + "\n\n" +
+    "Carefully inspect the card image and evaluate it against PSA grading criteria.\n" +
+    "Assess ONLY what is visible in the image. Do not guess what you cannot see.\n\n" +
+    "Respond with ONLY a single raw JSON object. No markdown. No backticks. No extra text.\n\n" +
+    "Required fields:\n" +
+    "centering - one of: excellent, good, fair, poor (string)\n" +
+    "centeringNote - 1 sentence: describe the left/right and top/bottom centering as visible (string)\n" +
+    "corners - one of: excellent, good, fair, poor (string)\n" +
+    "cornersNote - 1 sentence: describe corner condition — any fraying, rounding, or wear (string)\n" +
+    "edges - one of: excellent, good, fair, poor (string)\n" +
+    "edgesNote - 1 sentence: describe edge condition — any nicks, chips, or roughness (string)\n" +
+    "surface - one of: excellent, good, fair, poor (string)\n" +
+    "surfaceNote - 1 sentence: describe surface — scratches, print lines, haze, staining (string)\n" +
+    "overallScore - estimated PSA numeric grade this card would likely receive, 1-10 (integer)\n" +
+    "gradingRisk - 1-2 sentences: what is the main grading risk for this card based on what you see (string)\n" +
+    "estimatedGrade - short label like 'PSA 7-8 likely' or 'PSA 9 possible' or 'PSA 10 candidate' (string)\n" +
+    "worthGrading - based ONLY on visible condition, is this card likely worth grading? (boolean)\n" +
+    "worthGradingReason - 1 sentence explaining the worthGrading verdict based on visible condition (string)\n" +
+    "imageSummary - 1-2 sentences: overall impression of this card's condition from the image (string)\n\n" +
+    "Rating scale: excellent=minimal issues, good=minor issues, fair=moderate issues, poor=significant issues.\n" +
+    "Be honest. Do not grade generously. PSA standards are strict.";
+
+  const message = await anthropic.messages.create({
+    model: "claude-sonnet-4-6", max_tokens: 1000,
+    messages: [{
+      role: "user",
+      content: [
+        {
+          type: "image",
+          source: { type: "base64", media_type: mime, data: base64 },
+        },
+        { type: "text", text: imagePrompt },
+      ],
+    }],
+  });
+
+  const text = (message.content || []).map(function(b) { return b.type === "text" ? b.text : ""; }).join("").trim();
+  if (!text) return null;
+  const parsed = extractJSON(text);
+  if (!parsed) return null;
+  return normaliseImageAnalysis(parsed);
+}
+
 // ─── Main handler ─────────────────────────────────────────────────────────────
 export default async function handler(req, res) {
   if (req.method !== "POST") return res.status(405).json({ error: "Method not allowed." });
@@ -233,12 +395,23 @@ export default async function handler(req, res) {
     });
   }
 
-  const body      = req.body || {};
-  const cardName  = sanitiseString(body.cardName);
-  const cardSet   = sanitiseString(body.cardSet   || "");
-  const email     = sanitiseString(body.email     || "");
-  const condition = ["risky", "strong", "gem"].includes(body.condition) ? body.condition : "strong";
-  const cardTypeRaw = typeof body.cardType === "string" ? body.cardType.trim().toLowerCase() : "";
+  // Parse request — handles both multipart and JSON
+  let fields, imageBuffer, imageMimeType;
+  try {
+    const parsed = await parseRequest(req);
+    fields       = parsed.fields;
+    imageBuffer  = parsed.imageBuffer;
+    imageMimeType = parsed.imageMimeType;
+  } catch (parseErr) {
+    console.error("[GemPredict] Request parse error:", parseErr.message);
+    return res.status(400).json({ error: "Could not read request. Please try again." });
+  }
+
+  const cardName  = sanitiseString(fields.cardName  || "");
+  const cardSet   = sanitiseString(fields.cardSet   || "");
+  const email     = sanitiseString(fields.email     || "");
+  const condition = ["risky", "strong", "gem"].includes(fields.condition) ? fields.condition : "strong";
+  const cardTypeRaw = typeof fields.cardType === "string" ? fields.cardType.trim().toLowerCase() : "";
   const cardType    = VALID_CARD_TYPES.has(cardTypeRaw) ? cardTypeRaw : "tcg";
 
   if (!cardName) { logRequest({ ip, cardName, cardType, cardSet, status: "invalid_input", errorMessage: "missing card name" }); return res.status(400).json({ error: "Card name is required." }); }
@@ -246,6 +419,11 @@ export default async function handler(req, res) {
   if (cardName.length > CARD_NAME_MAX) { logRequest({ ip, cardName, cardType, cardSet, status: "invalid_input", errorMessage: "too long" }); return res.status(400).json({ error: "Card name must be " + CARD_NAME_MAX + " characters or fewer." }); }
   if (cardSet.length > CARD_SET_MAX)   { logRequest({ ip, cardName, cardType, cardSet, status: "invalid_input", errorMessage: "set too long" }); return res.status(400).json({ error: "Set / year must be " + CARD_SET_MAX + " characters or fewer." }); }
   if (looksLikeJunk(cardName))         { logRequest({ ip, cardName, cardType, cardSet, status: "invalid_input", errorMessage: "junk input" }); return res.status(400).json({ error: "Please enter a valid card name." }); }
+
+  // Image size guard (redundant with formidable limit but belt-and-suspenders)
+  if (imageBuffer && imageBuffer.length > IMAGE_MAX_BYTES) {
+    return res.status(400).json({ error: "Image file is too large. Please upload an image under 5 MB." });
+  }
 
   let emailSaved = false;
   if (email) {
@@ -260,9 +438,29 @@ export default async function handler(req, res) {
   }
 
   try {
-    const prediction = await fetchPrediction(cardName, cardType, cardSet, condition);
+    // Run text prediction and image analysis in parallel when image is present.
+    // Image analysis failure is non-fatal — text prediction still completes.
+    const [prediction, imageAnalysis] = await Promise.all([
+      fetchPrediction(cardName, cardType, cardSet, condition),
+      imageBuffer
+        ? fetchImageAnalysis(imageBuffer, imageMimeType, cardName, cardType).catch(function(err) {
+            console.error("[GemPredict] Image analysis error (non-fatal):", err.message);
+            return null;
+          })
+        : Promise.resolve(null),
+    ]);
+
     logRequest({ ip, cardName, cardType, cardSet, status: "success" });
-    return res.status(200).json({ success: true, prediction, remaining: rateCheck.remaining, emailSaved });
+
+    return res.status(200).json({
+      success: true,
+      prediction,
+      imageAnalysis,        // null if no image uploaded; object if image was analysed
+      hasImageAnalysis: imageAnalysis !== null,
+      remaining: rateCheck.remaining,
+      emailSaved,
+    });
+
   } catch (err) {
     console.error("[GemPredict] Prediction error:", err.status || "", err.message);
     let userMessage = "Something went wrong. Please try again.";
