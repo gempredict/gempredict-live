@@ -597,19 +597,7 @@ export default function App() {
               <div style={{ marginTop: "20px" }}>
   <label>Upload Card Image (Optional)</label>
 
-  <input
-  type="file"
-  accept="image/*"
-  onChange={(e) => {
-    const file = e.target.files[0];
-
-    setSelectedImage(file);
-
-    if (file) {
-      setImagePreview(URL.createObjectURL(file));
-    }
-  }}
-/>
+  
                 <input
   type="file"
   accept="image/*"
