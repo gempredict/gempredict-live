@@ -763,7 +763,46 @@ export default function App() {
                 onChange={function(e) { handleImageSelect(e.target.files && e.target.files[0]); }}
               />
             </div>
+<div
+  style={{
+    marginTop: "1rem",
+    background: "#f8f6f2",
+    border: "1px solid #e7dcc7",
+    borderRadius: 12,
+    padding: "0.9rem 1rem",
+  }}
+>
+  <div
+    style={{
+      fontSize: "0.72rem",
+      fontWeight: 700,
+      textTransform: "uppercase",
+      letterSpacing: "0.08em",
+      color: "#8b6b2c",
+      marginBottom: "0.5rem",
+    }}
+  >
+    Photo Tips for Better Grading Analysis
+  </div>
 
+  <ul
+    style={{
+      margin: 0,
+      paddingLeft: "1rem",
+      fontSize: "0.82rem",
+      lineHeight: 1.7,
+      color: "#555",
+    }}
+  >
+    <li>Use a dark flat background</li>
+    <li>Remove sleeves/toploaders if safe</li>
+    <li>Avoid harsh glare and shadows</li>
+    <li>Take the photo straight-on</li>
+    <li>Include all corners and edges</li>
+    <li>Clean lighting improves surface analysis</li>
+    <li>Front and back photos will improve future grading accuracy</li>
+  </ul>
+</div>
             {/* Examples */}
             <p style={{ fontSize: "0.72rem", color: C.inkSoft, marginBottom: "0.75rem" }}>AI estimates raw value, PSA 9, PSA 10, grading upside, and recommendation.</p>
             <div style={{ display: "flex", gap: "0.5rem", flexWrap: "wrap", alignItems: "center" }}>
