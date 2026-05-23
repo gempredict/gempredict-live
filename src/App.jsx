@@ -566,6 +566,8 @@ export default function App() {
       }
 
       const data = await res.json();
+      console.log("GemPredict API response:", data);
+alert("Image analysis returned: " + (data.imageAnalysis ? "YES" : "NO"));
       if (res.status === 429) { setRateLimitMsg(data.message || "Rate limit exceeded. Please try again later."); setLoading(false); return; }
       if (!res.ok) { setError(data.error || "Something went wrong. Please try again."); setLoading(false); return; }
 
