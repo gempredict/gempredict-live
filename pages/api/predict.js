@@ -334,29 +334,60 @@ async function fetchImageAnalysis(imageBuffer, imageMimeType, cardName, cardType
   const mime = VALID_MIME.includes(imageMimeType) ? imageMimeType : "image/jpeg";
 
   const imagePrompt =
-    "You are a professional card grader inspecting a trading card image for PSA grading potential.\n\n" +
-    "Card name: " + (cardName || "unknown") + "\n" +
-    "Card type: " + typeLabel + "\n\n" +
-    "Carefully inspect the card image and evaluate it against PSA grading criteria.\n" +
-    "Assess ONLY what is visible in the image. Do not guess what you cannot see.\n\n" +
-    "Respond with ONLY a single raw JSON object. No markdown. No backticks. No extra text.\n\n" +
-    "Required fields:\n" +
-    "centering - one of: excellent, good, fair, poor (string)\n" +
-    "centeringNote - 1 sentence: describe the left/right and top/bottom centering as visible (string)\n" +
-    "corners - one of: excellent, good, fair, poor (string)\n" +
-    "cornersNote - 1 sentence: describe corner condition — any fraying, rounding, or wear (string)\n" +
-    "edges - one of: excellent, good, fair, poor (string)\n" +
-    "edgesNote - 1 sentence: describe edge condition — any nicks, chips, or roughness (string)\n" +
-    "surface - one of: excellent, good, fair, poor (string)\n" +
-    "surfaceNote - 1 sentence: describe surface — scratches, print lines, haze, staining (string)\n" +
-    "overallScore - estimated PSA numeric grade this card would likely receive, 1-10 (integer)\n" +
-    "gradingRisk - 1-2 sentences: what is the main grading risk for this card based on what you see (string)\n" +
-    "estimatedGrade - short label like 'PSA 7-8 likely' or 'PSA 9 possible' or 'PSA 10 candidate' (string)\n" +
-    "worthGrading - based ONLY on visible condition, is this card likely worth grading? (boolean)\n" +
-    "worthGradingReason - 1 sentence explaining the worthGrading verdict based on visible condition (string)\n" +
-    "imageSummary - 1-2 sentences: overall impression of this card's condition from the image (string)\n\n" +
-    "Rating scale: excellent=minimal issues, good=minor issues, fair=moderate issues, poor=significant issues.\n" +
-    "Be honest. Do not grade generously. PSA standards are strict.";
+  "You are an expert card pre-grader helping a collector decide whether this card is worth submitting to PSA.\n\n" +
+  "Card name: " + (cardName || "unknown") + "\n" +
+  "Card type: " + typeLabel + "\n\n" +
+
+  "Your job is NOT to guarantee a PSA grade. Your job is to identify visible grade limiters and estimate the card's realistic grading ceiling from the image.\n\n" +
+
+  "Assess ONLY what is visible in the uploaded image. If the back of the card is not visible, say that this limits confidence. If glare, sleeve reflection, angle, blur, or low resolution limits surface inspection, say so.\n\n" +
+
+  "Think like a strict PSA pre-screen reviewer:\n" +
+  "- Centering can cap the grade even if the card is otherwise clean.\n" +
+  "- Surface defects are often the biggest hidden risk, especially for holo, chrome, foil, and glossy cards.\n" +
+  "- Corners and edges should be evaluated for whitening, chipping, fraying, soft corners, dents, and rough cuts.\n" +
+  "- One moderate defect can cap the card below a PSA 10 even if other categories look strong.\n" +
+  "- Do not give a PSA 10 candidate label unless all visible categories look exceptionally clean and image quality is good enough to justify it.\n\n" +
+
+  "Use card-type awareness:\n" +
+  "- Pokemon/TCG: pay close attention to holo scratches, whitening, silvering, edge chipping, print lines, and surface dents.\n" +
+  "- Chrome/sports parallels: pay close attention to centering, surface lines, dimples, print defects, roller marks, and corner sharpness.\n" +
+  "- Vintage cards: be stricter about corner softness, edge wear, print registration, staining, and overall eye appeal.\n\n" +
+
+  "Important consistency rule:\n" +
+  "The final overallScore and estimatedGrade MUST logically follow the category ratings and notes. If centering, corners, edges, and surface are all good or excellent with no meaningful defect, the card should generally project as PSA 9 or better unless image confidence is low. If you assign a lower score, explicitly explain the grade-capping issue.\n\n" +
+
+  "Respond with ONLY a single raw JSON object. No markdown. No backticks. No extra text.\n\n" +
+
+  "Required fields:\n" +
+  "centering - one of: excellent, good, fair, poor (string)\n" +
+  "centeringNote - specific visible centering assessment, mention left/right and top/bottom if visible (string)\n" +
+  "corners - one of: excellent, good, fair, poor (string)\n" +
+  "cornersNote - specific visible corner assessment, mention any whitening, softness, fraying, bends, or unclear areas (string)\n" +
+  "edges - one of: excellent, good, fair, poor (string)\n" +
+  "edgesNote - specific visible edge assessment, mention whitening, chipping, rough cuts, or unclear areas (string)\n" +
+  "surface - one of: excellent, good, fair, poor (string)\n" +
+  "surfaceNote - specific visible surface assessment, mention scratches, print lines, dimples, glare limitations, haze, staining, or uncertainty (string)\n" +
+  "overallScore - realistic estimated grade ceiling from visible evidence, 1-10 integer (integer)\n" +
+  "gradingRisk - 1-2 sentences explaining the main grade cap or uncertainty. This must directly justify the overallScore (string)\n" +
+  "estimatedGrade - short collector-friendly label like 'PSA 8 ceiling', 'PSA 9 candidate', 'PSA 9 with PSA 10 upside', or 'PSA 10 candidate but confidence limited' (string)\n" +
+  "worthGrading - based only on visible condition, whether the card appears worth grading before considering market value (boolean)\n" +
+  "worthGradingReason - 1 sentence explaining the grading recommendation from visible condition only (string)\n" +
+  "imageSummary - 1-2 sentences summarizing the card's visible condition and confidence level (string)\n\n" +
+
+  "Rating scale:\n" +
+  "excellent = no meaningful visible flaw in that category\n" +
+  "good = minor visible flaw or slight uncertainty\n" +
+  "fair = moderate visible flaw that may cap grade\n" +
+  "poor = significant visible flaw likely to strongly cap grade\n\n" +
+
+  "Scoring guidance:\n" +
+  "10 = only if all visible categories are excellent and image quality is strong\n" +
+  "9 = strong card with only minor visible concerns or limited image uncertainty\n" +
+  "8 = clean-looking card with one meaningful limiter or moderate uncertainty\n" +
+  "7 or below = visible moderate-to-major flaw, multiple issues, or poor image confidence\n\n" +
+
+  "Be strict, specific, and internally consistent. Avoid canned language.";
 
   const message = await anthropic.messages.create({
     model: "claude-sonnet-4-6", max_tokens: 1000,
