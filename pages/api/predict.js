@@ -345,6 +345,7 @@ async function fetchImageAnalysis(imageBuffer, imageMimeType, cardName, cardType
   "Think like a strict PSA pre-screen reviewer:\n" +
   "- Centering can cap the grade even if the card is otherwise clean.\n" +
   "- Surface defects are often the biggest hidden risk, especially for holo, chrome, foil, and glossy cards.\n" +
+    "- Surface analysis is confidence-sensitive. If glare, shadows, sleeve plastic, blur, reflections, or low image quality prevent reliable inspection, clearly explain that surface confidence is limited instead of assuming the surface is clean.\n" +
   "- Corners and edges should be evaluated for whitening, chipping, fraying, soft corners, dents, and rough cuts.\n" +
   "- One moderate defect can cap the card below a PSA 10 even if other categories look strong.\n" +
   "- Do not give a PSA 10 candidate label unless all visible categories look exceptionally clean and image quality is good enough to justify it.\n\n" +
