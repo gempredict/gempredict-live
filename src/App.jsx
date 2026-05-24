@@ -612,8 +612,16 @@ export default function App() {
       if (res.status === 429) { setRateLimitMsg(data.message || "Rate limit exceeded. Please try again later."); setLoading(false); return; }
       if (!res.ok) { setError(data.error || "Something went wrong. Please try again."); setLoading(false); return; }
 
-      setResults(function(prev) { return [data.prediction, ...prev].slice(0, 5); });
-      if (data.imageAnalysis) setImageAnalysis(data.imageAnalysis);
+      setResults(function(prev) {
+  const newReport = {
+    ...data.prediction,
+    imageAnalysis: data.imageAnalysis || null,
+  };
+
+  return [newReport, ...prev].slice(0, 5);
+});
+
+if (data.imageAnalysis) setImageAnalysis(data.imageAnalysis);
       if (data.remaining != null) setRemaining(data.remaining);
       if (data.emailSaved) { setEmailConfirm(true); track("waitlist_signup"); }
       addToHistory(cardName.trim(), cardType, cardSet.trim());
@@ -908,7 +916,22 @@ export default function App() {
                 {results.length === 1 ? "Your Report" : "Recent Reports (" + results.length + ")"}
               </div>
               <div style={{ display: "flex", flexDirection: "column", gap: "1.25rem" }}>
-                {results.map(function(r, i) { return <ResultCard key={i} data={r} index={i} onSave={saveReport} isSaved={isSavedReport(r)} />; })}
+               {results.map(function(r, i) {
+  return (
+    <div key={i}>
+      <ResultCard
+        data={r}
+        index={i}
+        onSave={saveReport}
+        isSaved={isSavedReport(r)}
+      />
+
+      {r.imageAnalysis && (
+        <ImageAnalysisCard data={r.imageAnalysis} />
+      )}
+    </div>
+  );
+})}
               </div>
 
               {/* Image analysis — shown below the first result card when present */}
