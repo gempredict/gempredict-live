@@ -241,7 +241,7 @@ const combinedNotes = [
 ].join(" ").toLowerCase();
 
 const hasMajorDamage =
-  /crease|creased|bend|bent|wrinkle|fold|dent|damaged corner|corner damage|corner bend|surface damage|indentation|peeling/.test(combinedNotes);
+  /crease|creased|bend|bent|wrinkle|fold|dent|dented|damaged corner|corner damage|corner bend|surface damage|indentation|peeling|corner softness|soft corner|soft corners|heavy whitening|major whitening|significant whitening|clearly visible scratch|visible scratches|deep scratch|deep scratches|surface scratches|surface wear|edge wear|heavy edge wear|chipping|chip|creased surface|structural damage|pressure mark|surface impression|surface crease|warping|warped/.test(combinedNotes);
 
 const forcedLimiter = hasMajorDamage
   ? "Visible structural damage such as creasing, bending, dents, or corner damage is a major grade cap."
@@ -263,7 +263,7 @@ const forcedLimiter = hasMajorDamage
     gradingRisk: forcedLimiter || safeStr(raw.gradingRisk, "Grading risk could not be determined from this image."),
 
 estimatedGrade: hasMajorDamage
-  ? "PSA 5-6 ceiling likely"
+  ? "PSA 2-4 ceiling likely"
   : safeStr(raw.estimatedGrade, "Unable to estimate."),
 
 worthGrading: hasMajorDamage
@@ -275,7 +275,7 @@ worthGradingReason: hasMajorDamage
   : safeStr(raw.worthGradingReason, "Insufficient image quality to determine."),
 
 gradeCeiling: hasMajorDamage
-  ? "PSA 5-6 ceiling likely"
+  ? "PSA 2-4 ceiling likely"
   : safeStr(raw.gradeCeiling, "Unknown"),
 
 primaryLimiter: forcedLimiter || safeStr(raw.primaryLimiter, "No primary limiter identified."),
