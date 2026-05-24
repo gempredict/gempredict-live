@@ -261,18 +261,14 @@ const hasMinorDamage =
   /whitening|edge whitening|corner whitening/.test(combinedNotes)
 ].filter(Boolean).length;
 
+  const hasStackedModerateDamage =
+  hasModerateDamage && minorDamageCount >= 2;
+
 let forcedLimiter = null;
 let forcedGrade = null;
 let forcedScore = null;
 
-  if (minorDamageCount >= 3 && !hasModerateDamage && !hasSevereDamage && !hasCatastrophicDamage) {
-  forcedLimiter = "Multiple smaller defects combine to significantly lower high-grade potential.";
-  forcedGrade = "PSA 5-7 ceiling likely";
-  forcedScore = 6;
-}
-else
-
-if (hasCatastrophicDamage) {
+  if (hasCatastrophicDamage) {
   forcedLimiter = "Heavy structural damage such as multiple creases, severe bends, or destroyed corners is a catastrophic grade cap.";
   forcedGrade = "PSA 1-2 ceiling likely";
   forcedScore = 1;
@@ -282,10 +278,20 @@ else if (hasSevereDamage) {
   forcedGrade = "PSA 2-4 ceiling likely";
   forcedScore = 3;
 }
+else if (hasStackedModerateDamage) {
+  forcedLimiter = "Moderate damage combined with multiple smaller issues creates a compounded grade cap.";
+  forcedGrade = "PSA 3-5 ceiling likely";
+  forcedScore = 4;
+}
 else if (hasModerateDamage) {
   forcedLimiter = "Visible bends, dents, whitening, or structural wear significantly limit grading upside.";
   forcedGrade = "PSA 4-6 ceiling likely";
   forcedScore = 5;
+}
+else if (minorDamageCount >= 3) {
+  forcedLimiter = "Multiple smaller defects combine to significantly lower high-grade potential.";
+  forcedGrade = "PSA 5-7 ceiling likely";
+  forcedScore = 6;
 }
 else if (hasMinorDamage) {
   forcedLimiter = "Visible surface or edge wear slightly limits top-end grading potential.";
