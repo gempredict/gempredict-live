@@ -240,12 +240,34 @@ const combinedNotes = [
   raw.imageSummary
 ].join(" ").toLowerCase();
 
-const hasMajorDamage =
-  /crease|creased|bend|bent|wrinkle|fold|dent|dented|damaged corner|corner damage|corner bend|surface damage|indentation|peeling|corner softness|soft corner|soft corners|heavy whitening|major whitening|significant whitening|clearly visible scratch|visible scratches|deep scratch|deep scratches|surface scratches|surface wear|edge wear|heavy edge wear|chipping|chip|creased surface|structural damage|pressure mark|surface impression|surface crease|warping|warped/.test(combinedNotes);
+const hasSevereDamage =
+  /crease|creased|wrinkle|fold|heavy crease|major crease|corner fold|peeling|structural damage|warped|warping/.test(combinedNotes);
 
-const forcedLimiter = hasMajorDamage
-  ? "Visible structural damage such as creasing, bending, dents, or corner damage is a major grade cap."
-  : null;
+const hasModerateDamage =
+  /bend|bent|dent|dented|corner bend|surface damage|indentation|deep scratch|deep scratches|heavy whitening|major whitening|heavy edge wear|surface crease|pressure mark/.test(combinedNotes);
+
+const hasMinorDamage =
+  /corner softness|soft corner|soft corners|visible scratches|surface scratches|surface wear|edge wear|chipping|chip|print line|print lines|roller mark|roller lines/.test(combinedNotes);
+
+let forcedLimiter = null;
+let forcedGrade = null;
+let forcedScore = null;
+
+if (hasSevereDamage) {
+  forcedLimiter = "Visible structural damage such as creasing, folding, or warping is a severe grade cap.";
+  forcedGrade = "PSA 1-3 ceiling likely";
+  forcedScore = 2;
+}
+else if (hasModerateDamage) {
+  forcedLimiter = "Visible bends, dents, whitening, or structural wear significantly limit grading upside.";
+  forcedGrade = "PSA 4-6 ceiling likely";
+  forcedScore = 5;
+}
+else if (hasMinorDamage) {
+  forcedLimiter = "Visible surface or edge wear slightly limits top-end grading potential.";
+  forcedGrade = "PSA 7-8 ceiling likely";
+  forcedScore = 7;
+}
   
   return {
     // Per-attribute ratings
@@ -259,23 +281,23 @@ const forcedLimiter = hasMajorDamage
     edgesNote:      safeStr(raw.edgesNote,       "Edges not assessed."),
     surfaceNote:    safeStr(raw.surfaceNote,     "Surface not assessed."),
     // Overall
-    overallScore: hasMajorDamage ? 3 : safeScore(raw.overallScore), // 0-10
+    overallScore: forcedScore || safeScore(raw.overallScore), // 0-10
     gradingRisk: forcedLimiter || safeStr(raw.gradingRisk, "Grading risk could not be determined from this image."),
 
-estimatedGrade: hasMajorDamage
-  ? "PSA 2-4 ceiling likely"
+estimatedGrade: forcedGrade
+  ? forcedGrade
   : safeStr(raw.estimatedGrade, "Unable to estimate."),
 
-worthGrading: hasMajorDamage
+worthGrading: (hasSevereDamage || hasModerateDamage)
   ? false
   : (typeof raw.worthGrading === "boolean" ? raw.worthGrading : null),
 
-worthGradingReason: hasMajorDamage
-  ? "Visible structural damage usually makes this a poor grading candidate unless the card is extremely rare or valuable."
+worthGradingReason: (hasSevereDamage || hasModerateDamage)
+  ? "Visible structural damage or moderate defects usually make this a poor grading candidate unless the card is extremely rare or valuable."
   : safeStr(raw.worthGradingReason, "Insufficient image quality to determine."),
 
-gradeCeiling: hasMajorDamage
-  ? "PSA 2-4 ceiling likely"
+gradeCeiling: forcedGrade
+  ? forcedGrade
   : safeStr(raw.gradeCeiling, "Unknown"),
 
 primaryLimiter: forcedLimiter || safeStr(raw.primaryLimiter, "No primary limiter identified."),
