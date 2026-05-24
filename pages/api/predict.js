@@ -370,6 +370,9 @@ async function fetchImageAnalysis(imageBuffer, imageMimeType, cardName, cardType
   "surface - one of: excellent, good, fair, poor (string)\n" +
   "surfaceNote - specific visible surface assessment, mention scratches, print lines, dimples, glare limitations, haze, staining, or uncertainty (string)\n" +
   "overallScore - realistic estimated grade ceiling from visible evidence, 1-10 integer (integer)\n" +
+    "gradeCeiling - realistic PSA ceiling based on visible condition like 'PSA 8 ceiling', 'PSA 9 candidate', or 'PSA 10 upside with risk' (string)\n" +
+"primaryLimiter - the single biggest visible issue or uncertainty likely limiting the grade ceiling (string)\n" +
+"confidenceLevel - one of: high, moderate, low (string)\n" +
   "gradingRisk - 1-2 sentences explaining the main grade cap or uncertainty. This must directly justify the overallScore (string)\n" +
   "estimatedGrade - short collector-friendly label like 'PSA 8 ceiling', 'PSA 9 candidate', 'PSA 9 with PSA 10 upside', or 'PSA 10 candidate but confidence limited' (string)\n" +
   "worthGrading - based only on visible condition, whether the card appears worth grading before considering market value (boolean)\n" +
@@ -387,6 +390,11 @@ async function fetchImageAnalysis(imageBuffer, imageMimeType, cardName, cardType
   "9 = strong card with only minor visible concerns or limited image uncertainty\n" +
   "8 = clean-looking card with one meaningful limiter or moderate uncertainty\n" +
   "7 or below = visible moderate-to-major flaw, multiple issues, or poor image confidence\n\n" +
+
+    "Confidence guidance:\n" +
+"high = strong image quality with clearly visible surfaces, corners, and edges\n" +
+"moderate = some uncertainty from glare, angle, reflections, or missing card back\n" +
+"low = image quality too limited for confident grading assessment\n\n" +
 
   "Be strict, specific, and internally consistent. Avoid canned language.";
 
