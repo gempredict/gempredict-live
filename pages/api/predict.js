@@ -231,7 +231,22 @@ function normaliseImageAnalysis(raw) {
     const valid = ["excellent", "good", "fair", "poor"];
     return typeof val === "string" && valid.includes(val.toLowerCase()) ? val.toLowerCase() : "fair";
   }
+const combinedNotes = [
+  raw.centeringNote,
+  raw.cornersNote,
+  raw.edgesNote,
+  raw.surfaceNote,
+  raw.gradingRisk,
+  raw.imageSummary
+].join(" ").toLowerCase();
 
+const hasMajorDamage =
+  /crease|creased|bend|bent|wrinkle|fold|dent|damaged corner|corner damage|corner bend|surface damage|indentation|peeling/.test(combinedNotes);
+
+const forcedLimiter = hasMajorDamage
+  ? "Visible structural damage such as creasing, bending, dents, or corner damage is a major grade cap."
+  : null;
+  
   return {
     // Per-attribute ratings
     centering:      safeRating(raw.centering),
@@ -245,11 +260,29 @@ function normaliseImageAnalysis(raw) {
     surfaceNote:    safeStr(raw.surfaceNote,     "Surface not assessed."),
     // Overall
     overallScore:       safeScore(raw.overallScore),       // 0-10
-    gradingRisk:        safeStr(raw.gradingRisk,        "Grading risk could not be determined from this image."),
-    estimatedGrade:     safeStr(raw.estimatedGrade,     "Unable to estimate."),
-    worthGrading:       typeof raw.worthGrading === "boolean" ? raw.worthGrading : null,
-    worthGradingReason: safeStr(raw.worthGradingReason, "Insufficient image quality to determine."),
-    imageSummary:       safeStr(raw.imageSummary,       "No summary available."),
+    gradingRisk: forcedLimiter || safeStr(raw.gradingRisk, "Grading risk could not be determined from this image."),
+
+estimatedGrade: hasMajorDamage
+  ? "PSA 5-6 ceiling likely"
+  : safeStr(raw.estimatedGrade, "Unable to estimate."),
+
+worthGrading: hasMajorDamage
+  ? false
+  : (typeof raw.worthGrading === "boolean" ? raw.worthGrading : null),
+
+worthGradingReason: hasMajorDamage
+  ? "Visible structural damage usually makes this a poor grading candidate unless the card is extremely rare or valuable."
+  : safeStr(raw.worthGradingReason, "Insufficient image quality to determine."),
+
+gradeCeiling: hasMajorDamage
+  ? "PSA 5-6 ceiling likely"
+  : safeStr(raw.gradeCeiling, "Unknown"),
+
+primaryLimiter: forcedLimiter || safeStr(raw.primaryLimiter, "No primary limiter identified."),
+
+majorGradeCap: forcedLimiter || safeStr(raw.majorGradeCap, "No major grade cap identified."),
+
+minorConcerns: safeStr(raw.minorConcerns, "No additional visible concerns identified."),
   };
 }
 
