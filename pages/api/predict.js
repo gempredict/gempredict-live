@@ -350,6 +350,17 @@ async function fetchImageAnalysis(imageBuffer, imageMimeType, cardName, cardType
   "- One moderate defect can cap the card below a PSA 10 even if other categories look strong.\n" +
     "If any visible crease, bend, dent, corner bend, surface indentation, peeling, major whitening, heavy edge wear, or wrinkle is detected, it MUST be listed as the primaryLimiter and majorGradeCap. Do not say 'no major limiter identified' when a visible crease, bend, or corner damage exists.\n" +
     "Avoid generic grading summaries. Identify the most likely grade cap first, then describe smaller concerns separately.\n" +
+    "Hard grading rules:\n" +
+"- If a visible crease, wrinkle, bend, dent, peeling layer, or corner fold exists, PSA 10 is impossible.\n" +
+"- Visible structural damage must always appear in both primaryLimiter and majorGradeCap.\n" +
+"- If visible whitening exists, do not say 'no concerns identified'.\n" +
+"- If surface glare or image quality prevents reliable inspection, confidenceLevel cannot be 'high'.\n" +
+"- If corners show visible bends or softening, those issues must appear in minorConcerns or majorGradeCap.\n" +
+"- If multiple moderate flaws exist together, the grade ceiling should drop accordingly.\n" +
+"- Do not give optimistic grades when visible defects clearly cap the card lower.\n\n" +
+    "- If visible surface scratches, print lines, chrome lines, dents, dimples, roller marks, or holo scratches are present, surface cannot be rated excellent.\n" +
+"- If surface scratches or print lines are clearly visible, they must appear in primaryLimiter, majorGradeCap, or minorConcerns depending on severity.\n" +
+"- For Pokemon holo, foil, chrome, and glossy cards, visible surface scratches should materially reduce PSA 10 confidence.\n" +
   "- Do not give a PSA 10 candidate label unless all visible categories look exceptionally clean and image quality is good enough to justify it.\n\n" +
 
   "Use card-type awareness:\n" +
