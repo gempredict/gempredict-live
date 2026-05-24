@@ -250,6 +250,23 @@ function ImageAnalysisCard({ data }) {
     {data.confidenceLevel || "Moderate"}
   </div>
 </div>
+        <div style={{ background: "#fefce8", border: "1px solid #fde68a", borderRadius: 10, padding: "0.8rem 1rem", marginBottom: "1rem" }}>
+  <div style={{ fontSize: "0.65rem", fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.08em", color: "#a16207", marginBottom: "0.35rem" }}>
+    Major Grade Cap
+  </div>
+  <div style={{ fontSize: "0.84rem", color: C.inkMid, lineHeight: 1.6 }}>
+    {data.majorGradeCap || data.primaryLimiter || "No major grade cap identified."}
+  </div>
+</div>
+
+<div style={{ background: C.cream, border: "1px solid " + C.border, borderRadius: 10, padding: "0.8rem 1rem", marginBottom: "1rem" }}>
+  <div style={{ fontSize: "0.65rem", fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.08em", color: C.inkSoft, marginBottom: "0.35rem" }}>
+    Minor Concerns
+  </div>
+  <div style={{ fontSize: "0.84rem", color: C.inkMid, lineHeight: 1.6 }}>
+    {data.minorConcerns || "No additional visible concerns identified."}
+  </div>
+</div>
 
         {/* Overall score bar */}
         <div style={{ background: C.cream, borderRadius: 10, padding: "0.85rem 1rem", marginBottom: "1rem" }}>
