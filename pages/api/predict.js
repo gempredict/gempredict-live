@@ -252,9 +252,25 @@ const hasModerateDamage =
 const hasMinorDamage =
   /corner softness|soft corner|soft corners|visible scratches|surface scratches|surface wear|edge wear|chipping|chip|print line|print lines|roller mark|roller lines/.test(combinedNotes);
 
+  const minorDamageCount = [
+  /corner softness|soft corner|soft corners/.test(combinedNotes),
+  /visible scratches|surface scratches|surface wear/.test(combinedNotes),
+  /edge wear|heavy edge wear|chipping|chip/.test(combinedNotes),
+  /print line|print lines|roller mark|roller lines/.test(combinedNotes),
+  /off-center|centering issue|centering variance/.test(combinedNotes),
+  /whitening|edge whitening|corner whitening/.test(combinedNotes)
+].filter(Boolean).length;
+
 let forcedLimiter = null;
 let forcedGrade = null;
 let forcedScore = null;
+
+  if (minorDamageCount >= 3 && !hasModerateDamage && !hasSevereDamage && !hasCatastrophicDamage) {
+  forcedLimiter = "Multiple smaller defects combine to significantly lower high-grade potential.";
+  forcedGrade = "PSA 5-7 ceiling likely";
+  forcedScore = 6;
+}
+else
 
 if (hasCatastrophicDamage) {
   forcedLimiter = "Heavy structural damage such as multiple creases, severe bends, or destroyed corners is a catastrophic grade cap.";
