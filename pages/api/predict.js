@@ -240,6 +240,9 @@ const combinedNotes = [
   raw.imageSummary
 ].join(" ").toLowerCase();
 
+  const hasCatastrophicDamage =
+  /multiple creases|heavy creases|major creases|deep creases|creased throughout|badly creased|heavily creased|large crease|large creases|major bend|badly bent|heavily bent|trashed|heavily damaged|major structural damage|severe structural damage|corner destroyed|corners destroyed|severe corner damage|bad corner damage/.test(combinedNotes);
+
 const hasSevereDamage =
   /crease|creased|wrinkle|fold|heavy crease|major crease|corner fold|peeling|structural damage|warped|warping/.test(combinedNotes);
 
@@ -253,10 +256,15 @@ let forcedLimiter = null;
 let forcedGrade = null;
 let forcedScore = null;
 
-if (hasSevereDamage) {
+if (hasCatastrophicDamage) {
+  forcedLimiter = "Heavy structural damage such as multiple creases, severe bends, or destroyed corners is a catastrophic grade cap.";
+  forcedGrade = "PSA 1-2 ceiling likely";
+  forcedScore = 1;
+}
+else if (hasSevereDamage) {
   forcedLimiter = "Visible structural damage such as creasing, folding, or warping is a severe grade cap.";
-  forcedGrade = "PSA 1-3 ceiling likely";
-  forcedScore = 2;
+  forcedGrade = "PSA 2-4 ceiling likely";
+  forcedScore = 3;
 }
 else if (hasModerateDamage) {
   forcedLimiter = "Visible bends, dents, whitening, or structural wear significantly limit grading upside.";
@@ -288,11 +296,11 @@ estimatedGrade: forcedGrade
   ? forcedGrade
   : safeStr(raw.estimatedGrade, "Unable to estimate."),
 
-worthGrading: (hasSevereDamage || hasModerateDamage)
+worthGrading: (hasCatastrophicDamage || hasSevereDamage || hasModerateDamage)
   ? false
   : (typeof raw.worthGrading === "boolean" ? raw.worthGrading : null),
 
-worthGradingReason: (hasSevereDamage || hasModerateDamage)
+worthGradingReason: (hasCatastrophicDamage || hasSevereDamage || hasModerateDamage)
   ? "Visible structural damage or moderate defects usually make this a poor grading candidate unless the card is extremely rare or valuable."
   : safeStr(raw.worthGradingReason, "Insufficient image quality to determine."),
 
