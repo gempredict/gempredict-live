@@ -224,6 +224,32 @@ function ImageAnalysisCard({ data }) {
             );
           })}
         </div>
+        <div style={{ background: C.cream, border: "1px solid " + C.border, borderRadius: 10, padding: "0.8rem 1rem", marginBottom: "1rem" }}>
+  <div style={{ fontSize: "0.65rem", fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.08em", color: C.inkSoft, marginBottom: "0.35rem" }}>
+    Grade Ceiling
+  </div>
+  <div style={{ fontSize: "0.9rem", fontWeight: 700, color: C.ink }}>
+    {data.gradeCeiling || data.estimatedGrade || "Unknown"}
+  </div>
+</div>
+
+<div style={{ background: "#fff7ed", border: "1px solid #fed7aa", borderRadius: 10, padding: "0.8rem 1rem", marginBottom: "1rem" }}>
+  <div style={{ fontSize: "0.65rem", fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.08em", color: "#c2410c", marginBottom: "0.35rem" }}>
+    Primary Grade Limiter
+  </div>
+  <div style={{ fontSize: "0.84rem", color: C.inkMid, lineHeight: 1.6 }}>
+    {data.primaryLimiter || "No major limiter identified from the uploaded image."}
+  </div>
+</div>
+
+<div style={{ background: C.cream, border: "1px solid " + C.border, borderRadius: 10, padding: "0.8rem 1rem", marginBottom: "1rem" }}>
+  <div style={{ fontSize: "0.65rem", fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.08em", color: C.inkSoft, marginBottom: "0.35rem" }}>
+    Confidence Level
+  </div>
+  <div style={{ fontSize: "0.9rem", fontWeight: 700, color: C.ink }}>
+    {data.confidenceLevel || "Moderate"}
+  </div>
+</div>
 
         {/* Overall score bar */}
         <div style={{ background: C.cream, borderRadius: 10, padding: "0.85rem 1rem", marginBottom: "1rem" }}>
