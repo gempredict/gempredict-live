@@ -348,6 +348,7 @@ async function fetchImageAnalysis(imageBuffer, imageMimeType, cardName, cardType
     "- Surface analysis is confidence-sensitive. If glare, shadows, sleeve plastic, blur, reflections, or low image quality prevent reliable inspection, clearly explain that surface confidence is limited instead of assuming the surface is clean.\n" +
   "- Corners and edges should be evaluated for whitening, chipping, fraying, soft corners, dents, and rough cuts.\n" +
   "- One moderate defect can cap the card below a PSA 10 even if other categories look strong.\n" +
+    "Avoid generic grading summaries. Identify the most likely grade cap first, then describe smaller concerns separately.\n" +
   "- Do not give a PSA 10 candidate label unless all visible categories look exceptionally clean and image quality is good enough to justify it.\n\n" +
 
   "Use card-type awareness:\n" +
@@ -372,6 +373,8 @@ async function fetchImageAnalysis(imageBuffer, imageMimeType, cardName, cardType
   "overallScore - realistic estimated grade ceiling from visible evidence, 1-10 integer (integer)\n" +
     "gradeCeiling - realistic PSA ceiling based on visible condition like 'PSA 8 ceiling', 'PSA 9 candidate', or 'PSA 10 upside with risk' (string)\n" +
 "primaryLimiter - the single biggest visible issue or uncertainty likely limiting the grade ceiling (string)\n" +
+    "majorGradeCap - the biggest visible issue most likely preventing a higher grade, written collector-style (string)\n" +
+"minorConcerns - short collector-style list of smaller visible risks or uncertainties separated by commas (string)\n" +
 "confidenceLevel - one of: high, moderate, low (string)\n" +
   "gradingRisk - 1-2 sentences explaining the main grade cap or uncertainty. This must directly justify the overallScore (string)\n" +
   "estimatedGrade - short collector-friendly label like 'PSA 8 ceiling', 'PSA 9 candidate', 'PSA 9 with PSA 10 upside', or 'PSA 10 candidate but confidence limited' (string)\n" +
