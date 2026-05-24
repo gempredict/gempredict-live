@@ -261,6 +261,17 @@ const hasMinorDamage =
   /whitening|edge whitening|corner whitening/.test(combinedNotes)
 ].filter(Boolean).length;
 
+  const severeSignalCount = [
+  /crease|creased|surface crease|wrinkle/.test(combinedNotes),
+  /bend|bent|major bend|badly bent|heavily bent/.test(combinedNotes),
+  /corner damage|severe corner damage|bad corner damage|jacked up corners|multiple damaged corners/.test(combinedNotes),
+  /dent|dented|indentation|pressure mark/.test(combinedNotes),
+  /heavy whitening|major whitening|heavy edge wear/.test(combinedNotes)
+].filter(Boolean).length;
+
+const hasStackedSevereDamage =
+  severeSignalCount >= 2;
+
   const hasStackedModerateDamage =
   hasModerateDamage && minorDamageCount >= 2;
 
@@ -272,6 +283,11 @@ let forcedScore = null;
   forcedLimiter = "Heavy structural damage such as multiple creases, severe bends, or destroyed corners is a catastrophic grade cap.";
   forcedGrade = "PSA 1-2 ceiling likely";
   forcedScore = 1;
+}
+    else if (hasStackedSevereDamage) {
+  forcedLimiter = "Multiple serious condition issues combine into a severe structural grade cap.";
+  forcedGrade = "PSA 2-3 ceiling likely";
+  forcedScore = 2;
 }
 else if (hasSevereDamage) {
   forcedLimiter = "Visible structural damage such as creasing, folding, or warping is a severe grade cap.";
