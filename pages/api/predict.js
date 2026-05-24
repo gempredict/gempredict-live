@@ -259,7 +259,7 @@ const forcedLimiter = hasMajorDamage
     edgesNote:      safeStr(raw.edgesNote,       "Edges not assessed."),
     surfaceNote:    safeStr(raw.surfaceNote,     "Surface not assessed."),
     // Overall
-    overallScore:       safeScore(raw.overallScore),       // 0-10
+    overallScore: hasMajorDamage ? 3 : safeScore(raw.overallScore), // 0-10
     gradingRisk: forcedLimiter || safeStr(raw.gradingRisk, "Grading risk could not be determined from this image."),
 
 estimatedGrade: hasMajorDamage
