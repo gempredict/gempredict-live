@@ -244,11 +244,11 @@ const combinedNotes = [
   /multiple creases|heavy creases|major creases|deep creases|creased throughout|badly creased|heavily creased|large crease|large creases|major bend|badly bent|heavily bent|trashed|heavily damaged|major structural damage|severe structural damage|corner destroyed|corners destroyed|severe corner damage|bad corner damage/.test(combinedNotes);
 
 const hasSevereDamage =
-  /crease|creased|wrinkle|fold|heavy crease|major crease|corner fold|peeling|structural damage|warped|warping/.test(combinedNotes);
-
+  /crease|creased|wrinkle|heavy crease|major crease|peeling|structural damage|warped|warping/.test(combinedNotes);
+  
 const hasModerateDamage =
-  /bend|bent|dent|dented|corner bend|surface damage|indentation|deep scratch|deep scratches|heavy whitening|major whitening|heavy edge wear|surface crease|pressure mark/.test(combinedNotes);
-
+  /bend|bent|dent|dented|corner bend|corner fold|corner folds|surface damage|indentation|deep scratch|deep scratches|heavy whitening|major whitening|heavy edge wear|surface crease|pressure mark/.test(combinedNotes);
+  
 const hasMinorDamage =
   /corner softness|soft corner|soft corners|visible scratches|surface scratches|surface wear|edge wear|chipping|chip|print line|print lines|roller mark|roller lines/.test(combinedNotes);
 
