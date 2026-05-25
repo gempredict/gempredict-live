@@ -258,7 +258,37 @@ function ImageAnalysisCard({ data }) {
     {data.majorGradeCap || data.primaryLimiter || "No major grade cap identified."}
   </div>
 </div>
+<div style={{ background: C.cream, border: "1px solid " + C.border, borderRadius: 10, padding: "0.8rem 1rem", marginBottom: "1rem" }}>
+  <div style={{ fontSize: "0.65rem", fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.08em", color: C.inkSoft, marginBottom: "0.35rem" }}>
+    Most Likely Outcome
+  </div>
 
+  <div style={{ fontSize: "0.9rem", fontWeight: 700, color: C.ink, marginBottom: "0.35rem" }}>
+    {data.mostLikelyGradeRange || "Uncertain"}
+  </div>
+
+  <div style={{ fontSize: "0.84rem", color: C.inkMid, lineHeight: 1.6 }}>
+    {data.psa10Upside}
+  </div>
+</div>
+
+{data.gemRiskFactors && data.gemRiskFactors.length > 0 && (
+  <div style={{ background: "#fff8e7", border: "1px solid #f5d487", borderRadius: 10, padding: "0.8rem 1rem", marginBottom: "1rem" }}>
+    <div style={{ fontSize: "0.65rem", fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.08em", color: "#8a6a00", marginBottom: "0.45rem" }}>
+      PSA 10 Risk Factors
+    </div>
+
+    <ul style={{ margin: 0, paddingLeft: "1rem" }}>
+      {data.gemRiskFactors.map(function(risk, i) {
+        return (
+          <li key={i} style={{ fontSize: "0.82rem", color: C.inkMid, marginBottom: "0.3rem", lineHeight: 1.5 }}>
+            {risk}
+          </li>
+        );
+      })}
+    </ul>
+  </div>
+)}
 <div style={{ background: C.cream, border: "1px solid " + C.border, borderRadius: 10, padding: "0.8rem 1rem", marginBottom: "1rem" }}>
   <div style={{ fontSize: "0.65rem", fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.08em", color: C.inkSoft, marginBottom: "0.35rem" }}>
     Minor Concerns
