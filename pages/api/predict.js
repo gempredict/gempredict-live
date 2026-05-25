@@ -244,35 +244,10 @@ const hasImageQualityIssues =
   /glare|reflection|reflections|blurry|blur|out of focus|poor lighting|lighting issue|shadow|shadows|low visibility|surface not fully visible|unclear surface|image quality limited|difficult to inspect|angle prevents|hard to determine|holo glare|foil glare/.test(combinedNotes);
 
   const hasCatastrophicDamage =
-  /multiple creases|heavy creases|major creases|deep creases|creased throughout|badly creased|heavily creased|large crease|large creases|major bend|badly bent|heavily bent|trashed|heavily damaged|major structural damage|severe structural damage|corner destroyed|corners destroyed|severe corner damage|bad corner damage/.test(combinedNotes);
+  /multiple creases|heavy creases|major creases|deep creases|creased throughout|badly creased|heavily creased|large crease|large creases|trashed|heavily damaged|major structural damage|severe structural damage|corner destroyed|corners destroyed/.test(combinedNotes);
 
-const hasSevereDamage =
-  /crease|creased|surface crease|wrinkle|fold|peeling|structural damage|warped|warping|major bend|badly bent|heavily bent|jacked up corners|multiple damaged corners/.test(combinedNotes);
-
-const hasModerateDamage =
-  /bend|bent|dent|dented|corner bend|corner fold|corner folds|heavy whitening|major whitening|heavy edge wear|corner damage/.test(combinedNotes);
-
-const hasMinorDamage =
-  /corner softness|soft corner|soft corners|visible scratches|surface scratches|surface wear|edge wear|chipping|chip|print line|print lines|roller mark|roller lines/.test(combinedNotes);
-
-const minorDamageCount = [
-  /corner softness|soft corner|soft corners/.test(combinedNotes),
-  /visible scratches|surface scratches|surface wear/.test(combinedNotes),
-  /edge wear|heavy edge wear|chipping|chip/.test(combinedNotes),
-  /print line|print lines|roller mark|roller lines/.test(combinedNotes),
-  /off-center|centering issue|centering variance/.test(combinedNotes),
-  /whitening|edge whitening|corner whitening/.test(combinedNotes)
-].filter(Boolean).length;
-
-const severeSignalCount = [
-  /crease|creased|wrinkle|fold/.test(combinedNotes),
-  /bend|bent|major bend|badly bent|heavily bent/.test(combinedNotes),
-  /corner damage|severe corner damage|bad corner damage|jacked up corners|multiple damaged corners|corner bend|corner fold|corner folds/.test(combinedNotes),
-  /heavy whitening|major whitening|heavy edge wear/.test(combinedNotes)
-].filter(Boolean).length;
-
-const hasStackedSevereDamage = severeSignalCount >= 2;
-const hasStackedModerateDamage = hasModerateDamage && minorDamageCount >= 2;
+const hasObviousStructuralDamage =
+  /crease|creased|wrinkle|fold|bend|bent|corner bend|corner fold|peeling|warped|warping/.test(combinedNotes);
 
 let forcedLimiter = null;
 let forcedGrade = null;
@@ -284,41 +259,15 @@ if (hasImageQualityIssues) {
 }
 
 if (hasCatastrophicDamage) {
-  forcedLimiter = "Heavy structural damage such as multiple creases, severe bends, or destroyed corners is a catastrophic grade cap.";
-  forcedGrade = "PSA 1-2 ceiling likely";
-  forcedScore = 1;
-}
-else if (hasStackedSevereDamage) {
-  forcedLimiter = "Multiple serious condition issues combine into a severe structural grade cap.";
-  forcedGrade = "PSA 2-3 ceiling likely";
+  forcedLimiter = "Heavy structural damage is visible and creates a major grading cap.";
+  forcedGrade = "PSA 1-3 ceiling likely";
   forcedScore = 2;
 }
-else if (hasSevereDamage) {
-  forcedLimiter = "Visible structural damage such as creasing, folding, bending, or warping is a severe grade cap.";
-  forcedGrade = "PSA 2-4 ceiling likely";
-  forcedScore = 3;
-}
-else if (hasStackedModerateDamage) {
-  forcedLimiter = "Moderate damage combined with multiple smaller issues creates a compounded grade cap.";
-  forcedGrade = "PSA 3-5 ceiling likely";
-  forcedScore = 4;
-}
-else if (hasModerateDamage) {
-  forcedLimiter = "Visible bends, dents, whitening, corner folds, or structural wear significantly limit grading upside.";
-  forcedGrade = "PSA 4-6 ceiling likely";
+else if (hasObviousStructuralDamage) {
+  forcedLimiter = "Visible structural damage such as a crease, bend, fold, or corner bend may significantly cap the grade.";
+  forcedGrade = "PSA 3-6 ceiling likely";
   forcedScore = 5;
-}
-else if (minorDamageCount >= 3) {
-  forcedLimiter = "Multiple smaller defects combine to significantly lower high-grade potential.";
-  forcedGrade = "PSA 5-7 ceiling likely";
-  forcedScore = 6;
-}
-else if (hasMinorDamage) {
-  forcedLimiter = "Visible surface or edge wear slightly limits top-end grading potential.";
-  forcedGrade = "PSA 7-8 ceiling likely";
-  forcedScore = 7;
-}
-  
+}  
   return {
     // Per-attribute ratings
     centering:      safeRating(raw.centering),
@@ -338,11 +287,11 @@ estimatedGrade: forcedGrade
   ? forcedGrade
   : safeStr(raw.estimatedGrade, "Unable to estimate."),
 
-worthGrading: (hasCatastrophicDamage || hasSevereDamage || hasModerateDamage)
+worthGrading: (hasCatastrophicDamage || hasObviousStructuralDamage)
   ? false
   : (typeof raw.worthGrading === "boolean" ? raw.worthGrading : null),
 
-worthGradingReason: (hasCatastrophicDamage || hasSevereDamage || hasModerateDamage)
+worthGradingReason: (hasCatastrophicDamage || hasObviousStructuralDamage)
   ? "Visible structural damage or moderate defects usually make this a poor grading candidate unless the card is extremely rare or valuable."
   : safeStr(raw.worthGradingReason, "Insufficient image quality to determine."),
 
