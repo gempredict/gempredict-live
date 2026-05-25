@@ -250,7 +250,7 @@ const hasSevereDamage =
   /crease|creased|surface crease|wrinkle|fold|peeling|structural damage|warped|warping|major bend|badly bent|heavily bent|jacked up corners|multiple damaged corners/.test(combinedNotes);
 
 const hasModerateDamage =
-  /bend|bent|dent|dented|corner bend|corner fold|corner folds|surface damage|indentation|deep scratch|deep scratches|heavy whitening|major whitening|heavy edge wear|pressure mark|corner damage/.test(combinedNotes);
+  /bend|bent|dent|dented|corner bend|corner fold|corner folds|heavy whitening|major whitening|heavy edge wear|corner damage/.test(combinedNotes);
 
 const hasMinorDamage =
   /corner softness|soft corner|soft corners|visible scratches|surface scratches|surface wear|edge wear|chipping|chip|print line|print lines|roller mark|roller lines/.test(combinedNotes);
@@ -265,10 +265,9 @@ const minorDamageCount = [
 ].filter(Boolean).length;
 
 const severeSignalCount = [
-  /crease|creased|surface crease|wrinkle|fold/.test(combinedNotes),
+  /crease|creased|wrinkle|fold/.test(combinedNotes),
   /bend|bent|major bend|badly bent|heavily bent/.test(combinedNotes),
   /corner damage|severe corner damage|bad corner damage|jacked up corners|multiple damaged corners|corner bend|corner fold|corner folds/.test(combinedNotes),
-  /dent|dented|indentation|pressure mark/.test(combinedNotes),
   /heavy whitening|major whitening|heavy edge wear/.test(combinedNotes)
 ].filter(Boolean).length;
 
