@@ -247,7 +247,7 @@ const hasImageQualityIssues =
   /multiple creases|heavy creases|major creases|deep creases|creased throughout|badly creased|heavily creased|large crease|large creases|trashed|heavily damaged|major structural damage|severe structural damage|corner destroyed|corners destroyed/.test(combinedNotes);
 
 const hasObviousStructuralDamage =
-  /crease|creased|wrinkle|fold|bend|bent|corner bend|corner fold|peeling|warped|warping/.test(combinedNotes);
+  /visible crease|obvious crease|clear crease|major crease|deep crease|visible bend|obvious bend|corner bend detected|corner fold detected|warped|warping|structural damage/.test(combinedNotes);
 
 let forcedLimiter = null;
 let forcedGrade = null;
