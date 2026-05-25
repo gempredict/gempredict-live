@@ -310,6 +310,19 @@ imageSummary: hasImageQualityIssues
     " Surface glare, reflections, lighting, or image quality may hide additional defects."
   : safeStr(raw.imageSummary, "No summary available."),
 
+    mostLikelyGradeRange:
+  safeStr(raw.mostLikelyGradeRange, "Most likely PSA range uncertain."),
+
+psa10Upside:
+  safeStr(raw.psa10Upside, "PSA 10 upside could not be confidently determined."),
+
+gemRiskFactors:
+  Array.isArray(raw.gemRiskFactors)
+    ? raw.gemRiskFactors.slice(0, 4).map(function(v) {
+        return typeof v === "string" ? v.slice(0, 120) : null;
+      }).filter(Boolean)
+    : [],
+
 minorConcerns: safeStr(raw.minorConcerns, "No additional visible concerns identified."),
   };
 }
@@ -451,6 +464,9 @@ async function fetchImageAnalysis(imageBuffer, imageMimeType, cardName, cardType
 "confidenceLevel - one of: high, moderate, low (string)\n" +
   "gradingRisk - 1-2 sentences explaining the main grade cap or uncertainty. This must directly justify the overallScore (string)\n" +
   "estimatedGrade - short collector-friendly label like 'PSA 8 ceiling', 'PSA 9 candidate', 'PSA 9 with PSA 10 upside', or 'PSA 10 candidate but confidence limited' (string)\n" +
+  "mostLikelyGradeRange - short realistic range like 'PSA 8-9 likely' or 'PSA 9 with outside PSA 10 upside' (string)\n" +
+  "psa10Upside - one sentence explaining whether PSA 10 is realistically achievable from the visible image (string)\n" +
+  "gemRiskFactors - array of 2-4 short PSA 10 risk factors focused on collector submission concerns (array of strings)\n" +
   "worthGrading - based only on visible condition, whether the card appears worth grading before considering market value (boolean)\n" +
   "worthGradingReason - 1 sentence explaining the grading recommendation from visible condition only (string)\n" +
   "imageSummary - 1-2 sentences summarizing the card's visible condition and confidence level (string)\n\n" +
