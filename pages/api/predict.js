@@ -240,6 +240,9 @@ const combinedNotes = [
   raw.imageSummary
 ].join(" ").toLowerCase();
 
+const hasImageQualityIssues =
+  /glare|reflection|reflections|blurry|blur|out of focus|poor lighting|lighting issue|shadow|shadows|low visibility|surface not fully visible|unclear surface|image quality limited|difficult to inspect|angle prevents|hard to determine|holo glare|foil glare/.test(combinedNotes);
+
   const hasCatastrophicDamage =
   /multiple creases|heavy creases|major creases|deep creases|creased throughout|badly creased|heavily creased|large crease|large creases|major bend|badly bent|heavily bent|trashed|heavily damaged|major structural damage|severe structural damage|corner destroyed|corners destroyed|severe corner damage|bad corner damage/.test(combinedNotes);
 
@@ -275,6 +278,11 @@ const hasStackedModerateDamage = hasModerateDamage && minorDamageCount >= 2;
 let forcedLimiter = null;
 let forcedGrade = null;
 let forcedScore = null;
+let forcedConfidence = null;
+
+if (hasImageQualityIssues) {
+  forcedConfidence = "low";
+}
 
 if (hasCatastrophicDamage) {
   forcedLimiter = "Heavy structural damage such as multiple creases, severe bends, or destroyed corners is a catastrophic grade cap.";
@@ -346,6 +354,13 @@ gradeCeiling: forcedGrade
 primaryLimiter: forcedLimiter || safeStr(raw.primaryLimiter, "No primary limiter identified."),
 
 majorGradeCap: forcedLimiter || safeStr(raw.majorGradeCap, "No major grade cap identified."),
+
+confidenceLevel: forcedConfidence || safeStr(raw.confidenceLevel, "moderate"),
+
+imageSummary: hasImageQualityIssues
+  ? safeStr(raw.imageSummary, "Image quality limits grading confidence.") +
+    " Surface glare, reflections, lighting, or image quality may hide additional defects."
+  : safeStr(raw.imageSummary, "No summary available."),
 
 minorConcerns: safeStr(raw.minorConcerns, "No additional visible concerns identified."),
   };
