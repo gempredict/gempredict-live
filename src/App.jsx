@@ -656,6 +656,9 @@ const emailRef    = useRef(null);
         formData.append("condition", condition);
         if (email.trim()) formData.append("email", email.trim());
         formData.append("image", imageFile);
+        if (backImageFile) {
+  formData.append("backImage", backImageFile);
+}
         res = await fetch("/api/predict", { method: "POST", body: formData });
       } else {
         // JSON when no image
@@ -682,7 +685,13 @@ if (data.imageAnalysis) setImageAnalysis(data.imageAnalysis);
       if (data.remaining != null) setRemaining(data.remaining);
       if (data.emailSaved) { setEmailConfirm(true); track("waitlist_signup"); }
       addToHistory(cardName.trim(), cardType, cardSet.trim());
-      track("prediction_submitted", { cardType, condition, hasImage: !!imageFile });
+      track("prediction_submitted", {
+  cardType,
+  condition,
+  hasImage: !!imageFile,
+  hasBackImage: !!backImageFile,
+});
+    
 
     } catch { setError("Network error — check your connection and try again."); }
     finally   { setLoading(false); }
