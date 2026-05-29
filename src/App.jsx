@@ -541,12 +541,17 @@ export default function App() {
   const [savedReports,    setSavedReports]    = useState([]);
 
   // Image upload state
-  const [imageFile,       setImageFile]       = useState(null);   // File object
-  const [imagePreview,    setImagePreview]    = useState(null);   // Object URL for preview
-  const fileInputRef = useRef(null);
+const [imageFile,       setImageFile]       = useState(null);   // Front image
+const [imagePreview,    setImagePreview]    = useState(null);
 
-  const cardNameRef = useRef(null);
-  const emailRef    = useRef(null);
+const [backImageFile,   setBackImageFile]   = useState(null);   // Back image
+const [backImagePreview,setBackImagePreview]= useState(null);
+
+const fileInputRef = useRef(null);
+const backFileInputRef = useRef(null);
+
+const cardNameRef = useRef(null);
+const emailRef    = useRef(null);
 
   useEffect(function() {
     setHistory(lsGet(LS_HISTORY) || []);
@@ -571,6 +576,28 @@ export default function App() {
     setImagePreview(URL.createObjectURL(file));
     setError("");
   }
+
+  function handleBackImageSelect(file) {
+  if (!file) return;
+
+  // Only allow images
+  if (!file.type.startsWith("image/")) {
+    setError("Please select an image file (JPEG, PNG, WebP, etc.)");
+    return;
+  }
+
+  // 5 MB client-side guard
+  if (file.size > 5 * 1024 * 1024) {
+    setError("Back image must be under 5 MB.");
+    return;
+  }
+
+  if (backImagePreview) URL.revokeObjectURL(backImagePreview);
+
+  setBackImageFile(file);
+  setBackImagePreview(URL.createObjectURL(file));
+  setError("");
+}
 
   function handleImageDrop(e) {
     e.preventDefault();
@@ -843,7 +870,42 @@ if (data.imageAnalysis) setImageAnalysis(data.imageAnalysis);
                 style={{ display: "none" }}
                 onChange={function(e) { handleImageSelect(e.target.files && e.target.files[0]); }}
               />
+              <input
+  ref={backFileInputRef}
+  type="file"
+  accept="image/*"
+  style={{ display: "none" }}
+  onChange={function(e) {
+    handleBackImageSelect(e.target.files && e.target.files[0]);
+  }}
+/>
             </div>
+            <div style={{ marginTop: "0.75rem" }}>
+  <button
+    type="button"
+    onClick={function() {
+      backFileInputRef.current && backFileInputRef.current.click();
+    }}
+    style={{
+      fontSize: "0.78rem",
+      fontWeight: 600,
+      background: C.white,
+      border: "1px solid " + C.border,
+      color: C.inkMid,
+      padding: "0.55rem 0.9rem",
+      borderRadius: 10,
+      cursor: "pointer"
+    }}
+  >
+    Upload Back Photo (Optional)
+  </button>
+
+  {backImageFile && (
+    <div style={{ marginTop: "0.5rem", fontSize: "0.75rem", color: C.inkSoft }}>
+      ✓ {backImageFile.name}
+    </div>
+  )}
+</div>
 <div
   style={{
     marginTop: "1rem",
