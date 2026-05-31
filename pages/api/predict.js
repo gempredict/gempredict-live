@@ -102,7 +102,7 @@ async function logRequest({ ip, cardName, cardType, cardSet, status, errorMessag
 
 // ─── Request parsing ──────────────────────────────────────────────────────────
 // Parses both multipart/form-data (with optional image) and application/json.
-// Returns { fields, imageBuffer, imageMimeType }.
+// Returns { fields, imageBuffer, imageMimeType, backImageBuffer, backImageMimeType }.
 async function parseRequest(req) {
   const contentType = req.headers["content-type"] || "";
 
@@ -130,6 +130,8 @@ async function parseRequest(req) {
 
         let imageBuffer = null;
         let imageMimeType = null;
+        let backImageBuffer = null;
+        let backImageMimeType = null;
 
         const imageFile = files.image ? (Array.isArray(files.image) ? files.image[0] : files.image) : null;
         if (imageFile && imageFile.filepath) {
@@ -143,10 +145,26 @@ async function parseRequest(req) {
           }
         }
 
-        resolve({ fields: flat, imageBuffer, imageMimeType });
-      });
-    });
+        const backImageFile = files.backImage ? (Array.isArray(files.backImage) ? files.backImage[0] : files.backImage) : null;
+if (backImageFile && backImageFile.filepath) {
+  try {
+    backImageBuffer = fs.readFileSync(backImageFile.filepath);
+    backImageMimeType = backImageFile.mimetype || "image/jpeg";
+
+    // Clean up temp file — non-fatal
+    try { fs.unlinkSync(backImageFile.filepath); } catch {}
+  } catch (readErr) {
+    console.error("[GemPredict] Back image read error:", readErr.message);
   }
+}
+
+       resolve({
+  fields: flat,
+  imageBuffer,
+  imageMimeType,
+  backImageBuffer,
+  backImageMimeType,
+});
 
   // JSON — collect body manually (bodyParser is disabled globally for this route)
   return new Promise(function(resolve, reject) {
@@ -333,13 +351,18 @@ const anthropic = process.env.CLAUDE_API_KEY
   : null;
 
 // ─── Text-only prediction (existing logic, unchanged) ─────────────────────────
-async function fetchPrediction(cardName, cardType, cardSet, condition) {
+async function fetchPrediction(
+  cardName,
+  cardType,
+  cardSet,
+  condition
+) {
   if (!anthropic) throw new Error("NO_API_KEY");
 
   const typeLabel      = CARD_TYPE_LABELS[cardType] || "Card";
-  const setLabel       = cardSet || "not specified";
-  const conditionLabel = CONDITION_LABELS[condition] || CONDITION_LABELS.strong;
-
+const setLabel       = cardSet || "not specified";
+const conditionLabel = CONDITION_LABELS[condition] || CONDITION_LABELS.strong;
+  
   const prompt =
     "You are an experienced card grading ROI analyst helping collectors make smarter submission decisions.\n\n" +
     "Your job is to give a realistic, conservative grading analysis — not hype. " +
@@ -396,16 +419,35 @@ async function fetchPrediction(cardName, cardType, cardSet, condition) {
 // ─── Vision analysis (new) ────────────────────────────────────────────────────
 // Sends the card image to Claude with a structured grading prompt.
 // Returns a normalised imageAnalysis object, or null on failure (non-fatal).
-async function fetchImageAnalysis(imageBuffer, imageMimeType, cardName, cardType) {
+async function fetchImageAnalysis(
+  imageBuffer,
+  imageMimeType,
+  backImageBuffer,
+  backImageMimeType,
+  cardName,
+  cardType
+) {
   if (!anthropic) throw new Error("NO_API_KEY");
   if (!imageBuffer || imageBuffer.length === 0) return null;
 
   const typeLabel = CARD_TYPE_LABELS[cardType] || "Card";
-  const base64    = imageBuffer.toString("base64");
+  const base64 = imageBuffer.toString("base64");
 
-  // Validate mime type for Claude — only jpeg, png, gif, webp accepted
-  const VALID_MIME = ["image/jpeg", "image/png", "image/gif", "image/webp"];
-  const mime = VALID_MIME.includes(imageMimeType) ? imageMimeType : "image/jpeg";
+// Validate mime type for Claude
+const VALID_MIME = ["image/jpeg", "image/png", "image/gif", "image/webp"];
+
+const mime = VALID_MIME.includes(imageMimeType)
+  ? imageMimeType
+  : "image/jpeg";
+
+const backBase64 = backImageBuffer
+  ? backImageBuffer.toString("base64")
+  : null;
+
+const backMime = backImageMimeType &&
+  VALID_MIME.includes(backImageMimeType)
+  ? backImageMimeType
+  : "image/jpeg";
 
   const imagePrompt =
   "You are an expert card pre-grader helping a collector decide whether this card is worth submitting to PSA.\n\n" +
@@ -495,11 +537,33 @@ async function fetchImageAnalysis(imageBuffer, imageMimeType, cardName, cardType
     messages: [{
       role: "user",
       content: [
-        {
-          type: "image",
-          source: { type: "base64", media_type: mime, data: base64 },
+  {
+    type: "image",
+    source: {
+      type: "base64",
+      media_type: mime,
+      data: base64,
+    },
+  },
+
+  ...(backBase64
+    ? [{
+        type: "image",
+        source: {
+          type: "base64",
+          media_type: backMime,
+          data: backBase64,
         },
-        { type: "text", text: imagePrompt },
+      }]
+    : []),
+
+  {
+    type: "text",
+    text: imagePrompt +
+      (backBase64
+        ? "\n\nBoth front and back images are provided. Evaluate both sides when assessing confidence, corners, edges, whitening, and grading risk."
+        : "\n\nOnly the front image is provided. Missing back image should reduce confidence where appropriate."),
+  },
       ],
     }],
   });
@@ -528,12 +592,18 @@ export default async function handler(req, res) {
   }
 
   // Parse request — handles both multipart and JSON
-  let fields, imageBuffer, imageMimeType;
+  let fields,
+    imageBuffer,
+    imageMimeType,
+    backImageBuffer,
+    backImageMimeType;
   try {
     const parsed = await parseRequest(req);
-    fields       = parsed.fields;
-    imageBuffer  = parsed.imageBuffer;
-    imageMimeType = parsed.imageMimeType;
+    fields = parsed.fields;
+imageBuffer = parsed.imageBuffer;
+imageMimeType = parsed.imageMimeType;
+backImageBuffer = parsed.backImageBuffer;
+backImageMimeType = parsed.backImageMimeType;
   } catch (parseErr) {
     console.error("[GemPredict] Request parse error:", parseErr.message);
     return res.status(400).json({ error: "Could not read request. Please try again." });
@@ -575,7 +645,14 @@ export default async function handler(req, res) {
     const [prediction, imageAnalysis] = await Promise.all([
       fetchPrediction(cardName, cardType, cardSet, condition),
       imageBuffer
-        ? fetchImageAnalysis(imageBuffer, imageMimeType, cardName, cardType).catch(function(err) {
+        ? fetchImageAnalysis(
+  imageBuffer,
+  imageMimeType,
+  backImageBuffer,
+  backImageMimeType,
+  cardName,
+  cardType
+).catch(function(err) {
             console.error("[GemPredict] Image analysis error (non-fatal):", err.message);
             return null;
           })
