@@ -158,14 +158,16 @@ if (backImageFile && backImageFile.filepath) {
   }
 }
 
-       resolve({
-  fields: flat,
-  imageBuffer,
-  imageMimeType,
-  backImageBuffer,
-  backImageMimeType,
-});
-
+     resolve({
+          fields: flat,
+          imageBuffer,
+          imageMimeType,
+          backImageBuffer,
+          backImageMimeType,
+        });
+      });
+    });
+  }
   // JSON — collect body manually (bodyParser is disabled globally for this route)
   return new Promise(function(resolve, reject) {
     let body = "";
@@ -173,7 +175,13 @@ if (backImageFile && backImageFile.filepath) {
     req.on("end", function() {
       try {
         const parsed = body ? JSON.parse(body) : {};
-        resolve({ fields: parsed, imageBuffer: null, imageMimeType: null });
+       resolve({
+  fields: parsed,
+  imageBuffer: null,
+  imageMimeType: null,
+  backImageBuffer: null,
+  backImageMimeType: null,
+});
       } catch (e) {
         reject(new Error("Invalid JSON body"));
       }
