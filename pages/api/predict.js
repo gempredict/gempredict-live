@@ -325,11 +325,11 @@ estimatedGrade: forcedGrade
   ? forcedGrade
   : safeStr(raw.estimatedGrade, "Unable to estimate."),
 
-worthGrading: (hasCatastrophicDamage || hasObviousStructuralDamage)
+worthGrading: hasCatastrophicDamage
   ? false
   : (typeof raw.worthGrading === "boolean" ? raw.worthGrading : null),
-
-worthGradingReason: (hasCatastrophicDamage || hasObviousStructuralDamage)
+    
+worthGradingReason: hasCatastrophicDamage
   ? "Visible structural damage or moderate defects usually make this a poor grading candidate unless the card is extremely rare or valuable."
   : safeStr(raw.worthGradingReason, "Insufficient image quality to determine."),
 
