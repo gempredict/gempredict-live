@@ -278,6 +278,9 @@ const hasImageQualityIssues =
   raw.majorGradeCap
 ].join(" ").toLowerCase();
 
+  const saysNoStructuralDamage =
+  /no structural damage|no obvious structural damage|no visible structural damage|no bends or folds|no obvious bends|no obvious bending|no obvious folds|no creasing visible|no visible creases/.test(structuralDamageText);
+
 const hasCatastrophicDamage =
   /multiple creases|heavy creases|major creases|deep creases|creased throughout|badly creased|heavily creased|large crease|large creases|trashed|heavily damaged|major structural damage|severe structural damage|corner destroyed|corners destroyed/.test(structuralDamageText);
 
@@ -298,7 +301,7 @@ if (hasCatastrophicDamage) {
   forcedGrade = "PSA 1-3 ceiling likely";
   forcedScore = 2;
 }
-else if (hasObviousStructuralDamage) {
+else if (hasObviousStructuralDamage && !saysNoStructuralDamage) {
   forcedLimiter = "Visible structural damage such as a crease, bend, fold, or corner bend may significantly cap the grade.";
   forcedGrade = "PSA 3-6 ceiling likely";
   forcedScore = 5;
