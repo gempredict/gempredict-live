@@ -283,7 +283,8 @@ const hasCatastrophicDamage =
 
 const hasObviousStructuralDamage =
   /visible crease|obvious crease|clear crease|major crease|deep crease|visible bend|obvious bend|clear bend|corner bend detected|corner fold detected|visible corner fold|obvious corner fold|warped|warping|structural damage is visible|visible structural damage/.test(structuralDamageText);
-  
+
+let forcedLimiter = null;  
 let forcedGrade = null;
 let forcedScore = null;
 let forcedConfidence = null;
