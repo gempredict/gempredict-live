@@ -272,12 +272,9 @@ const hasImageQualityIssues =
   const structuralDamageText = [
   raw.cornersNote,
   raw.edgesNote,
-  raw.surfaceNote,
-  raw.gradingRisk,
-  raw.primaryLimiter,
-  raw.majorGradeCap
+  raw.surfaceNote
 ].join(" ").toLowerCase();
-
+  
   const saysNoStructuralDamage =
   /no structural damage|no obvious structural damage|no visible structural damage|no bends or folds|no obvious bends|no obvious bending|no obvious folds|no creasing visible|no visible creases/.test(structuralDamageText);
 
