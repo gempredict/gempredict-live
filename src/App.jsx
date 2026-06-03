@@ -913,11 +913,73 @@ if (data.imageAnalysis) setImageAnalysis(data.imageAnalysis);
     Upload Back Photo (Optional)
   </button>
 
-  {backImageFile && (
-    <div style={{ marginTop: "0.5rem", fontSize: "0.75rem", color: C.inkSoft }}>
-      ✓ {backImageFile.name}
+  {backImagePreview && (
+  <div
+    style={{
+      display: "flex",
+      gap: "0.9rem",
+      alignItems: "center",
+      background: C.white,
+      border: "1px solid " + C.border,
+      borderRadius: 12,
+      padding: "0.75rem",
+      marginTop: "0.75rem"
+    }}
+  >
+    <img
+      src={backImagePreview}
+      alt="Back preview"
+      style={{
+        width: 72,
+        height: 100,
+        objectFit: "contain",
+        borderRadius: 6,
+        background: "#f0f0f0",
+        flexShrink: 0
+      }}
+    />
+
+    <div style={{ flex: 1, minWidth: 0 }}>
+      <div
+        style={{
+          fontSize: "0.82rem",
+          fontWeight: 600,
+          color: C.ink,
+          overflow: "hidden",
+          textOverflow: "ellipsis",
+          whiteSpace: "nowrap"
+        }}
+      >
+        {backImageFile.name}
+      </div>
+
+      <div
+        style={{
+          fontSize: "0.72rem",
+          color: C.inkSoft,
+          marginTop: "0.2rem"
+        }}
+      >
+        {(backImageFile.size / 1024).toFixed(0)} KB · Back photo ready for analysis
+      </div>
+
+      <div style={{ marginTop: "0.5rem" }}>
+        <span
+          style={{
+            fontSize: "0.68rem",
+            fontWeight: 700,
+            background: C.goldLight,
+            color: C.amber,
+            padding: "0.15rem 0.5rem",
+            borderRadius: 100
+          }}
+        >
+          📷 Back Photo Enabled
+        </span>
+      </div>
     </div>
-  )}
+  </div>
+)}
 </div>
 <div
   style={{
