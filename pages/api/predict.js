@@ -330,7 +330,7 @@ worthGrading: hasCatastrophicDamage
   : (typeof raw.worthGrading === "boolean" ? raw.worthGrading : null),
     
 worthGradingReason: hasCatastrophicDamage
-  ? "Visible structural damage or moderate defects usually make this a poor grading candidate unless the card is extremely rare or valuable."
+  ? "Heavy visible damage usually makes this a poor grading candidate unless the card is extremely rare or valuable."
   : safeStr(raw.worthGradingReason, "Insufficient image quality to determine."),
 
 gradeCeiling: forcedGrade
