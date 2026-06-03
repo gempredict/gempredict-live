@@ -269,13 +269,21 @@ const combinedNotes = [
 const hasImageQualityIssues =
   /glare|reflection|reflections|blurry|blur|out of focus|poor lighting|lighting issue|shadow|shadows|low visibility|surface not fully visible|unclear surface|image quality limited|difficult to inspect|angle prevents|hard to determine|holo glare|foil glare/.test(combinedNotes);
 
-  const hasCatastrophicDamage =
-  /multiple creases|heavy creases|major creases|deep creases|creased throughout|badly creased|heavily creased|large crease|large creases|trashed|heavily damaged|major structural damage|severe structural damage|corner destroyed|corners destroyed/.test(combinedNotes);
+  const structuralDamageText = [
+  raw.cornersNote,
+  raw.edgesNote,
+  raw.surfaceNote,
+  raw.gradingRisk,
+  raw.primaryLimiter,
+  raw.majorGradeCap
+].join(" ").toLowerCase();
+
+const hasCatastrophicDamage =
+  /multiple creases|heavy creases|major creases|deep creases|creased throughout|badly creased|heavily creased|large crease|large creases|trashed|heavily damaged|major structural damage|severe structural damage|corner destroyed|corners destroyed/.test(structuralDamageText);
 
 const hasObviousStructuralDamage =
-  /visible crease|obvious crease|clear crease|major crease|deep crease|visible bend|obvious bend|corner bend detected|corner fold detected|warped|warping|structural damage/.test(combinedNotes);
-
-let forcedLimiter = null;
+  /visible crease|obvious crease|clear crease|major crease|deep crease|visible bend|obvious bend|clear bend|corner bend detected|corner fold detected|visible corner fold|obvious corner fold|warped|warping|structural damage is visible|visible structural damage/.test(structuralDamageText);
+  
 let forcedGrade = null;
 let forcedScore = null;
 let forcedConfidence = null;
