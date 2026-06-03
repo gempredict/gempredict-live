@@ -163,7 +163,11 @@ function ImageAnalysisCard({ data }) {
   const worthColor  = data.worthGrading === true ? C.green : data.worthGrading === false ? C.red : C.amber;
   const worthBg     = data.worthGrading === true ? C.greenLight : data.worthGrading === false ? C.redLight : "#fffbeb";
   const worthBorder = data.worthGrading === true ? "#86efac" : data.worthGrading === false ? "#fca5a5" : "#fde68a";
-  const worthLabel  = data.worthGrading === true ? "Worth Grading" : data.worthGrading === false ? "Not Worth Grading" : "Borderline";
+  const worthLabel  = data.worthGrading === true
+  ? "Lower Submission Risk"
+  : data.worthGrading === false
+    ? "High Submission Risk"
+    : "Borderline Submission Risk";
 
   const attributes = [
     { key: "centering", label: "Centering", note: data.centeringNote },
@@ -202,7 +206,7 @@ function ImageAnalysisCard({ data }) {
           </span>
           <div>
             <div style={{ fontSize: "0.7rem", fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.07em", color: worthColor, marginBottom: "0.2rem" }}>
-              {worthLabel} — based on visible condition
+              {worthLabel} — based on visible grading risk
             </div>
             <div style={{ fontSize: "0.84rem", color: C.inkMid }}>{data.worthGradingReason}</div>
           </div>
