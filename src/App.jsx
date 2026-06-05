@@ -436,7 +436,7 @@ function ResultCard({ data, index, onSave, isSaved }) {
           <div style={{ background: C.border, borderRadius: 100, height: 8, overflow: "hidden" }}>
             <div style={{ height: "100%", borderRadius: 100, background: profit >= 0 ? C.green : C.red, width: barPct + "%", transition: "width 0.9s cubic-bezier(.4,0,.2,1)" }} />
           </div>
-          <div style={{ fontSize: "0.7rem", color: C.inkSoft, marginTop: "0.35rem" }}>After $25 PSA fee</div>
+          <div style={{ fontSize: "0.7rem", color: C.inkSoft, marginTop: "0.35rem" }}>After $80 PSA fee</div>
         </div>
         {/* Population Report */}
         {(data.psa9Pop != null || data.psa10Pop != null) && (function() {
