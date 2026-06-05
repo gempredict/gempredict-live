@@ -225,7 +225,7 @@ function normaliseCard(raw) {
   const psa9Value  = Math.max(0, safeInt(raw.psa9Value));
   const psa10Value = Math.max(0, safeInt(raw.psa10Value));
   const psa10Prob  = Math.min(100, Math.max(0, safeInt(raw.psa10Probability, 50)));
-  const gradingUpside = raw.gradingUpside != null ? safeInt(raw.gradingUpside) : psa10Value - rawValue - 25;
+  const gradingUpside = raw.gradingUpside != null ? safeInt(raw.gradingUpside) : psa10Value - rawValue - 80;
   const psa9Pop   = raw.psa9Pop  != null ? Math.max(0, safeInt(raw.psa9Pop))  : null;
   const psa10Pop  = raw.psa10Pop != null ? Math.max(0, safeInt(raw.psa10Pop)) : null;
   const populationInsight = typeof raw.populationInsight === "string" && raw.populationInsight.trim()
@@ -403,7 +403,7 @@ const conditionLabel = CONDITION_LABELS[condition] || CONDITION_LABELS.strong;
     "psa10Value - realistic PSA 10 USD estimate (integer)\n" +
     "psa10Probability - honest 0-100 chance of PSA 10 given this condition (integer — be conservative)\n" +
     "verdict - exactly one of: grade, skip, maybe (string)\n" +
-    "gradingUpside - psa10Value minus rawValue minus 25 (integer)\n" +
+    "gradingUpside - psa10Value minus rawValue minus 80 (integer)\n" +
     "analysis - 2 sentences max: direct, practical, no filler (string)\n" +
     "action - one sentence starting with a verb, specific to this card and condition (string)\n" +
     "psa9Pop - estimated PSA 9 population count based on collector market knowledge (integer)\n" +
