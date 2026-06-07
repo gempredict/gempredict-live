@@ -522,69 +522,44 @@ function ResultCard({ data, index, onSave, isSaved }) {
             );
           })}
         </div>
-        {/* Upside bar */}
-        <div style={{ background: C.cream, borderRadius: 10, padding: "0.85rem 1rem", marginBottom: "0.9rem" }}>
-          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "0.45rem" }}>
-            <span style={{ fontSize: "0.72rem", fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.05em", color: C.inkSoft }}>Grading Upside (PSA 10)</span>
-            <span style={{ fontFamily: "'Playfair Display', serif", fontSize: "1.1rem", fontWeight: 700, color: profit >= 0 ? C.green : C.red }}>{(profit >= 0 ? "+$" : "-$") + safeMoney(Math.abs(profit))}</span>
-          </div>
-          <div style={{ background: C.border, borderRadius: 100, height: 8, overflow: "hidden" }}>
-            <div style={{ height: "100%", borderRadius: 100, background: profit >= 0 ? C.green : C.red, width: barPct + "%", transition: "width 0.9s cubic-bezier(.4,0,.2,1)" }} />
-          </div>
-          <div style={{ fontSize: "0.7rem", color: C.inkSoft, marginTop: "0.35rem" }}>After $80 PSA fee</div>
-        </div>
-        {/* Population Report */}
-        {(data.psa9Pop != null || data.psa10Pop != null) && (function() {
-          const scarce = data.psa9Pop != null && data.psa10Pop != null && data.psa10Pop < data.psa9Pop * 0.3;
-          const common = data.psa9Pop != null && data.psa10Pop != null && data.psa10Pop > data.psa9Pop * 0.6;
-          const accentColor  = scarce ? C.green  : common ? C.amber  : C.inkSoft;
-          const accentBg     = scarce ? C.greenLight : common ? C.goldLight : C.cream;
-          const scarcityNote = scarce ? "Lower PSA 10 population supports scarcity." : null;
-          return (
-            <div style={{ background: C.white, border: "1px solid " + C.border, borderRadius: 14, overflow: "hidden", marginBottom: "0.9rem" }}>
-              <div style={{ padding: "0.65rem 1rem", borderBottom: "1px solid " + C.border, display: "flex", alignItems: "center", justifyContent: "space-between" }}>
-                <span style={{ fontSize: "0.65rem", fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.09em", color: C.inkSoft }}>Population Report</span>
-                <span style={{ fontSize: "0.65rem", color: C.inkSoft, fontStyle: "italic" }}>AI estimate</span>
-              </div>
-              <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", borderBottom: "1px solid " + C.border }}>
-                {[
-                  { label: "PSA 9 Population",  val: data.psa9Pop,  featured: false },
-                  { label: "PSA 10 Population", val: data.psa10Pop, featured: true  },
-                ].map(function(p, idx) {
-                  const display = p.val != null ? p.val.toLocaleString() : "—";
-                  const numColor = p.val == null ? C.inkSoft : (p.featured ? accentColor : C.inkMid);
-                  return (
-                    <div key={p.label} style={{ padding: "1rem", background: p.featured ? accentBg : C.cream, borderLeft: idx === 1 ? "1px solid " + C.border : "none", textAlign: "center" }}>
-                      <div style={{ fontSize: "0.62rem", fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.07em", color: p.featured ? accentColor : C.inkSoft, marginBottom: "0.35rem" }}>{p.label}</div>
-                      <div style={{ fontFamily: "'Playfair Display', serif", fontSize: "1.4rem", fontWeight: 700, color: numColor, lineHeight: 1 }}>{display}</div>
-                      {p.featured && scarcityNote && p.val != null && (
-                        <div style={{ fontSize: "0.68rem", color: accentColor, fontWeight: 600, marginTop: "0.3rem" }}>{scarcityNote}</div>
-                      )}
-                    </div>
-                  );
-                })}
-              </div>
-              <div style={{ padding: "0.75rem 1rem", display: "flex", gap: "0.6rem", alignItems: "flex-start" }}>
-                <span style={{ fontSize: "0.65rem", fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.08em", color: C.inkSoft, flexShrink: 0, paddingTop: "0.1rem" }}>Collector Insight</span>
-                <span style={{ fontSize: "0.82rem", color: C.inkMid, lineHeight: 1.65 }}>{data.populationInsight || "Population data helps indicate how scarce top grades may be."}</span>
-              </div>
-            </div>
-          );
-        })()}
-        {/* Analysis */}
-        <div style={{ fontSize: "0.875rem", color: C.inkMid, lineHeight: 1.7, marginBottom: "0.9rem" }}>{data.analysis}</div>
-        {/* Why this verdict */}
-        <div style={{ background: C.cream, border: "1px solid " + C.border, borderRadius: 12, padding: "0.9rem 1rem", marginBottom: "0.9rem" }}>
-          <div style={{ fontSize: "0.65rem", fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.08em", color: C.inkSoft, marginBottom: "0.6rem" }}>Why this verdict?</div>
-          {bullets.map(function(b) {
-            return (
-              <div key={b} style={{ display: "flex", gap: "0.5rem", alignItems: "flex-start", fontSize: "0.82rem", color: C.inkMid, marginBottom: "0.3rem" }}>
-                <span style={{ width: 5, height: 5, borderRadius: "50%", background: C.gold, flexShrink: 0, marginTop: "0.4rem", display: "inline-block" }} />
-                {b}
-              </div>
-            );
-          })}
-        </div>
+       {/* Expected Grading Economics */}
+<div style={{ background: C.cream, border: "1px solid " + C.border, borderRadius: 12, padding: "0.9rem 1rem", marginBottom: "0.9rem" }}>
+  <div style={{ fontSize: "0.65rem", fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.08em", color: C.inkSoft, marginBottom: "0.7rem" }}>
+    Expected Grading Economics
+  </div>
+
+  <div style={{ display: "grid", gap: "0.45rem", fontSize: "0.82rem", color: C.inkMid }}>
+    <div style={{ display: "flex", justifyContent: "space-between" }}>
+      <span>Expected Graded Value</span>
+      <strong style={{ color: C.ink }}>{"$" + safeMoney(data.expectedGradedValue || 0)}</strong>
+    </div>
+
+    <div style={{ display: "flex", justifyContent: "space-between" }}>
+      <span>Current Raw Value</span>
+      <strong style={{ color: C.red }}>{"-$" + safeMoney(data.rawValue || 0)}</strong>
+    </div>
+
+    <div style={{ display: "flex", justifyContent: "space-between" }}>
+      <span>PSA Submission Fee</span>
+      <strong style={{ color: C.red }}>{"-$" + safeMoney(data.psaFee || 80)}</strong>
+    </div>
+
+    <div style={{ height: 1, background: C.border, margin: "0.35rem 0" }} />
+
+    <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+      <span style={{ fontWeight: 700, color: C.ink }}>Expected Net</span>
+      <strong style={{ fontFamily: "'Playfair Display', serif", fontSize: "1.15rem", color: (data.expectedNetValue || 0) >= 0 ? C.green : C.red }}>
+        {data.expectedNetValue != null
+          ? ((data.expectedNetValue >= 0 ? "+$" : "-$") + safeMoney(Math.abs(data.expectedNetValue)))
+          : "—"}
+      </strong>
+    </div>
+  </div>
+
+  <div style={{ fontSize: "0.7rem", color: C.inkSoft, marginTop: "0.6rem", fontStyle: "italic" }}>
+    Expected value weighs PSA 10 odds against PSA 9 value, raw value, and current grading cost.
+  </div>
+</div>        
         {/* Best use case */}
         <div style={{ background: verdict.bg, border: "1px solid " + verdict.border, borderRadius: 10, padding: "0.65rem 0.9rem", marginBottom: data.action ? "0.9rem" : "0" }}>
           <span style={{ fontSize: "0.65rem", fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.07em", color: verdict.color }}>Best Use Case: </span>
