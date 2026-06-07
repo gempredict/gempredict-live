@@ -411,7 +411,88 @@ function ResultCard({ data, index, onSave, isSaved }) {
       </div>
 
       <div style={{ padding: "1.1rem 1.25rem" }}>
-        <div style={{ fontSize: "0.82rem", color: C.inkMid, fontStyle: "italic", marginBottom: "1rem" }}>{verdict.explain}</div>
+        <div
+  style={{
+    background: "#f8f6f2",
+    border: "1px solid " + C.border,
+    borderRadius: 14,
+    padding: "1rem",
+    marginBottom: "1rem",
+    textAlign: "center",
+  }}
+>
+  <div
+  style={{
+      fontSize: "0.72rem",
+      fontWeight: 700,
+      letterSpacing: "0.12em",
+      textTransform: "uppercase",
+      color: C.inkSoft,
+      marginBottom: "0.4rem",
+  }}
+>
+  SHOULD YOU GRADE THIS?
+</div>
+
+  <div
+    style={{
+      fontSize: "1.75rem",
+      fontWeight: 800,
+      color: verdict.color,
+      marginBottom: "0.35rem",
+    }}
+  >
+    {verdict.label}
+  </div>
+
+  <div
+    style={{
+      display: "grid",
+      gridTemplateColumns: "repeat(3,1fr)",
+      gap: "0.75rem",
+    }}
+  >
+    <div>
+  <div style={{ fontSize: "0.62rem", color: C.inkSoft }}>
+    Most Likely Outcome
+  </div>
+  <div style={{ fontWeight: 700 }}>
+    {data.imageAnalysis?.mostLikelyGradeRange || "See Analysis"}
+  </div>
+</div>
+
+    <div>
+      <div style={{ fontSize: "0.62rem", color: C.inkSoft }}>
+        PSA 10 Odds
+      </div>
+      <div style={{ fontWeight: 700 }}>
+        {data.psa10Probability != null ? data.psa10Probability + "%" : "—"}
+      </div>
+    </div>
+
+    <div>
+      <div style={{ fontSize: "0.62rem", color: C.inkSoft }}>
+        Potential Upside
+      </div>
+      <div
+        style={{
+          fontWeight: 700,
+          color: profit >= 0 ? C.green : C.red,
+        }}
+      >
+        {(profit >= 0 ? "+$" : "-$") + safeMoney(Math.abs(profit))}
+      </div>
+    </div>
+  </div>
+</div>
+        <div style={{
+  fontSize: "0.82rem",
+  color: C.inkMid,
+  fontStyle: "italic",
+  marginBottom: "1rem"
+}}>
+  {verdict.explain}
+</div>
         {/* Value grid */}
         <div className="gp-value-grid" style={{ marginBottom: "0.9rem" }}>
           {[
