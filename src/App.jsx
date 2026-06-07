@@ -499,13 +499,29 @@ function ResultCard({ data, index, onSave, isSaved }) {
     </div>
   </div>
 </div>
-        <div style={{
-  fontSize: "0.82rem",
-  color: C.inkMid,
-  fontStyle: "italic",
-  marginBottom: "1rem"
-}}>
-  {verdict.explain}
+       {/* Why this decision */}
+<div style={{ background: C.white, border: "1px solid " + C.border, borderRadius: 12, padding: "0.9rem 1rem", marginBottom: "1rem" }}>
+  <div style={{ fontSize: "0.65rem", fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.08em", color: C.inkSoft, marginBottom: "0.6rem" }}>
+    Why This Decision?
+  </div>
+
+  <div style={{ fontSize: "0.84rem", color: C.inkMid, lineHeight: 1.6, marginBottom: "0.6rem" }}>
+    {verdict.explain}
+  </div>
+
+  <div style={{ display: "grid", gap: "0.4rem" }}>
+    <div style={{ fontSize: "0.82rem", color: C.inkMid }}>
+      {(data.expectedNetValue || 0) >= 0 ? "✓" : "✕"} Expected net is {data.expectedNetValue != null ? ((data.expectedNetValue >= 0 ? "+$" : "-$") + safeMoney(Math.abs(data.expectedNetValue))) : "unknown"}
+    </div>
+
+    <div style={{ fontSize: "0.82rem", color: C.inkMid }}>
+      {(data.psa10Probability || 0) >= 50 ? "✓" : "✕"} PSA 10 odds are {data.psa10Probability != null ? data.psa10Probability + "%" : "unknown"}
+    </div>
+
+    <div style={{ fontSize: "0.82rem", color: C.inkMid }}>
+      {(profit || 0) >= 0 ? "✓" : "✕"} PSA 10 upside is {(profit >= 0 ? "+$" : "-$") + safeMoney(Math.abs(profit))}
+    </div>
+  </div>
 </div>
         {/* Value grid */}
         <div className="gp-value-grid" style={{ marginBottom: "0.9rem" }}>
