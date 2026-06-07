@@ -510,15 +510,15 @@ function ResultCard({ data, index, onSave, isSaved }) {
   </div>
 
   <div style={{ display: "grid", gap: "0.4rem" }}>
-    <div style={{ fontSize: "0.82rem", color: C.inkMid }}>
-      {(data.expectedNetValue || 0) >= 0 ? "✓" : "✕"} Expected net is {data.expectedNetValue != null ? ((data.expectedNetValue >= 0 ? "+$" : "-$") + safeMoney(Math.abs(data.expectedNetValue))) : "unknown"}
-    </div>
+    <div style={{ fontSize: "0.82rem", color: (data.expectedNetValue || 0) >= 0 ? C.green : C.red, fontWeight: 600 }}>
+  {(data.expectedNetValue || 0) >= 0 ? "✓" : "✕"} Expected net is {data.expectedNetValue != null ? ((data.expectedNetValue >= 0 ? "+$" : "-$") + safeMoney(Math.abs(data.expectedNetValue))) : "unknown"}
+</div>
 
-    <div style={{ fontSize: "0.82rem", color: C.inkMid }}>
+    <div style={{ fontSize: "0.82rem", color: (data.psa10Probability || 0) >= 50 ? C.green : C.red, fontWeight: 600 }}>
       {(data.psa10Probability || 0) >= 50 ? "✓" : "✕"} PSA 10 odds are {data.psa10Probability != null ? data.psa10Probability + "%" : "unknown"}
     </div>
 
-    <div style={{ fontSize: "0.82rem", color: C.inkMid }}>
+    <div style={{ fontSize: "0.82rem", color: (profit || 0) >= 0 ? C.green : C.red, fontWeight: 600 }}>
       {(profit || 0) >= 0 ? "✓" : "✕"} PSA 10 upside is {(profit >= 0 ? "+$" : "-$") + safeMoney(Math.abs(profit))}
     </div>
   </div>
