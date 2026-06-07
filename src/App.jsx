@@ -448,7 +448,7 @@ function ResultCard({ data, index, onSave, isSaved }) {
   <div
     style={{
       display: "grid",
-      gridTemplateColumns: "repeat(3,1fr)",
+      gridTemplateColumns: "repeat(4,1fr)",
       gap: "0.75rem",
     }}
   >
@@ -469,7 +469,21 @@ function ResultCard({ data, index, onSave, isSaved }) {
         {data.psa10Probability != null ? data.psa10Probability + "%" : "—"}
       </div>
     </div>
-
+<div>
+  <div style={{ fontSize: "0.62rem", color: C.inkSoft }}>
+    Expected Net
+  </div>
+  <div
+    style={{
+      fontWeight: 700,
+      color: (data.expectedNetValue || 0) >= 0 ? C.green : C.red,
+    }}
+  >
+    {data.expectedNetValue != null
+      ? ((data.expectedNetValue >= 0 ? "+$" : "-$") + safeMoney(Math.abs(data.expectedNetValue)))
+      : "—"}
+  </div>
+</div>
     <div>
       <div style={{ fontSize: "0.62rem", color: C.inkSoft }}>
         Potential Upside
