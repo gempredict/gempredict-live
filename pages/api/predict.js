@@ -215,7 +215,7 @@ function extractJSON(text) {
   }
   return null;
 }
-
+const PSA_FEE = 80;
 function normaliseCard(raw) {
   if (!raw || typeof raw !== "object" || Array.isArray(raw)) return null;
   const VALID_VERDICTS = ["grade", "skip", "maybe"];
@@ -225,7 +225,19 @@ function normaliseCard(raw) {
   const psa9Value  = Math.max(0, safeInt(raw.psa9Value));
   const psa10Value = Math.max(0, safeInt(raw.psa10Value));
   const psa10Prob  = Math.min(100, Math.max(0, safeInt(raw.psa10Probability, 50)));
-  const gradingUpside = raw.gradingUpside != null ? safeInt(raw.gradingUpside) : psa10Value - rawValue - 80;
+  const gradingUpside =
+    raw.gradingUpside != null
+        ? safeInt(raw.gradingUpside)
+        : psa10Value - rawValue - PSA_FEE;
+  const psa10ProbDecimal = psa10Prob / 100;
+const psa9ProbDecimal = Math.max(0, 1 - psa10ProbDecimal);
+
+const expectedGradedValue = Math.round(
+  psa10Value * psa10ProbDecimal +
+  psa9Value * psa9ProbDecimal
+);
+
+const expectedNetValue = expectedGradedValue - rawValue - PSA_FEE;
   const psa9Pop   = raw.psa9Pop  != null ? Math.max(0, safeInt(raw.psa9Pop))  : null;
   const psa10Pop  = raw.psa10Pop != null ? Math.max(0, safeInt(raw.psa10Pop)) : null;
   const populationInsight = typeof raw.populationInsight === "string" && raw.populationInsight.trim()
@@ -239,6 +251,9 @@ function normaliseCard(raw) {
     analysis: (typeof raw.analysis === "string" && raw.analysis.trim() ? raw.analysis.trim() : "No analysis available.").slice(0, 500),
     action:   typeof raw.action   === "string" && raw.action.trim()   ? raw.action.trim().slice(0, 200) : null,
     psa9Pop, psa10Pop, populationInsight,
+    psaFee: PSA_FEE,
+    expectedGradedValue,
+    expectedNetValue,
   };
 }
 
@@ -361,7 +376,6 @@ gemRiskFactors:
 minorConcerns: safeStr(raw.minorConcerns, "No additional visible concerns identified."),
   };
 }
-
 // ─── Anthropic client ─────────────────────────────────────────────────────────
 const anthropic = process.env.CLAUDE_API_KEY
   ? new Anthropic({ apiKey: process.env.CLAUDE_API_KEY })
