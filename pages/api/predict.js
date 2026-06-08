@@ -238,6 +238,15 @@ const expectedGradedValue = Math.round(
 );
 
 const expectedNetValue = expectedGradedValue - rawValue - PSA_FEE;
+  let decisionConfidence = 50;
+
+decisionConfidence += Math.round(psa10Prob * 0.3);
+
+if (expectedNetValue > 0) {
+  decisionConfidence += 20;
+}
+
+decisionConfidence = Math.max(1, Math.min(99, decisionConfidence));
   const psa9Pop   = raw.psa9Pop  != null ? Math.max(0, safeInt(raw.psa9Pop))  : null;
   const psa10Pop  = raw.psa10Pop != null ? Math.max(0, safeInt(raw.psa10Pop)) : null;
   const populationInsight = typeof raw.populationInsight === "string" && raw.populationInsight.trim()
@@ -252,9 +261,10 @@ const expectedNetValue = expectedGradedValue - rawValue - PSA_FEE;
     action:   typeof raw.action   === "string" && raw.action.trim()   ? raw.action.trim().slice(0, 200) : null,
     psa9Pop, psa10Pop, populationInsight,
     psaFee: PSA_FEE,
-    expectedGradedValue,
-    expectedNetValue,
-  };
+expectedGradedValue,
+expectedNetValue,
+decisionConfidence,
+};
 }
 
 // Validate and normalise image analysis response from Claude Vision
