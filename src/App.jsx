@@ -486,13 +486,25 @@ function ResultCard({ data, index, onSave, isSaved }) {
   </div>
 
   <div>
-    <div style={{ fontSize: "0.62rem", color: C.inkSoft }}>
-      Decision Confidence
-    </div>
-    <div style={{ fontWeight: 700 }}>
-      {data.decisionConfidence != null ? data.decisionConfidence + "%" : "—"}
-    </div>
+  <div style={{ fontSize: "0.62rem", color: C.inkSoft }}>
+    Decision Confidence
   </div>
+
+  <div style={{ fontWeight: 700, marginBottom: "0.25rem" }}>
+    {data.decisionConfidence != null ? data.decisionConfidence + "%" : "—"}
+  </div>
+
+  <div style={{ background: C.border, borderRadius: 100, height: 6, overflow: "hidden" }}>
+    <div
+      style={{
+        height: "100%",
+        width: (data.decisionConfidence || 0) + "%",
+        background: verdict.color,
+        borderRadius: 100,
+      }}
+    />
+  </div>
+</div>
 
   <div>
     <div style={{ fontSize: "0.62rem", color: C.inkSoft }}>
