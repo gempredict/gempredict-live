@@ -433,72 +433,82 @@ function ResultCard({ data, index, onSave, isSaved }) {
 >
   SHOULD YOU GRADE THIS?
 </div>
-
-  <div
-    style={{
-      fontSize: "1.75rem",
-      fontWeight: 800,
-      color: verdict.color,
-      marginBottom: "0.35rem",
-    }}
-  >
-    {verdict.label}
-  </div>
-
-  <div
-    style={{
-      display: "grid",
-      gridTemplateColumns: "repeat(4,1fr)",
-      gap: "0.75rem",
-    }}
-  >
-    <div>
-  <div style={{ fontSize: "0.62rem", color: C.inkSoft }}>
-    Most Likely Outcome
-  </div>
-  <div style={{ fontWeight: 700 }}>
-    {data.imageAnalysis?.mostLikelyGradeRange || "See Analysis"}
-  </div>
+          <div
+  style={{
+    fontSize: "1.75rem",
+    fontWeight: 800,
+    color: verdict.color,
+    marginBottom: "0.35rem",
+  }}
+>
+  {verdict.label}
 </div>
 
-    <div>
-      <div style={{ fontSize: "0.62rem", color: C.inkSoft }}>
-        PSA 10 Odds
-      </div>
-      <div style={{ fontWeight: 700 }}>
-        {data.psa10Probability != null ? data.psa10Probability + "%" : "—"}
-      </div>
+  <div
+  style={{
+    display: "grid",
+    gridTemplateColumns: "repeat(5,1fr)",
+    gap: "0.75rem",
+  }}
+>
+  <div>
+    <div style={{ fontSize: "0.62rem", color: C.inkSoft }}>
+      Most Likely Outcome
     </div>
-<div>
-  <div style={{ fontSize: "0.62rem", color: C.inkSoft }}>
-    Expected Net
-  </div>
-  <div
-    style={{
-      fontWeight: 700,
-      color: (data.expectedNetValue || 0) >= 0 ? C.green : C.red,
-    }}
-  >
-    {data.expectedNetValue != null
-      ? ((data.expectedNetValue >= 0 ? "+$" : "-$") + safeMoney(Math.abs(data.expectedNetValue)))
-      : "—"}
-  </div>
-</div>
-    <div>
-      <div style={{ fontSize: "0.62rem", color: C.inkSoft }}>
-        Potential Upside
-      </div>
-      <div
-        style={{
-          fontWeight: 700,
-          color: profit >= 0 ? C.green : C.red,
-        }}
-      >
-        {(profit >= 0 ? "+$" : "-$") + safeMoney(Math.abs(profit))}
-      </div>
+    <div style={{ fontWeight: 700 }}>
+      {data.imageAnalysis?.mostLikelyGradeRange || "See Analysis"}
     </div>
   </div>
+
+  <div>
+    <div style={{ fontSize: "0.62rem", color: C.inkSoft }}>
+      PSA 10 Odds
+    </div>
+    <div style={{ fontWeight: 700 }}>
+      {data.psa10Probability != null ? data.psa10Probability + "%" : "—"}
+    </div>
+  </div>
+
+  <div>
+    <div style={{ fontSize: "0.62rem", color: C.inkSoft }}>
+      Expected Net
+    </div>
+    <div
+      style={{
+        fontWeight: 700,
+        color: (data.expectedNetValue || 0) >= 0 ? C.green : C.red,
+      }}
+    >
+      {data.expectedNetValue != null
+        ? ((data.expectedNetValue >= 0 ? "+$" : "-$") + safeMoney(Math.abs(data.expectedNetValue)))
+        : "—"}
+    </div>
+  </div>
+
+  <div>
+    <div style={{ fontSize: "0.62rem", color: C.inkSoft }}>
+      Decision Confidence
+    </div>
+    <div style={{ fontWeight: 700 }}>
+      {data.decisionConfidence != null ? data.decisionConfidence + "%" : "—"}
+    </div>
+  </div>
+
+  <div>
+    <div style={{ fontSize: "0.62rem", color: C.inkSoft }}>
+      Potential Upside
+    </div>
+    <div
+      style={{
+        fontWeight: 700,
+        color: profit >= 0 ? C.green : C.red,
+      }}
+    >
+      {(profit >= 0 ? "+$" : "-$") + safeMoney(Math.abs(profit))}
+    </div>
+  </div>
 </div>
+        </div>
        {/* Why this decision */}
 <div style={{ background: C.white, border: "1px solid " + C.border, borderRadius: 12, padding: "0.9rem 1rem", marginBottom: "1rem" }}>
   <div style={{ fontSize: "0.65rem", fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.08em", color: C.inkSoft, marginBottom: "0.6rem" }}>
