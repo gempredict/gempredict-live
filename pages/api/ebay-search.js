@@ -9,19 +9,19 @@ export default async function handler(req, res) {
       });
     }
 
-    const clientId = process.env.EBAY_SANDBOX_CLIENT_ID;
-    const clientSecret = process.env.EBAY_SANDBOX_CLIENT_SECRET;
+    const clientId = process.env.EBAY_PROD_CLIENT_ID;
+    const clientSecret = process.env.EBAY_PROD_CLIENT_SECRET;
 
     if (!clientId || !clientSecret) {
       return res.status(500).json({
         success: false,
-        error: "Missing eBay sandbox credentials",
+        error: "Missing eBay production credentials",
       });
     }
 
     const basicAuth = Buffer.from(`${clientId}:${clientSecret}`).toString("base64");
 
-    const tokenRes = await fetch("https://api.sandbox.ebay.com/identity/v1/oauth2/token", {
+    const tokenRes = await fetch("https://api.ebay.com/identity/v1/oauth2/token", {
       method: "POST",
       headers: {
         Authorization: `Basic ${basicAuth}`,
@@ -44,7 +44,7 @@ export default async function handler(req, res) {
     }
 
     const searchUrl =
-      "https://api.sandbox.ebay.com/buy/browse/v1/item_summary/search?" +
+      "https://api.ebay.com/buy/browse/v1/item_summary/search?" +
       new URLSearchParams({
         q,
         limit: "10",
@@ -86,6 +86,7 @@ export default async function handler(req, res) {
 
     return res.status(200).json({
       success: true,
+      environment: "production",
       query: q,
       total: searchData.total || 0,
       count: items.length,
