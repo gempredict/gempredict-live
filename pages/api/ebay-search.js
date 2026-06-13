@@ -210,6 +210,22 @@ const q = typeof req.query.q === "string" && req.query.q.trim()
     const rawLowest = rawPrices.length ? Math.min.apply(null, rawPrices) : null;
     const rawHighest = rawPrices.length ? Math.max.apply(null, rawPrices) : null;
     const rawMedian = getMedian(rawPrices);
+    let marketConfidence = 50;
+
+if (rawComparableItems.length >= 5) marketConfidence += 10;
+if (rawComparableItems.length >= 10) marketConfidence += 10;
+if (rawComparableItems.length >= 15) marketConfidence += 10;
+
+const avgMatchScore =
+  rawComparableItems.length > 0
+    ? rawComparableItems.reduce((sum, item) => sum + item.matchScore, 0) /
+      rawComparableItems.length
+    : 0;
+
+if (avgMatchScore >= 120) marketConfidence += 10;
+if (avgMatchScore >= 150) marketConfidence += 10;
+
+marketConfidence = Math.min(100, marketConfidence);
 
     return res.status(200).json({
   success: true,
@@ -225,6 +241,8 @@ const q = typeof req.query.q === "string" && req.query.q.trim()
         rawLowest: roundMoney(rawLowest),
         rawHighest: roundMoney(rawHighest),
         rawMedian: roundMoney(rawMedian),
+        marketConfidence,
+averageMatchScore: Math.round(avgMatchScore),
       },
       rawComparableItems,
       gradedItems,
