@@ -19,8 +19,8 @@ function getListingType(title, condition) {
   const c = (condition || "").toLowerCase();
 
   const isGraded =
-    c.includes("graded") ||
-    /\bpsa\b|\bbgs\b|\bsgc\b|\bcgc\b|gem mt|gem mint|mint 10|grade 10|grade 9/.test(t);
+  c === "graded" ||
+  /\bpsa\b|\bbgs\b|\bsgc\b|\bcgc\b/.test(t);
 
   const isLot =
     /\blot\b|lot of|\bx2\b|\bx3\b|\bx4\b|\bx5\b|\b2x\b|\b3x\b|\b4x\b|\b5x\b/.test(t);
