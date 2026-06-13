@@ -231,16 +231,6 @@ if (rawComparableItems.length >= 5) marketConfidence += 10;
 if (rawComparableItems.length >= 10) marketConfidence += 10;
 if (rawComparableItems.length >= 15) marketConfidence += 10;
 
-const avgMatchScore =
-  rawComparableItems.length > 0
-    ? rawComparableItems.reduce((sum, item) => sum + item.matchScore, 0) /
-      rawComparableItems.length
-    : 0;
-
-if (avgMatchScore >= 120) marketConfidence += 10;
-if (avgMatchScore >= 150) marketConfidence += 10;
-
-marketConfidence = Math.min(100, marketConfidence);
 
     return res.status(200).json({
   success: true,
