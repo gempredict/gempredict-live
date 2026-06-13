@@ -702,14 +702,45 @@ backImageMimeType = parsed.backImageMimeType;
 
     logRequest({ ip, cardName, cardType, cardSet, status: "success" });
 
+    let marketData = null;
+
+try {
+  const marketQuery = [
+    prediction.cardTitle,
+    prediction.cardMeta,
+  ]
+    .filter(Boolean)
+    .join(" ");
+
+  const host = req.headers.host;
+  const protocol = host && host.includes("localhost") ? "http" : "https";
+
+  const marketUrl =
+    `${protocol}://${host}/api/ebay-search?q=` +
+    encodeURIComponent(marketQuery);
+
+  const marketRes = await fetch(marketUrl);
+  const marketJson = await marketRes.json();
+
+  if (marketRes.ok && marketJson.success) {
+    marketData = marketJson;
+  }
+} catch (marketErr) {
+  marketData = {
+    success: false,
+    error: "Market data unavailable",
+  };
+}
+
     return res.status(200).json({
-      success: true,
-      prediction,
-      imageAnalysis,        // null if no image uploaded; object if image was analysed
-      hasImageAnalysis: imageAnalysis !== null,
-      remaining: rateCheck.remaining,
-      emailSaved,
-    });
+  success: true,
+  prediction,
+  marketData,
+  imageAnalysis,
+  hasImageAnalysis: imageAnalysis !== null,
+  remaining: rateCheck.remaining,
+  emailSaved,
+});
 
   } catch (err) {
     console.error("[GemPredict] Prediction error:", err.status || "", err.message);
