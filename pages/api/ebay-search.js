@@ -8,6 +8,31 @@ function getMedian(nums) {
   return (sorted[mid - 1] + sorted[mid]) / 2;
 }
 
+function roundMoney(value) {
+  return typeof value === "number" && Number.isFinite(value)
+    ? Math.round(value * 100) / 100
+    : null;
+}
+
+function getListingType(title, condition) {
+  const t = (title || "").toLowerCase();
+  const c = (condition || "").toLowerCase();
+
+  const isGraded =
+    c.includes("graded") ||
+    /\bpsa\b|\bbgs\b|\bsgc\b|\bcgc\b|gem mt|gem mint|mint 10|grade 10|grade 9/.test(t);
+
+  const isLot =
+    /\blot\b|lot of|\bx2\b|\bx3\b|\bx4\b|\bx5\b|\b2x\b|\b3x\b|\b4x\b|\b5x\b/.test(t);
+
+  const isAutoOrPatch =
+    /\bauto\b|autograph|signature|patch|relic|jersey|memorabilia/.test(t);
+
+  if (isLot || isAutoOrPatch) return "excluded";
+  if (isGraded) return "graded";
+  return "raw";
+}
+
 function scoreListing(title, query) {
   const t = (title || "").toLowerCase();
   const q = (query || "").toLowerCase();
@@ -23,14 +48,12 @@ function scoreListing(title, query) {
     if (t.includes(word)) score += 10;
   });
 
-  // Early card-specific boosts
   if (t.includes("248")) score += 20;
   if (t.includes("purple")) score += 20;
   if (t.includes("shock")) score += 20;
   if (t.includes("rated rookie")) score += 15;
   if (t.includes("optic")) score += 10;
 
-  // Penalize things that distort raw comps
   if (t.includes("psa") || t.includes("bgs") || t.includes("sgc") || t.includes("cgc")) score -= 40;
   if (t.includes("lot")) score -= 50;
   if (t.includes("auto") || t.includes("autograph")) score -= 35;
@@ -109,37 +132,51 @@ export default async function handler(req, res) {
       });
     }
 
-    const items = (searchData.itemSummaries || []).map(function(item) {
-      const priceValue = item.price && item.price.value
-        ? Number(item.price.value)
-        : null;
+    const items = (searchData.itemSummaries || [])
+      .map(function(item) {
+        const priceValue = item.price && item.price.value
+          ? Number(item.price.value)
+          : null;
 
-      const title = item.title || null;
+        const title = item.title || "";
+        const listingType = getListingType(title, item.condition);
 
-      return {
-        title,
-        matchScore: scoreListing(title, q),
-        price: item.price
-          ? {
-              value: item.price.value,
-              currency: item.price.currency,
-            }
-          : null,
-        priceValue: Number.isFinite(priceValue) ? priceValue : null,
-        condition: item.condition || null,
-        itemWebUrl: item.itemWebUrl || null,
-        image: item.image && item.image.imageUrl ? item.image.imageUrl : null,
-        itemId: item.itemId || null,
-      };
-    }).sort(function(a, b) {
-      return b.matchScore - a.matchScore;
+        return {
+          title,
+          matchScore: scoreListing(title, q),
+          listingType,
+          price: item.price
+            ? {
+                value: item.price.value,
+                currency: item.price.currency,
+              }
+            : null,
+          priceValue: Number.isFinite(priceValue) ? priceValue : null,
+          condition: item.condition || null,
+          itemWebUrl: item.itemWebUrl || null,
+          image: item.image && item.image.imageUrl ? item.image.imageUrl : null,
+          itemId: item.itemId || null,
+        };
+      })
+      .sort(function(a, b) {
+        return b.matchScore - a.matchScore;
+      });
+
+    const rawComparableItems = items.filter(function(item) {
+      return item.listingType === "raw" &&
+        item.matchScore >= 60 &&
+        typeof item.priceValue === "number";
     });
 
-    const comparableItems = items.filter(function(item) {
-      return item.matchScore >= 60 && typeof item.priceValue === "number";
+    const gradedItems = items.filter(function(item) {
+      return item.listingType === "graded";
     });
 
-    const priceValues = comparableItems
+    const excludedItems = items.filter(function(item) {
+      return item.listingType === "excluded";
+    });
+
+    const rawPrices = rawComparableItems
       .map(function(item) {
         return item.priceValue;
       })
@@ -147,9 +184,9 @@ export default async function handler(req, res) {
         return typeof value === "number" && Number.isFinite(value) && value > 0;
       });
 
-    const lowest = priceValues.length ? Math.min.apply(null, priceValues) : null;
-    const highest = priceValues.length ? Math.max.apply(null, priceValues) : null;
-    const median = getMedian(priceValues);
+    const rawLowest = rawPrices.length ? Math.min.apply(null, rawPrices) : null;
+    const rawHighest = rawPrices.length ? Math.max.apply(null, rawPrices) : null;
+    const rawMedian = getMedian(rawPrices);
 
     return res.status(200).json({
       success: true,
@@ -158,13 +195,16 @@ export default async function handler(req, res) {
       total: searchData.total || 0,
       count: items.length,
       marketSummary: {
-        comparableCount: comparableItems.length,
-        listingCount: priceValues.length,
-        lowest,
-        highest,
-        median,
+        rawComparableCount: rawComparableItems.length,
+        gradedCount: gradedItems.length,
+        excludedCount: excludedItems.length,
+        rawLowest: roundMoney(rawLowest),
+        rawHighest: roundMoney(rawHighest),
+        rawMedian: roundMoney(rawMedian),
       },
-      comparableItems,
+      rawComparableItems,
+      gradedItems,
+      excludedItems,
       items,
     });
   } catch (err) {
