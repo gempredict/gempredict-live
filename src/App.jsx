@@ -370,6 +370,9 @@ function EmptyState() {
 function ResultCard({ data, index, onSave, isSaved }) {
   const verdict  = VERDICTS[data.verdict] || VERDICTS.maybe;
   const profit   = typeof data.gradingUpside === "number" ? data.gradingUpside : 0;
+  const marketSummary = data.marketData && data.marketData.marketSummary
+  ? data.marketData.marketSummary
+  : null;
   const barPct   = Math.min(100, Math.max(4, (Math.abs(profit) / Math.max(data.psa10Value || 1, 1)) * 100));
   const bullets  = getVerdictBullets(data);
   const useCase  = VERDICT_USE_CASE[data.verdict] || VERDICT_USE_CASE.maybe;
@@ -521,6 +524,40 @@ function ResultCard({ data, index, onSave, isSaved }) {
   </div>
 </div>
         </div>
+        {marketSummary && (
+  <div style={{ background: C.cream, border: "1px solid " + C.border, borderRadius: 12, padding: "0.9rem 1rem", marginBottom: "1rem" }}>
+    <div style={{ fontSize: "0.65rem", fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.08em", color: C.inkSoft, marginBottom: "0.65rem" }}>
+      Market Intelligence
+    </div>
+
+    <div style={{ display: "grid", gridTemplateColumns: "repeat(3,1fr)", gap: "0.65rem", textAlign: "center" }}>
+      <div>
+        <div style={{ fontSize: "0.62rem", color: C.inkSoft }}>Raw Market Value</div>
+        <div style={{ fontFamily: "'Playfair Display', serif", fontSize: "1.25rem", fontWeight: 700, color: C.ink }}>
+          {marketSummary.rawMedian != null ? "$" + safeMoney(marketSummary.rawMedian) : "—"}
+        </div>
+      </div>
+
+      <div>
+        <div style={{ fontSize: "0.62rem", color: C.inkSoft }}>Comparable Listings</div>
+        <div style={{ fontFamily: "'Playfair Display', serif", fontSize: "1.25rem", fontWeight: 700, color: C.ink }}>
+          {marketSummary.rawComparableCount != null ? marketSummary.rawComparableCount : "—"}
+        </div>
+      </div>
+
+      <div>
+        <div style={{ fontSize: "0.62rem", color: C.inkSoft }}>Market Confidence</div>
+        <div style={{ fontFamily: "'Playfair Display', serif", fontSize: "1.25rem", fontWeight: 700, color: C.green }}>
+          {marketSummary.marketConfidence != null ? marketSummary.marketConfidence + "%" : "—"}
+        </div>
+      </div>
+    </div>
+
+    <div style={{ fontSize: "0.7rem", color: C.inkSoft, marginTop: "0.65rem", fontStyle: "italic" }}>
+      Based on live eBay comparable listings filtered by GemPredict Market Engine.
+    </div>
+  </div>
+)}
        {/* Why this decision */}
 <div style={{ background: C.white, border: "1px solid " + C.border, borderRadius: 12, padding: "0.9rem 1rem", marginBottom: "1rem" }}>
   <div style={{ fontSize: "0.65rem", fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.08em", color: C.inkSoft, marginBottom: "0.6rem" }}>
@@ -786,9 +823,10 @@ const emailRef    = useRef(null);
 
       setResults(function(prev) {
   const newReport = {
-    ...data.prediction,
-    imageAnalysis: data.imageAnalysis || null,
-  };
+  ...data.prediction,
+  marketData: data.marketData || null,
+  imageAnalysis: data.imageAnalysis || null,
+};
 
   return [newReport, ...prev].slice(0, 5);
 });
