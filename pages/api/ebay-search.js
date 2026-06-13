@@ -1,3 +1,17 @@
+function getMedian(nums) {
+  if (!nums.length) return null;
+
+  const sorted = nums.slice().sort(function(a, b) {
+    return a - b;
+  });
+
+  const mid = Math.floor(sorted.length / 2);
+
+  if (sorted.length % 2) return sorted[mid];
+
+  return (sorted[mid - 1] + sorted[mid]) / 2;
+}
+
 export default async function handler(req, res) {
   try {
     const q = typeof req.query.q === "string" ? req.query.q.trim() : "";
@@ -47,7 +61,7 @@ export default async function handler(req, res) {
       "https://api.ebay.com/buy/browse/v1/item_summary/search?" +
       new URLSearchParams({
         q,
-        limit: "10",
+        limit: "20",
       }).toString();
 
     const searchRes = await fetch(searchUrl, {
@@ -69,6 +83,10 @@ export default async function handler(req, res) {
     }
 
     const items = (searchData.itemSummaries || []).map(function(item) {
+      const priceValue = item.price && item.price.value
+        ? Number(item.price.value)
+        : null;
+
       return {
         title: item.title || null,
         price: item.price
@@ -77,6 +95,7 @@ export default async function handler(req, res) {
               currency: item.price.currency,
             }
           : null,
+        priceValue: Number.isFinite(priceValue) ? priceValue : null,
         condition: item.condition || null,
         itemWebUrl: item.itemWebUrl || null,
         image: item.image && item.image.imageUrl ? item.image.imageUrl : null,
@@ -84,12 +103,30 @@ export default async function handler(req, res) {
       };
     });
 
+    const priceValues = items
+      .map(function(item) {
+        return item.priceValue;
+      })
+      .filter(function(value) {
+        return typeof value === "number" && Number.isFinite(value) && value > 0;
+      });
+
+    const lowest = priceValues.length ? Math.min.apply(null, priceValues) : null;
+    const highest = priceValues.length ? Math.max.apply(null, priceValues) : null;
+    const median = getMedian(priceValues);
+
     return res.status(200).json({
       success: true,
       environment: "production",
       query: q,
       total: searchData.total || 0,
       count: items.length,
+      marketSummary: {
+        listingCount: priceValues.length,
+        lowest,
+        highest,
+        median,
+      },
       items,
     });
   } catch (err) {
