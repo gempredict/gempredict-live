@@ -64,7 +64,30 @@ function scoreListing(title, query) {
 
 export default async function handler(req, res) {
   try {
-    const q = typeof req.query.q === "string" ? req.query.q.trim() : "";
+    const identity = {
+  game: typeof req.query.game === "string" ? req.query.game.trim() : null,
+  year: typeof req.query.year === "string" ? req.query.year.trim() : null,
+  brand: typeof req.query.brand === "string" ? req.query.brand.trim() : null,
+  set: typeof req.query.set === "string" ? req.query.set.trim() : null,
+  player: typeof req.query.player === "string" ? req.query.player.trim() : null,
+  cardName: typeof req.query.cardName === "string" ? req.query.cardName.trim() : null,
+  cardNumber: typeof req.query.cardNumber === "string" ? req.query.cardNumber.trim() : null,
+  parallel: typeof req.query.parallel === "string" ? req.query.parallel.trim() : null,
+};
+
+const structuredQuery = [
+  identity.year,
+  identity.brand || identity.set,
+  identity.player || identity.cardName,
+  identity.cardNumber,
+  identity.parallel,
+]
+  .filter(Boolean)
+  .join(" ");
+
+const q = typeof req.query.q === "string" && req.query.q.trim()
+  ? req.query.q.trim()
+  : structuredQuery;
 
     if (!q) {
       return res.status(400).json({
@@ -189,9 +212,10 @@ export default async function handler(req, res) {
     const rawMedian = getMedian(rawPrices);
 
     return res.status(200).json({
-      success: true,
-      environment: "production",
-      query: q,
+  success: true,
+  environment: "production",
+  query: q,
+  identity,
       total: searchData.total || 0,
       count: items.length,
       marketSummary: {
