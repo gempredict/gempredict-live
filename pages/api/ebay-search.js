@@ -1,15 +1,42 @@
 function getMedian(nums) {
   if (!nums.length) return null;
-
   const sorted = nums.slice().sort(function(a, b) {
     return a - b;
   });
-
   const mid = Math.floor(sorted.length / 2);
-
   if (sorted.length % 2) return sorted[mid];
-
   return (sorted[mid - 1] + sorted[mid]) / 2;
+}
+
+function scoreListing(title, query) {
+  const t = (title || "").toLowerCase();
+  const q = (query || "").toLowerCase();
+
+  let score = 0;
+
+  const queryWords = q
+    .split(/\s+/)
+    .map(function(w) { return w.trim(); })
+    .filter(Boolean);
+
+  queryWords.forEach(function(word) {
+    if (t.includes(word)) score += 10;
+  });
+
+  // Early card-specific boosts
+  if (t.includes("248")) score += 20;
+  if (t.includes("purple")) score += 20;
+  if (t.includes("shock")) score += 20;
+  if (t.includes("rated rookie")) score += 15;
+  if (t.includes("optic")) score += 10;
+
+  // Penalize things that distort raw comps
+  if (t.includes("psa") || t.includes("bgs") || t.includes("sgc") || t.includes("cgc")) score -= 40;
+  if (t.includes("lot")) score -= 50;
+  if (t.includes("auto") || t.includes("autograph")) score -= 35;
+  if (t.includes("patch") || t.includes("relic")) score -= 35;
+
+  return Math.max(0, score);
 }
 
 export default async function handler(req, res) {
@@ -87,8 +114,11 @@ export default async function handler(req, res) {
         ? Number(item.price.value)
         : null;
 
+      const title = item.title || null;
+
       return {
-        title: item.title || null,
+        title,
+        matchScore: scoreListing(title, q),
         price: item.price
           ? {
               value: item.price.value,
@@ -101,9 +131,15 @@ export default async function handler(req, res) {
         image: item.image && item.image.imageUrl ? item.image.imageUrl : null,
         itemId: item.itemId || null,
       };
+    }).sort(function(a, b) {
+      return b.matchScore - a.matchScore;
     });
 
-    const priceValues = items
+    const comparableItems = items.filter(function(item) {
+      return item.matchScore >= 60 && typeof item.priceValue === "number";
+    });
+
+    const priceValues = comparableItems
       .map(function(item) {
         return item.priceValue;
       })
@@ -122,11 +158,13 @@ export default async function handler(req, res) {
       total: searchData.total || 0,
       count: items.length,
       marketSummary: {
+        comparableCount: comparableItems.length,
         listingCount: priceValues.length,
         lowest,
         highest,
         median,
       },
+      comparableItems,
       items,
     });
   } catch (err) {
