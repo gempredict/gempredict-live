@@ -566,15 +566,7 @@ function ResultCard({ data, index, onSave, isSaved }) {
         return (
           <div key={item.itemId || idx} style={{ background: C.white, border: "1px solid " + C.border, borderRadius: 10, padding: "0.65rem 0.75rem" }}>
             <div style={{ display: "flex", justifyContent: "space-between", gap: "0.75rem", alignItems: "flex-start" }}>
-              <a
-  href={item.itemWebUrl}
-  target="_blank"
-  rel="noopener noreferrer"
-  style={{ fontSize: "0.78rem", color: C.inkMid, lineHeight: 1.35, textDecoration: "none" }}
->
-  {item.title}
-  <span style={{ color: C.inkSoft, marginLeft: 6 }}>↗</span>
-</a>
+              <div style={{ fontSize: "0.78rem", color: C.inkMid, lineHeight: 1.35 }}>
                 {item.title}
               </div>
               <div style={{ fontWeight: 800, color: C.green, whiteSpace: "nowrap" }}>

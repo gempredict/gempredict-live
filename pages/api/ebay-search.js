@@ -227,9 +227,15 @@ if (avgMatchScore >= 150) marketConfidence += 10;
 
 marketConfidence = Math.min(100, marketConfidence);
 
-if (rawComparableItems.length >= 5) marketConfidence += 10;
-if (rawComparableItems.length >= 10) marketConfidence += 10;
-if (rawComparableItems.length >= 15) marketConfidence += 10;
+const rawTypicalRangeLow = rawPrices.length
+  ? rawPrices.slice().sort(function(a, b) { return a - b; })[Math.floor(rawPrices.length * 0.25)]
+  : null;
+
+const rawTypicalRangeHigh = rawPrices.length
+  ? rawPrices.slice().sort(function(a, b) { return a - b; })[Math.floor(rawPrices.length * 0.75)]
+  : null;
+
+marketConfidence = Math.max(1, Math.min(99, marketConfidence));
 
 
     return res.status(200).json({
@@ -246,6 +252,8 @@ if (rawComparableItems.length >= 15) marketConfidence += 10;
         rawLowest: roundMoney(rawLowest),
         rawHighest: roundMoney(rawHighest),
         rawMedian: roundMoney(rawMedian),
+        rawTypicalRangeLow: roundMoney(rawTypicalRangeLow),
+rawTypicalRangeHigh: roundMoney(rawTypicalRangeHigh),
         marketConfidence,
 averageMatchScore: Math.round(avgMatchScore),
       },
