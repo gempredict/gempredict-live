@@ -530,13 +530,27 @@ function ResultCard({ data, index, onSave, isSaved }) {
       Market Intelligence
     </div>
 
-    <div style={{ display: "grid", gridTemplateColumns: "repeat(3,1fr)", gap: "0.65rem", textAlign: "center" }}>
+    <div style={{ display: "grid", gridTemplateColumns: "repeat(2,1fr)", gap: "0.65rem", textAlign: "center" }}>
       <div>
         <div style={{ fontSize: "0.62rem", color: C.inkSoft }}>Raw Market Value</div>
         <div style={{ fontFamily: "'Playfair Display', serif", fontSize: "1.25rem", fontWeight: 700, color: C.ink }}>
           {marketSummary.rawMedian != null ? "$" + safeMoney(marketSummary.rawMedian) : "—"}
         </div>
       </div>
+      <div>
+  <div style={{ fontSize: "0.62rem", color: C.inkSoft }}>
+    Typical Range
+  </div>
+  <div style={{ fontFamily: "'Playfair Display', serif", fontSize: "1.05rem", fontWeight: 700, color: C.ink }}>
+    {marketSummary.rawTypicalRangeLow != null &&
+     marketSummary.rawTypicalRangeHigh != null
+      ? "$" +
+        safeMoney(marketSummary.rawTypicalRangeLow) +
+        " - $" +
+        safeMoney(marketSummary.rawTypicalRangeHigh)
+      : "—"}
+  </div>
+</div>
 
       <div>
         <div style={{ fontSize: "0.62rem", color: C.inkSoft }}>Comparable Listings</div>
