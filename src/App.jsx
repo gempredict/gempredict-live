@@ -555,6 +555,30 @@ function ResultCard({ data, index, onSave, isSaved }) {
 
     <div style={{ fontSize: "0.7rem", color: C.inkSoft, marginTop: "0.65rem", fontStyle: "italic" }}>
       Based on live eBay comparable listings filtered by GemPredict Market Engine.
+      {data.marketData?.rawComparableItems?.length > 0 && (
+  <div style={{ marginTop: "0.85rem", borderTop: "1px solid " + C.border, paddingTop: "0.75rem" }}>
+    <div style={{ fontSize: "0.65rem", fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.08em", color: C.inkSoft, marginBottom: "0.55rem" }}>
+      Top Comparable Listings
+    </div>
+
+    <div style={{ display: "grid", gap: "0.5rem" }}>
+      {data.marketData.rawComparableItems.slice(0, 3).map(function(item, idx) {
+        return (
+          <div key={item.itemId || idx} style={{ background: C.white, border: "1px solid " + C.border, borderRadius: 10, padding: "0.65rem 0.75rem" }}>
+            <div style={{ display: "flex", justifyContent: "space-between", gap: "0.75rem", alignItems: "flex-start" }}>
+              <div style={{ fontSize: "0.78rem", color: C.inkMid, lineHeight: 1.35 }}>
+                {item.title}
+              </div>
+              <div style={{ fontWeight: 800, color: C.green, whiteSpace: "nowrap" }}>
+                {item.priceValue != null ? "$" + safeMoney(item.priceValue) : "—"}
+              </div>
+            </div>
+          </div>
+        );
+      })}
+    </div>
+  </div>
+)}
     </div>
   </div>
 )}
