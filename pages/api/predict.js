@@ -718,7 +718,7 @@ try {
 const marketUrl =
   `${baseUrl}/api/ebay-search?q=` +
   encodeURIComponent(marketQuery);
-const host
+
   const marketRes = await fetch(marketUrl);
   const marketJson = await marketRes.json();
 
