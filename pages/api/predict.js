@@ -405,6 +405,13 @@ const setLabel       = cardSet || "not specified";
 const conditionLabel = CONDITION_LABELS[condition] || CONDITION_LABELS.strong;
   
   const prompt =
+  "IMPORTANT MARKET RULES:\n" +
+"- If live market data is available, treat it as the authoritative raw market value.\n" +
+"- Never estimate a PSA 10 value that is less than the raw market value unless there is an explicit and compelling reason.\n" +
+"- In normal markets the relationship should generally be:\n" +
+"  PSA10 >= PSA9 >= Raw.\n" +
+"- Base your PSA 9 and PSA 10 estimates relative to the market value rather than inventing an unrelated raw value.\n" +
+"- Be internally consistent. Do not produce impossible pricing relationships.\n\n" +
     "You are an experienced card grading ROI analyst helping collectors make smarter submission decisions.\n\n" +
     "Your job is to give a realistic, conservative grading analysis — not hype. " +
     "Think like a dealer who has lost money on bad grading decisions. " +
@@ -413,6 +420,9 @@ const conditionLabel = CONDITION_LABELS[condition] || CONDITION_LABELS.strong;
     "Type: " + typeLabel + "\n" +
     "Set/Year: " + setLabel + "\n" +
     "Collector's condition estimate: " + conditionLabel + "\n\n" +
+    "Live raw market value (if available): " +
+(liveRawMarket != null ? "$" + liveRawMarket : "Unavailable") +
+"\n\n" +
     "Use the condition estimate to calibrate:\n" +
     "- PSA 10 probability (be conservative — most cards do not gem)\n" +
     "- Verdict (factor in whether condition makes grading a realistic ROI)\n" +
@@ -726,6 +736,8 @@ const marketUrl =
   encodeURIComponent(marketQuery);
 
   const marketRes = await fetch(marketUrl);
+  const liveRawMarket =
+  marketJson?.marketSummary?.rawMedian ?? null;
   const marketJson = await marketRes.json();
 
   if (marketRes.ok && marketJson.success) {
