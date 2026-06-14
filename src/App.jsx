@@ -609,7 +609,13 @@ function ResultCard({ data, index, onSave, isSaved }) {
         {/* Value grid */}
         <div className="gp-value-grid" style={{ marginBottom: "0.9rem" }}>
           {[
-            { label: "Raw Value",   val: data.rawValue,   featured: false },
+            {
+  label: data.marketData?.marketSummary?.rawMedian != null ? "Live Raw Market" : "Raw Value",
+  val: data.marketData?.marketSummary?.rawMedian != null
+    ? data.marketData.marketSummary.rawMedian
+    : data.rawValue,
+  featured: false
+},
             { label: "PSA 9 Value", val: data.psa9Value,  featured: false },
             { label: "PSA 10",      val: data.psa10Value, featured: true  },
           ].map(function(b) {
