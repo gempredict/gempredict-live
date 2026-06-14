@@ -712,13 +712,13 @@ try {
     .filter(Boolean)
     .join(" ");
 
-  const host = req.headers.host;
-  const protocol = host && host.includes("localhost") ? "http" : "https";
+   const baseUrl =
+  process.env.NEXT_PUBLIC_SITE_URL || "https://gempredict-live.vercel.app";
 
-  const marketUrl =
-    `${protocol}://${host}/api/ebay-search?q=` +
-    encodeURIComponent(marketQuery);
-
+const marketUrl =
+  `${baseUrl}/api/ebay-search?q=` +
+  encodeURIComponent(marketQuery);
+const host
   const marketRes = await fetch(marketUrl);
   const marketJson = await marketRes.json();
 
