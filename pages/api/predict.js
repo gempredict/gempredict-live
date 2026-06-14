@@ -706,11 +706,17 @@ backImageMimeType = parsed.backImageMimeType;
 
 try {
   const marketQuery = [
-    prediction.cardTitle,
-    prediction.cardMeta,
-  ]
-    .filter(Boolean)
-    .join(" ");
+  prediction.cardMeta,
+  prediction.cardTitle,
+]
+  .join(" ")
+  .replace(/Prospect Auto or Base/gi, "")
+  .replace(/Auto/gi, "")
+  .replace(/Base/gi, "")
+  .replace(/Parallel/gi, "")
+  .replace(/,/g, " ")
+  .replace(/\s+/g, " ")
+  .trim();
 
    const baseUrl =
   process.env.NEXT_PUBLIC_SITE_URL || "https://gempredict-live.vercel.app";
