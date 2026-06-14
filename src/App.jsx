@@ -818,6 +818,7 @@ const emailRef    = useRef(null);
       }
 
       const data = await res.json();
+      console.log("PREDICT RESPONSE:", data);
       if (res.status === 429) { setRateLimitMsg(data.message || "Rate limit exceeded. Please try again later."); setLoading(false); return; }
       if (!res.ok) { setError(data.error || "Something went wrong. Please try again."); setLoading(false); return; }
 
