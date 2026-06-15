@@ -221,9 +221,14 @@ function normaliseCard(raw) {
   const VALID_VERDICTS = ["grade", "skip", "maybe"];
   const verdictRaw = typeof raw.verdict === "string" ? raw.verdict.trim().toLowerCase() : "";
   const verdict    = VALID_VERDICTS.includes(verdictRaw) ? verdictRaw : "maybe";
-  const rawValue   = Math.max(0, safeInt(raw.rawValue));
-  const psa9Value  = Math.max(0, safeInt(raw.psa9Value));
-  const psa10Value = Math.max(0, safeInt(raw.psa10Value));
+  const rawValue = Math.max(0, safeInt(raw.rawValue));
+
+let psa9Value = Math.max(0, safeInt(raw.psa9Value));
+let psa10Value = Math.max(0, safeInt(raw.psa10Value));
+
+if (psa9Value < rawValue) psa9Value = rawValue;
+if (psa10Value < psa9Value) psa10Value = psa9Value;
+if (psa10Value < rawValue) psa10Value = rawValue;
   const psa10Prob  = Math.min(100, Math.max(0, safeInt(raw.psa10Probability, 50)));
   const gradingUpside =
     raw.gradingUpside != null
