@@ -420,9 +420,7 @@ const conditionLabel = CONDITION_LABELS[condition] || CONDITION_LABELS.strong;
     "Type: " + typeLabel + "\n" +
     "Set/Year: " + setLabel + "\n" +
     "Collector's condition estimate: " + conditionLabel + "\n\n" +
-    "Live raw market value (if available): " +
-(liveRawMarket != null ? "$" + liveRawMarket : "Unavailable") +
-"\n\n" +
+    
     "Use the condition estimate to calibrate:\n" +
     "- PSA 10 probability (be conservative — most cards do not gem)\n" +
     "- Verdict (factor in whether condition makes grading a realistic ROI)\n" +
