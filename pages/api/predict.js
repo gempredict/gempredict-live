@@ -252,6 +252,16 @@ if (expectedNetValue > 0) {
 }
 
 decisionConfidence = Math.max(1, Math.min(99, decisionConfidence));
+let gemPredictScore = 50;
+
+gemPredictScore += Math.round(psa10Prob * 0.25);
+
+if (expectedNetValue > 0) gemPredictScore += 20;
+if (expectedNetValue > 50) gemPredictScore += 10;
+if (gradingUpside > 0) gemPredictScore += 10;
+if (gradingUpside > 100) gemPredictScore += 10;
+
+gemPredictScore = Math.max(1, Math.min(99, gemPredictScore));
   const psa9Pop   = raw.psa9Pop  != null ? Math.max(0, safeInt(raw.psa9Pop))  : null;
   const psa10Pop  = raw.psa10Pop != null ? Math.max(0, safeInt(raw.psa10Pop)) : null;
   const populationInsight = typeof raw.populationInsight === "string" && raw.populationInsight.trim()
@@ -269,6 +279,7 @@ decisionConfidence = Math.max(1, Math.min(99, decisionConfidence));
 expectedGradedValue,
 expectedNetValue,
 decisionConfidence,
+gemPredictScore,
 };
 }
 
