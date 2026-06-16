@@ -469,6 +469,36 @@ function ResultCard({ data, index, onSave, isSaved }) {
     >
       {data.gemPredictScore}/99
     </div>
+    <div
+  style={{
+    marginTop: "0.35rem",
+    fontSize: "0.72rem",
+    color: C.inkMid,
+    lineHeight: 1.35,
+    maxWidth: 260,
+  }}
+>
+  {data.gemPredictScore >= 85
+    ? "🟢 Strong Grade Candidate"
+    : data.gemPredictScore >= 70
+    ? "🟡 Good Candidate"
+    : data.gemPredictScore >= 55
+    ? "🟠 Consider It"
+    : "🔴 Keep Raw"}
+</div>
+
+<div
+  style={{
+    marginTop: "0.35rem",
+    fontSize: "0.65rem",
+    color: C.inkSoft,
+    lineHeight: 1.4,
+    maxWidth: 260,
+  }}
+>
+  Measures grading attractiveness using market strength,
+  PSA 10 odds, expected profit, and confidence.
+</div>
   </div>
 )}
           <div
