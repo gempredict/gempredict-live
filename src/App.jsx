@@ -436,6 +436,41 @@ function ResultCard({ data, index, onSave, isSaved }) {
 >
   SHOULD YOU GRADE THIS?
 </div>
+{data.gemPredictScore != null && (
+  <div
+    style={{
+      display: "inline-block",
+      background: C.goldLight,
+      border: "1px solid " + C.gold,
+      borderRadius: 999,
+      padding: "0.35rem 0.9rem",
+      marginBottom: "0.8rem",
+    }}
+  >
+    <span
+      style={{
+        fontSize: "0.68rem",
+        fontWeight: 700,
+        textTransform: "uppercase",
+        letterSpacing: "0.08em",
+        color: C.amber,
+      }}
+    >
+      GemPredict Score
+    </span>
+
+    <div
+      style={{
+        fontSize: "1.6rem",
+        fontWeight: 800,
+        color: C.amber,
+        lineHeight: 1.1,
+      }}
+    >
+      {data.gemPredictScore}/99
+    </div>
+  </div>
+)}
           <div
   style={{
     fontSize: "1.75rem",
