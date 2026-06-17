@@ -597,7 +597,7 @@ function ResultCard({ data, index, onSave, isSaved }) {
 
     <div style={{ display: "grid", gridTemplateColumns: "repeat(2,1fr)", gap: "0.65rem", textAlign: "center" }}>
       <div>
-        <div style={{ fontSize: "0.62rem", color: C.inkSoft }}>Raw Market Value</div>
+        <div style={{ fontSize: "0.62rem", color: C.inkSoft }}>GemPredict Fair Market Value™</div>
         <div style={{ fontFamily: "'Playfair Display', serif", fontSize: "1.25rem", fontWeight: 700, color: C.ink }}>
           {marketSummary.rawMedian != null ? "$" + safeMoney(marketSummary.rawMedian) : "—"}
         </div>
@@ -656,6 +656,22 @@ function ResultCard({ data, index, onSave, isSaved }) {
   ? "Good Match"
   : "Weak Match"}
   </div>
+  {item.matchReasons && item.matchReasons.length > 0 && (
+  <div
+    style={{
+      fontSize: "0.62rem",
+      color: C.inkSoft,
+      marginTop: "0.25rem",
+      lineHeight: 1.4,
+    }}
+  >
+    {item.matchReasons.slice(0, 3).map(function(reason, i) {
+      return (
+        <div key={i}>✓ {reason}</div>
+      );
+    })}
+  </div>
+)}
               </div>
               <div style={{ fontWeight: 800, color: C.green, whiteSpace: "nowrap" }}>
                 {item.priceValue != null ? "$" + safeMoney(item.priceValue) : "—"}
