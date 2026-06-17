@@ -637,7 +637,7 @@ function ResultCard({ data, index, onSave, isSaved }) {
       {data.marketData?.rawComparableItems?.length > 0 && (
   <div style={{ marginTop: "0.85rem", borderTop: "1px solid " + C.border, paddingTop: "0.75rem" }}>
     <div style={{ fontSize: "0.65rem", fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.08em", color: C.inkSoft, marginBottom: "0.55rem" }}>
-      Top Comparable Listings
+     Top Comparable Listings
     </div>
 
     <div style={{ display: "grid", gap: "0.5rem" }}>
@@ -645,8 +645,13 @@ function ResultCard({ data, index, onSave, isSaved }) {
         return (
           <div key={item.itemId || idx} style={{ background: C.white, border: "1px solid " + C.border, borderRadius: 10, padding: "0.65rem 0.75rem" }}>
             <div style={{ display: "flex", justifyContent: "space-between", gap: "0.75rem", alignItems: "flex-start" }}>
-              <div style={{ fontSize: "0.78rem", color: C.inkMid, lineHeight: 1.35 }}>
+              <div style={{ flex: 1 }}>
+  <div style={{ fontSize: "0.78rem", color: C.inkMid, lineHeight: 1.35 }}>
                 {item.title}
+                  </div>
+  <div style={{ fontSize: "0.64rem", color: C.inkSoft, marginTop: "0.25rem" }}>
+    Match Score: {item.matchScore || "—"}
+  </div>
               </div>
               <div style={{ fontWeight: 800, color: C.green, whiteSpace: "nowrap" }}>
                 {item.priceValue != null ? "$" + safeMoney(item.priceValue) : "—"}
