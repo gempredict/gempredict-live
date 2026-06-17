@@ -650,7 +650,11 @@ function ResultCard({ data, index, onSave, isSaved }) {
                 {item.title}
                   </div>
   <div style={{ fontSize: "0.64rem", color: C.inkSoft, marginTop: "0.25rem" }}>
-    Match Score: {item.matchScore || "—"}
+    {item.matchScore >= 140
+  ? "High Confidence Match"
+  : item.matchScore >= 90
+  ? "Good Match"
+  : "Weak Match"}
   </div>
               </div>
               <div style={{ fontWeight: 800, color: C.green, whiteSpace: "nowrap" }}>
