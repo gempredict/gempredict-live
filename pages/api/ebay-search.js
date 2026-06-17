@@ -33,11 +33,12 @@ function getListingType(title, condition) {
   return "raw";
 }
 
-function scoreListing(title, query) {
+ function scoreListing(title, query) {
   const t = (title || "").toLowerCase();
   const q = (query || "").toLowerCase();
 
   let score = 0;
+  const reasons = [];
 
   const queryWords = q
     .split(/\s+/)
@@ -48,18 +49,36 @@ function scoreListing(title, query) {
     if (t.includes(word)) score += 10;
   });
 
-  if (t.includes("248")) score += 20;
-  if (t.includes("purple")) score += 20;
-  if (t.includes("shock")) score += 20;
-  if (t.includes("rated rookie")) score += 15;
-  if (t.includes("optic")) score += 10;
+  if (t.includes("248")) {
+    score += 20;
+    reasons.push("Same card number");
+  }
+  if (t.includes("purple")) {
+    score += 20;
+    reasons.push("Parallel match");
+  }
+  if (t.includes("shock")) {
+    score += 20;
+    reasons.push("Parallel match");
+  }
+  if (t.includes("rated rookie")) {
+    score += 15;
+    reasons.push("Same rookie type");
+  }
+  if (t.includes("optic")) {
+    score += 10;
+    reasons.push("Same product/set");
+  }
 
   if (t.includes("psa") || t.includes("bgs") || t.includes("sgc") || t.includes("cgc")) score -= 40;
   if (t.includes("lot")) score -= 50;
   if (t.includes("auto") || t.includes("autograph")) score -= 35;
   if (t.includes("patch") || t.includes("relic")) score -= 35;
 
-  return Math.max(0, score);
+  return {
+    score: Math.max(0, score),
+    reasons: Array.from(new Set(reasons)),
+  };
 }
 
 export default async function handler(req, res) {
@@ -164,23 +183,26 @@ const q = typeof req.query.q === "string" && req.query.q.trim()
         const title = item.title || "";
         const listingType = getListingType(title, item.condition);
 
-        return {
-          title,
-          matchScore: scoreListing(title, q),
-          listingType,
-          price: item.price
-            ? {
-                value: item.price.value,
-                currency: item.price.currency,
-              }
-            : null,
-          priceValue: Number.isFinite(priceValue) ? priceValue : null,
-          condition: item.condition || null,
-          itemWebUrl: item.itemWebUrl || null,
-          image: item.image && item.image.imageUrl ? item.image.imageUrl : null,
-          itemId: item.itemId || null,
-        };
-      })
+        const match = scoreListing(title, q);
+
+return {
+  title,
+  matchScore: match.score,
+  matchReasons: match.reasons,
+  listingType,
+  price: item.price
+    ? {
+        value: item.price.value,
+        currency: item.price.currency,
+      }
+    : null,
+  priceValue: Number.isFinite(priceValue) ? priceValue : null,
+  condition: item.condition || null,
+  itemWebUrl: item.itemWebUrl || null,
+  image: item.image && item.image.imageUrl ? item.image.imageUrl : null,
+  itemId: item.itemId || null,
+};
+})
       .sort(function(a, b) {
         return b.matchScore - a.matchScore;
       });
@@ -252,6 +274,7 @@ marketConfidence = Math.max(1, Math.min(99, marketConfidence));
         rawLowest: roundMoney(rawLowest),
         rawHighest: roundMoney(rawHighest),
         rawMedian: roundMoney(rawMedian),
+        fairMarketValue: roundMoney(rawMedian),
         rawTypicalRangeLow: roundMoney(rawTypicalRangeLow),
 rawTypicalRangeHigh: roundMoney(rawTypicalRangeHigh),
         marketConfidence,
