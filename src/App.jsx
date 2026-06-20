@@ -666,7 +666,7 @@ function ResultCard({ data, index, onSave, isSaved }) {
   textDecoration: "underline",
   cursor: "pointer",
 }}
-  }}
+
 >
   {item.title}
   <span style={{ color: C.inkSoft, marginLeft: 5 }}>↗</span>
