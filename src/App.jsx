@@ -821,7 +821,7 @@ function ResultCard({ data, index, onSave, isSaved }) {
           </button>
         </div>
         <div style={{ fontSize: "0.7rem", color: C.inkSoft, marginTop: "0.75rem", fontStyle: "italic" }}>
-          Best used as a pre-submission grading filter — always verify with current comps.
+           GemPredict is in beta. Market values are estimates from live comparable listings and should be verified before buying, selling, or grading.
         </div>
       </div>
     </div>
