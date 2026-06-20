@@ -750,9 +750,10 @@ const marketUrl =
   encodeURIComponent(marketQuery);
 
   const marketRes = await fetch(marketUrl);
-  const liveRawMarket =
+const marketJson = await marketRes.json();
+
+const liveRawMarket =
   marketJson?.marketSummary?.rawMedian ?? null;
-  const marketJson = await marketRes.json();
 
   if (marketRes.ok && marketJson.success) {
     marketData = marketJson;
