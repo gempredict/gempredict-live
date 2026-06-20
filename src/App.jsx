@@ -659,7 +659,6 @@ function ResultCard({ data, index, onSave, isSaved }) {
   target="_blank"
   rel="noopener noreferrer"
   style={{
-    style={{
   display: "inline-block",
   fontSize: "0.78rem",
   color: C.green,
