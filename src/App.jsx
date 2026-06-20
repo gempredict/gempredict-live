@@ -654,9 +654,21 @@ function ResultCard({ data, index, onSave, isSaved }) {
           <div key={item.itemId || idx} style={{ background: C.white, border: "1px solid " + C.border, borderRadius: 10, padding: "0.65rem 0.75rem" }}>
             <div style={{ display: "flex", justifyContent: "space-between", gap: "0.75rem", alignItems: "flex-start" }}>
               <div style={{ flex: 1 }}>
-  <div style={{ fontSize: "0.78rem", color: C.inkMid, lineHeight: 1.35 }}>
-                {item.title}
-                  </div>
+  <a
+  href={item.itemWebUrl}
+  target="_blank"
+  rel="noopener noreferrer"
+  style={{
+    display: "inline-block",
+    fontSize: "0.78rem",
+    color: C.inkMid,
+    lineHeight: 1.35,
+    textDecoration: "none",
+  }}
+>
+  {item.title}
+  <span style={{ color: C.inkSoft, marginLeft: 5 }}>↗</span>
+</a>
   <div style={{ fontSize: "0.64rem", color: C.inkSoft, marginTop: "0.25rem" }}>
     {item.matchScore >= 140
   ? "High Confidence Match"
