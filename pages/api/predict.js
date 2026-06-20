@@ -729,12 +729,14 @@ backImageMimeType = parsed.backImageMimeType;
     let marketData = null;
 
 try {
-  const marketQuery = [
-  prediction.cardMeta,
+const marketQuery = [
   prediction.cardTitle,
+  prediction.cardMeta,
 ]
+  .filter(Boolean)
   .join(" ")
   .replace(/Prospect Auto or Base/gi, "")
+  .replace(/Prospects/gi, "")
   .replace(/Auto/gi, "")
   .replace(/Base/gi, "")
   .replace(/Parallel/gi, "")
