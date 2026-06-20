@@ -639,6 +639,12 @@ function ResultCard({ data, index, onSave, isSaved }) {
     <div style={{ fontSize: "0.65rem", fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.08em", color: C.inkSoft, marginBottom: "0.55rem" }}>
      Top Comparable Listings
     </div>
+    <div>
+  <div style={{ fontSize: "0.62rem", color: C.inkSoft }}>Outliers Removed</div>
+  <div style={{ fontFamily: "'Playfair Display', serif", fontSize: "1.25rem", fontWeight: 700, color: C.ink }}>
+    {marketSummary.rawOutlierCount != null ? marketSummary.rawOutlierCount : "—"}
+  </div>
+</div>
 
     <div style={{ display: "grid", gap: "0.5rem" }}>
       {data.marketData.rawComparableItems.slice(0, 3).map(function(item, idx) {
