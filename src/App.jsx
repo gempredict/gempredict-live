@@ -1550,7 +1550,7 @@ if (data.imageAnalysis) setImageAnalysis(data.imageAnalysis);
           <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(260px, 1fr))", gap: "1.25rem" }}>
             {[
               { icon: "📊", title: "Market-informed estimates",     body: "Values reflect collector market patterns and known grading premiums — not live auction data or guaranteed valuations." },
-              { icon: "🎯", title: "ROI-first analysis",            body: "GemPredict factors in the $25 PSA fee and realistic grade probabilities so you see real upside, not optimistic upsell." },
+              { icon: "🎯", title: "ROI-first analysis",            body: "GemPredict factors in the current $80 PSA fee and realistic grade probabilities so you see real upside, not optimistic upsell." },
               { icon: "🧠", title: "Condition-aware output",         body: "Tell GemPredict your card's likely condition and the analysis calibrates accordingly — played cards and gem candidates are treated differently." },
               { icon: "📷", title: "AI photo analysis (Beta)",       body: "Upload a card photo and GemPredict will assess centering, corners, edges, and surface to estimate grading potential from the image." },
             ].map(function(item) {
