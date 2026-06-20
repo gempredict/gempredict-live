@@ -671,9 +671,6 @@ function ResultCard({ data, index, onSave, isSaved }) {
   {item.title}
   <span style={{ color: C.inkSoft, marginLeft: 5 }}>↗</span>
 </a>
-<div style={{ fontSize: "0.55rem", color: "red" }}>
-  {item.itemWebUrl}
-</div>
   <div style={{ fontSize: "0.64rem", color: C.inkSoft, marginTop: "0.25rem" }}>
     {item.matchScore >= 140
   ? "High Confidence Match"
