@@ -659,16 +659,22 @@ function ResultCard({ data, index, onSave, isSaved }) {
   target="_blank"
   rel="noopener noreferrer"
   style={{
-    display: "inline-block",
-    fontSize: "0.78rem",
-    color: C.inkMid,
-    lineHeight: 1.35,
-    textDecoration: "none",
+    style={{
+  display: "inline-block",
+  fontSize: "0.78rem",
+  color: C.green,
+  lineHeight: 1.35,
+  textDecoration: "underline",
+  cursor: "pointer",
+}}
   }}
 >
   {item.title}
   <span style={{ color: C.inkSoft, marginLeft: 5 }}>↗</span>
 </a>
+<div style={{ fontSize: "0.55rem", color: "red" }}>
+  {item.itemWebUrl}
+</div>
   <div style={{ fontSize: "0.64rem", color: C.inkSoft, marginTop: "0.25rem" }}>
     {item.matchScore >= 140
   ? "High Confidence Match"
