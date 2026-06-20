@@ -512,7 +512,7 @@ marketContext +
     "Verdict rules: grade=clear positive ROI with realistic grade potential; " +
     "skip=fee risk outweighs realistic upside given condition; " +
     "maybe=upside exists but depends on actual card condition or market timing.\n" +
-    "Be realistic. Most raw cards do not get PSA 10. Standard grading fees are approximately $80. Factor that into all ROI calculations and recommendations.;
+    "Be realistic. Most raw cards do not get PSA 10. Standard grading fees are approximately $80. Factor that into all ROI calculations and recommendations.";
 
   const message = await anthropic.messages.create({
     model: "claude-sonnet-4-6", max_tokens: 1000,
