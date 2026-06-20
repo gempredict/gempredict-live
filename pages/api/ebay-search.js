@@ -221,41 +221,50 @@ return {
       return item.listingType === "excluded";
     });
 
-    const rawPrices = rawComparableItems
-      .map(function(item) {
-        return item.priceValue;
-      })
-      .filter(function(value) {
-        return typeof value === "number" && Number.isFinite(value) && value > 0;
-      });
+   const rawPrices = rawComparableItems
+  .map(function(item) {
+    return item.priceValue;
+  })
+  .filter(function(value) {
+    return typeof value === "number" && Number.isFinite(value) && value > 0;
+  });
 
-    const rawLowest = rawPrices.length ? Math.min.apply(null, rawPrices) : null;
-    const rawHighest = rawPrices.length ? Math.max.apply(null, rawPrices) : null;
-    const rawMedian = getMedian(rawPrices);
-    let marketConfidence = 50;
+const sortedRawPrices = rawPrices.slice().sort(function(a, b) {
+  return a - b;
+});
 
-if (rawComparableItems.length >= 5) marketConfidence += 10;
-if (rawComparableItems.length >= 10) marketConfidence += 10;
-if (rawComparableItems.length >= 15) marketConfidence += 10;
+const rawTypicalRangeLow = sortedRawPrices.length
+  ? sortedRawPrices[Math.floor(sortedRawPrices.length * 0.25)]
+  : null;
+
+const rawTypicalRangeHigh = sortedRawPrices.length
+  ? sortedRawPrices[Math.floor(sortedRawPrices.length * 0.75)]
+  : null;
+
+const filteredRawPrices = rawPrices.filter(function(price) {
+  if (rawTypicalRangeLow == null || rawTypicalRangeHigh == null) return true;
+  return price >= rawTypicalRangeLow * 0.5 && price <= rawTypicalRangeHigh * 1.75;
+});
+
+const rawLowest = filteredRawPrices.length ? Math.min.apply(null, filteredRawPrices) : null;
+const rawHighest = filteredRawPrices.length ? Math.max.apply(null, filteredRawPrices) : null;
+const rawMedian = getMedian(filteredRawPrices);
+
+let marketConfidence = 50;
+
+if (filteredRawPrices.length >= 5) marketConfidence += 10;
+if (filteredRawPrices.length >= 10) marketConfidence += 10;
+if (filteredRawPrices.length >= 15) marketConfidence += 10;
 
 const avgMatchScore =
   rawComparableItems.length > 0
-    ? rawComparableItems.reduce((sum, item) => sum + item.matchScore, 0) /
-      rawComparableItems.length
+    ? rawComparableItems.reduce(function(sum, item) {
+        return sum + item.matchScore;
+      }, 0) / rawComparableItems.length
     : 0;
 
 if (avgMatchScore >= 120) marketConfidence += 10;
 if (avgMatchScore >= 150) marketConfidence += 10;
-
-marketConfidence = Math.min(100, marketConfidence);
-
-const rawTypicalRangeLow = rawPrices.length
-  ? rawPrices.slice().sort(function(a, b) { return a - b; })[Math.floor(rawPrices.length * 0.25)]
-  : null;
-
-const rawTypicalRangeHigh = rawPrices.length
-  ? rawPrices.slice().sort(function(a, b) { return a - b; })[Math.floor(rawPrices.length * 0.75)]
-  : null;
 
 marketConfidence = Math.max(1, Math.min(99, marketConfidence));
 
@@ -269,6 +278,8 @@ marketConfidence = Math.max(1, Math.min(99, marketConfidence));
       count: items.length,
       marketSummary: {
         rawComparableCount: rawComparableItems.length,
+        rawUsedCount: filteredRawPrices.length,
+rawOutlierCount: rawPrices.length - filteredRawPrices.length,
         gradedCount: gradedItems.length,
         excludedCount: excludedItems.length,
         rawLowest: roundMoney(rawLowest),
