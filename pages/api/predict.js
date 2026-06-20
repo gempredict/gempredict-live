@@ -419,6 +419,51 @@ async function fetchPrediction(
   const typeLabel      = CARD_TYPE_LABELS[cardType] || "Card";
 const setLabel       = cardSet || "not specified";
 const conditionLabel = CONDITION_LABELS[condition] || CONDITION_LABELS.strong;
+
+let preMarketData = null;
+let preLiveRawMarket = null;
+
+try {
+  const preMarketQuery = [
+    cardName,
+    cardSet,
+  ]
+    .filter(Boolean)
+    .join(" ")
+    .replace(/Prospect Auto or Base/gi, "")
+    .replace(/Prospects/gi, "")
+    .replace(/Auto/gi, "")
+    .replace(/Base/gi, "")
+    .replace(/Parallel/gi, "")
+    .replace(/,/g, " ")
+    .replace(/\s+/g, " ")
+    .trim();
+
+  const baseUrl =
+    process.env.NEXT_PUBLIC_SITE_URL || "https://gempredict-live.vercel.app";
+
+  const preMarketUrl =
+    `${baseUrl}/api/ebay-search?q=` + encodeURIComponent(preMarketQuery);
+
+  const preMarketRes = await fetch(preMarketUrl);
+  const preMarketJson = await preMarketRes.json();
+
+  if (preMarketRes.ok && preMarketJson.success) {
+    preMarketData = preMarketJson;
+    preLiveRawMarket = preMarketJson?.marketSummary?.rawMedian ?? null;
+  }
+} catch (err) {
+  preMarketData = null;
+  preLiveRawMarket = null;
+}
+
+const marketContext =
+  preLiveRawMarket != null
+    ? "\n\nLIVE MARKET DATA:\n" +
+      "- Current GemPredict Fair Market Value: $" + preLiveRawMarket + "\n" +
+      "- Use this as the raw card value baseline.\n" +
+      "- Do not refer to a different raw value in the analysis or action.\n"
+    : "";
   
   const prompt =
   "IMPORTANT MARKET RULES:\n" +
@@ -435,7 +480,9 @@ const conditionLabel = CONDITION_LABELS[condition] || CONDITION_LABELS.strong;
     "Card: " + cardName + "\n" +
     "Type: " + typeLabel + "\n" +
     "Set/Year: " + setLabel + "\n" +
-    "Collector's condition estimate: " + conditionLabel + "\n\n" +
+    "Collector's condition estimate: " + conditionLabel + "\n" +
+marketContext +
+"\n" +
     
     "Use the condition estimate to calibrate:\n" +
     "- PSA 10 probability (be conservative — most cards do not gem)\n" +
