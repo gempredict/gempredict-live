@@ -592,7 +592,7 @@ function ResultCard({ data, index, onSave, isSaved }) {
         {marketSummary && (
   <div style={{ background: C.cream, border: "1px solid " + C.border, borderRadius: 12, padding: "0.9rem 1rem", marginBottom: "1rem" }}>
     <div style={{ fontSize: "0.65rem", fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.08em", color: C.inkSoft, marginBottom: "0.65rem" }}>
-      Market Intelligence
+     Listings Used
     </div>
 
     <div style={{ display: "grid", gridTemplateColumns: "repeat(2,1fr)", gap: "0.65rem", textAlign: "center" }}>
@@ -620,7 +620,9 @@ function ResultCard({ data, index, onSave, isSaved }) {
       <div>
         <div style={{ fontSize: "0.62rem", color: C.inkSoft }}>Comparable Listings</div>
         <div style={{ fontFamily: "'Playfair Display', serif", fontSize: "1.25rem", fontWeight: 700, color: C.ink }}>
-          {marketSummary.rawComparableCount != null ? marketSummary.rawComparableCount : "—"}
+          {marketSummary.rawUsedCount != null && marketSummary.rawComparableCount != null
+  ? marketSummary.rawUsedCount + " / " + marketSummary.rawComparableCount
+  : "—"}
         </div>
       </div>
 
