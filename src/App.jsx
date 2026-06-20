@@ -764,9 +764,11 @@ function ResultCard({ data, index, onSave, isSaved }) {
     </div>
 
     <div style={{ display: "flex", justifyContent: "space-between" }}>
-      <span>Current Raw Value</span>
-      <strong style={{ color: C.red }}>{"-$" + safeMoney(data.rawValue || 0)}</strong>
-    </div>
+  <span>Current Raw Value</span>
+  <strong style={{ color: C.red }}>
+    {"-$" + safeMoney(data.marketData?.marketSummary?.rawMedian ?? data.rawValue ?? 0)}
+  </strong>
+</div>
 
     <div style={{ display: "flex", justifyContent: "space-between" }}>
       <span>PSA Submission Fee</span>
