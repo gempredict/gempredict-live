@@ -1455,6 +1455,102 @@ if (data.imageAnalysis) setImageAnalysis(data.imageAnalysis);
             </div>
           )}
 
+          {/* What To Grade Next */}
+{savedReports.length > 0 && (
+  <div style={{ marginTop: "1.75rem" }}>
+    <div
+      style={{
+        fontSize: "0.72rem",
+        fontWeight: 700,
+        textTransform: "uppercase",
+        letterSpacing: "0.08em",
+        color: C.inkSoft,
+        marginBottom: "0.75rem",
+      }}
+    >
+      What To Grade Next
+    </div>
+
+    <div
+      style={{
+        background: C.white,
+        border: "1px solid " + C.border,
+        borderRadius: 12,
+        overflow: "hidden",
+      }}
+    >
+      {savedReports
+        .slice()
+        .sort(function(a, b) {
+          const scoreA =
+            (a.gemPredictScore || 0) +
+            Math.max(0, a.expectedNetValue || 0);
+
+          const scoreB =
+            (b.gemPredictScore || 0) +
+            Math.max(0, b.expectedNetValue || 0);
+
+          return scoreB - scoreA;
+        })
+        .slice(0, 5)
+        .map(function(r, idx) {
+          return (
+            <div
+              key={r.cardTitle}
+              style={{
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "space-between",
+                padding: "0.85rem 1rem",
+                borderBottom:
+                  idx < 4 ? "1px solid " + C.border : "none",
+              }}
+            >
+              <div style={{ flex: 1, minWidth: 0 }}>
+                <div
+                  style={{
+                    fontSize: "0.85rem",
+                    fontWeight: 700,
+                    color: C.ink,
+                  }}
+                >
+                  #{idx + 1} {r.cardTitle}
+                </div>
+
+                <div
+                  style={{
+                    fontSize: "0.72rem",
+                    color: C.inkSoft,
+                    marginTop: "0.2rem",
+                  }}
+                >
+                  Score {r.gemPredictScore || "—"}/99
+                  {" • "}
+                  Expected Net{" "}
+                  {r.expectedNetValue != null
+                    ? (r.expectedNetValue >= 0 ? "+$" : "-$") +
+                      safeMoney(Math.abs(r.expectedNetValue))
+                    : "—"}
+                </div>
+              </div>
+
+              <div
+                style={{
+                  fontSize: "0.75rem",
+                  fontWeight: 700,
+                  color: C.green,
+                  flexShrink: 0,
+                }}
+              >
+                Grade →
+              </div>
+            </div>
+          );
+        })}
+    </div>
+  </div>
+)}
+
           {/* Saved Reports */}
           {savedReports.length > 0 && (
             <div style={{ marginTop: "1.75rem" }}>
@@ -1498,6 +1594,64 @@ if (data.imageAnalysis) setImageAnalysis(data.imageAnalysis);
           )}
         </div>
       </div>
+
+<div
+  style={{
+    marginTop: "2rem",
+    background: C.cream,
+    border: "1px solid " + C.border,
+    borderRadius: 14,
+    padding: "1rem 1.25rem",
+  }}
+>
+  <div
+    style={{
+      fontSize: "0.72rem",
+      fontWeight: 700,
+      textTransform: "uppercase",
+      letterSpacing: "0.08em",
+      color: C.inkSoft,
+      marginBottom: "0.75rem",
+    }}
+  >
+    GemPredict Platform
+  </div>
+
+  <div
+    style={{
+      display: "grid",
+      gridTemplateColumns: "repeat(auto-fit,minmax(220px,1fr))",
+      gap: "0.75rem",
+    }}
+  >
+    <div>✅ Grading Decision Reports</div>
+    <div>✅ Live Market Intelligence</div>
+    <div>✅ Comparable Listing Engine</div>
+    <div>✅ Saved Reports</div>
+
+    <div>🚧 Inventory Tracker</div>
+    <div>🚧 Sold Comps Engine</div>
+    <div>🚧 Card Identification Confidence</div>
+    <div>🚧 Collection Value Dashboard</div>
+
+    <div>🚧 Top Cards to Grade</div>
+    <div>🚧 Grading Submission Planner</div>
+    <div>🚧 Population Intelligence</div>
+    <div>🚧 ROI Alerts</div>
+  </div>
+
+  <div
+    style={{
+      marginTop: "1rem",
+      fontSize: "0.72rem",
+      color: C.inkSoft,
+      lineHeight: 1.5,
+    }}
+  >
+    Building the Bloomberg Terminal for trading cards — combining grading,
+    market intelligence, collection management, and ROI analysis in one place.
+  </div>
+</div>
 
       {/* ── TRUST BAND ──────────────────────────────────────────────────────── */}
       <div style={{ background: C.cream, padding: "3.5rem 1.5rem" }}>
