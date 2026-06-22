@@ -599,9 +599,23 @@ const backMime = backImageMimeType &&
   "Important consistency rule:\n" +
   "The final overallScore and estimatedGrade MUST logically follow the category ratings and notes. If centering, corners, edges, and surface are all good or excellent with no meaningful defect, the card should generally project as PSA 9 or better unless image confidence is low. If you assign a lower score, explicitly explain the grade-capping issue.\n\n" +
 
+"Card identification task:\n" +
+"- Identify the card as specifically as possible from the image and provided card name.\n" +
+"- Look for year, brand, set, player/character, card number, parallel, serial numbering, autograph/relic indicators, and visible text.\n" +
+"- Do not invent details. If a detail is uncertain, use null and explain uncertainty in identityNotes.\n" +
+"- identityConfidence should be high only when visible card text and provided card name strongly agree.\n\n" +
+
   "Respond with ONLY a single raw JSON object. No markdown. No backticks. No extra text.\n\n" +
 
   "Required fields:\n" +
+  "identifiedYear - likely card year if visible or inferable, otherwise null (string or null)\n" +
+"identifiedBrandSet - likely brand/set/product name if visible or inferable, otherwise null (string or null)\n" +
+"identifiedSubject - player, character, or card subject if visible or inferable, otherwise null (string or null)\n" +
+"identifiedCardNumber - card number if visible or inferable, otherwise null (string or null)\n" +
+"identifiedParallel - likely parallel/variant if visible or inferable, otherwise null (string or null)\n" +
+"identifiedAutoOrRelic - one of: auto, relic, auto relic, none, unknown (string)\n" +
+"identityConfidence - 0-100 confidence in the card identification from image plus provided card name (integer)\n" +
+"identityNotes - one short sentence explaining what identity details are certain vs uncertain (string)\n" +
   "centering - one of: excellent, good, fair, poor (string)\n" +
   "centeringNote - specific visible centering assessment, mention left/right and top/bottom if visible (string)\n" +
   "corners - one of: excellent, good, fair, poor (string)\n" +
