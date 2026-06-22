@@ -1040,16 +1040,17 @@ if (data.imageAnalysis) setImageAnalysis(data.imageAnalysis);
       <div style={{ background: "linear-gradient(160deg, #0d1117 0%, #111827 50%, #0a0f1e 100%)", padding: "4rem 1.5rem 4.5rem", textAlign: "center", borderBottom: "1px solid rgba(201,168,76,0.18)" }}>
         <div style={{ maxWidth: 620, margin: "0 auto", display: "flex", flexDirection: "column", alignItems: "center", gap: 0 }}>
           <img src="/gempredict-logo.png" alt="GemPredict" className="gp-hero-logo" style={{ marginTop: 40, marginBottom: 28, borderRadius: 20, display: "block" }} />
-          <p style={{ fontSize: "0.7rem", fontWeight: 700, letterSpacing: "0.14em", textTransform: "uppercase", color: C.gold, marginBottom: "0.75rem" }}>AI Grading Decision Tool</p>
+          <p style={{ fontSize: "0.7rem", fontWeight: 700, letterSpacing: "0.14em", textTransform: "uppercase", color: C.gold, marginBottom: "0.75rem" }}>AI GRADING & COLLECTION INTELLIGENCE</p>
           <h1 style={{ fontFamily: "'Playfair Display', serif", fontSize: "clamp(2.2rem, 5vw, 3.4rem)", fontWeight: 900, lineHeight: 1.08, letterSpacing: "-0.025em", color: "#ffffff", marginBottom: "1rem" }}>
-            Stop Guessing. Know If Your<br />
+            Make Smarter Grading Decisions. Track Better Collections.<br />
             <em style={{ color: C.gold, fontStyle: "italic" }}>Card Is Worth Grading.</em>
           </h1>
           <p style={{ fontSize: "1.05rem", color: "rgba(255,255,255,0.65)", fontWeight: 300, lineHeight: 1.75, maxWidth: 480, marginBottom: "0.6rem" }}>
-            Get a clear Grade / Skip verdict with realistic PSA values and risk-adjusted upside — before you spend money on grading fees.
+            AI-powered grading decisions, live market intelligence,
+saved reports, and grading opportunity rankings.
           </p>
           <p style={{ fontSize: "0.78rem", color: "rgba(255,255,255,0.35)", marginBottom: "2rem" }}>
-            Built for collectors, flippers, eBay sellers, and grading submitters. AI estimates only — not affiliated with PSA.
+            Built for collectors, dealers, flippers, and serious grading submissions.
           </p>
           <a href="#tool" style={{ display: "inline-flex", alignItems: "center", gap: "0.45rem", background: C.gold, color: C.ink, padding: "0.9rem 2rem", borderRadius: 100, textDecoration: "none", fontSize: "0.95rem", fontWeight: 800, boxShadow: "0 4px 20px rgba(201,168,76,0.35)" }}>
             Analyze My Card →
