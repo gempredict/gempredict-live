@@ -193,6 +193,101 @@ function ImageAnalysisCard({ data }) {
         </div>
       </div>
 
+            {/* Card Identification */}
+      {(data.identifiedSubject ||
+        data.identifiedBrandSet ||
+        data.identifiedYear ||
+        data.identifiedParallel ||
+        data.identifiedCardNumber) && (
+        <div
+          style={{
+            margin: "1rem 1.25rem 0",
+            background: C.cream,
+            border: "1px solid " + C.border,
+            borderRadius: 12,
+            padding: "0.9rem 1rem",
+          }}
+        >
+          <div
+            style={{
+              fontSize: "0.65rem",
+              fontWeight: 700,
+              textTransform: "uppercase",
+              letterSpacing: "0.08em",
+              color: C.inkSoft,
+              marginBottom: "0.55rem",
+            }}
+          >
+            Card Identification
+          </div>
+
+          <div style={{ fontSize: "0.95rem", fontWeight: 800, color: C.ink }}>
+            {[data.identifiedYear, data.identifiedBrandSet, data.identifiedSubject]
+              .filter(Boolean)
+              .join(" · ") || "Card identity uncertain"}
+          </div>
+
+          <div
+            style={{
+              display: "flex",
+              flexWrap: "wrap",
+              gap: "0.45rem",
+              marginTop: "0.55rem",
+            }}
+          >
+            {data.identifiedParallel && (
+              <span style={{ fontSize: "0.68rem", fontWeight: 700, color: C.amber, background: C.goldLight, border: "1px solid " + C.gold, borderRadius: 100, padding: "0.15rem 0.55rem" }}>
+                {data.identifiedParallel}
+              </span>
+            )}
+
+            {data.identifiedCardNumber && (
+              <span style={{ fontSize: "0.68rem", fontWeight: 700, color: C.inkSoft, background: C.white, border: "1px solid " + C.border, borderRadius: 100, padding: "0.15rem 0.55rem" }}>
+                #{data.identifiedCardNumber}
+              </span>
+            )}
+
+            {data.identifiedAutoOrRelic && data.identifiedAutoOrRelic !== "none" && data.identifiedAutoOrRelic !== "unknown" && (
+              <span style={{ fontSize: "0.68rem", fontWeight: 700, color: C.inkSoft, background: C.white, border: "1px solid " + C.border, borderRadius: 100, padding: "0.15rem 0.55rem" }}>
+                {data.identifiedAutoOrRelic}
+              </span>
+            )}
+
+            <span
+              style={{
+                fontSize: "0.68rem",
+                fontWeight: 700,
+                color: (data.identityConfidence || 0) >= 85 ? C.green : (data.identityConfidence || 0) >= 60 ? C.amber : C.red,
+                background: (data.identityConfidence || 0) >= 85 ? C.greenLight : (data.identityConfidence || 0) >= 60 ? C.goldLight : C.redLight,
+                border: "1px solid " + ((data.identityConfidence || 0) >= 85 ? "#86efac" : (data.identityConfidence || 0) >= 60 ? C.gold : "#fca5a5"),
+                borderRadius: 100,
+                padding: "0.15rem 0.55rem",
+              }}
+            >
+              {(data.identityConfidence || 0) >= 85
+                ? "High Confidence"
+                : (data.identityConfidence || 0) >= 60
+                ? "Moderate Confidence"
+                : "Low Confidence"}{" "}
+              {data.identityConfidence || 0}%
+            </span>
+          </div>
+
+          {data.identityNotes && (
+            <div
+              style={{
+                fontSize: "0.72rem",
+                color: C.inkSoft,
+                marginTop: "0.55rem",
+                lineHeight: 1.45,
+              }}
+            >
+              {data.identityNotes}
+            </div>
+          )}
+        </div>
+      )}
+
       <div style={{ padding: "1.1rem 1.25rem" }}>
         {/* Image summary */}
         <p style={{ fontSize: "0.875rem", color: C.inkMid, lineHeight: 1.7, marginBottom: "1rem", fontStyle: "italic" }}>
