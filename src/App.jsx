@@ -1103,12 +1103,12 @@ saved reports, and grading opportunity rankings.
 
       {/* ── TOOL ────────────────────────────────────────────────────────────── */}
       <div id="tool" style={{ background: C.white, borderTop: "1px solid " + C.border, borderBottom: "1px solid " + C.border, padding: "4rem 1.5rem 3.5rem" }}>
-        <div style={{ maxWidth: 680, margin: "0 auto" }}>
+        <div style={{ maxWidth: 980, margin: "0 auto" }}>
           <h2 style={{ fontFamily: "'Playfair Display', serif", fontSize: "2rem", fontWeight: 900, letterSpacing: "-0.02em", marginBottom: "0.35rem" }}>Analyze My Card</h2>
           <p style={{ fontSize: "0.9rem", color: C.inkSoft, fontWeight: 300, marginBottom: "0.5rem" }}>
             Enter any card below. Get a Grade / Skip verdict with raw, PSA 9, PSA 10 values, and real grading upside.
           </p>
-          <p style={{ fontSize: "0.78rem", color: C.inkSoft, fontStyle: "italic", marginBottom: "1.75rem", maxWidth: 520 }}>
+          <p style={{ fontSize: "0.78rem", color: C.inkSoft, fontStyle: "italic", marginBottom: "1.75rem", maxWidth: 720 }}>
             Most raw cards don't gem. This helps you find the ones that do.
           </p>
 
