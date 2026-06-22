@@ -1043,7 +1043,7 @@ if (data.imageAnalysis) setImageAnalysis(data.imageAnalysis);
           <p style={{ fontSize: "0.7rem", fontWeight: 700, letterSpacing: "0.14em", textTransform: "uppercase", color: C.gold, marginBottom: "0.75rem" }}>AI GRADING & COLLECTION INTELLIGENCE</p>
           <h1 style={{ fontFamily: "'Playfair Display', serif", fontSize: "clamp(2.2rem, 5vw, 3.4rem)", fontWeight: 900, lineHeight: 1.08, letterSpacing: "-0.025em", color: "#ffffff", marginBottom: "1rem" }}>
             Make Smarter Grading Decisions. Track Better Collections.<br />
-            <em style={{ color: C.gold, fontStyle: "italic" }}>Card Is Worth Grading.</em>
+            <em style={{ color: C.gold, fontStyle: "italic" }}></em>
           </h1>
           <p style={{ fontSize: "1.05rem", color: "rgba(255,255,255,0.65)", fontWeight: 300, lineHeight: 1.75, maxWidth: 480, marginBottom: "0.6rem" }}>
             AI-powered grading decisions, live market intelligence,
