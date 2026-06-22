@@ -344,7 +344,16 @@ else if (hasObviousStructuralDamage && !saysNoStructuralDamage) {
   forcedGrade = "PSA 3-6 ceiling likely";
   forcedScore = 5;
 }  
-  return {
+  return {  
+    // Card identity
+    identifiedYear: raw.identifiedYear != null ? safeStr(raw.identifiedYear, null) : null,
+    identifiedBrandSet: raw.identifiedBrandSet != null ? safeStr(raw.identifiedBrandSet, null) : null,
+    identifiedSubject: raw.identifiedSubject != null ? safeStr(raw.identifiedSubject, null) : null,
+    identifiedCardNumber: raw.identifiedCardNumber != null ? safeStr(raw.identifiedCardNumber, null) : null,
+    identifiedParallel: raw.identifiedParallel != null ? safeStr(raw.identifiedParallel, null) : null,
+    identifiedAutoOrRelic: safeStr(raw.identifiedAutoOrRelic, "unknown"),
+    identityConfidence: Math.min(100, Math.max(0, safeInt(raw.identityConfidence, 0))),
+    identityNotes: safeStr(raw.identityNotes, "Card identity could not be confidently determined."),
     // Per-attribute ratings
     centering:      safeRating(raw.centering),
     corners:        safeRating(raw.corners),
@@ -358,6 +367,7 @@ else if (hasObviousStructuralDamage && !saysNoStructuralDamage) {
     // Overall
     overallScore: forcedScore || safeScore(raw.overallScore), // 0-10
     gradingRisk: forcedLimiter || safeStr(raw.gradingRisk, "Grading risk could not be determined from this image."),
+      
 
 estimatedGrade: forcedGrade
   ? forcedGrade
