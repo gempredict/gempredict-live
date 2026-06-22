@@ -1469,6 +1469,22 @@ if (data.imageAnalysis) setImageAnalysis(data.imageAnalysis);
                         <div style={{ display: "flex", gap: "0.75rem", marginTop: "0.2rem", flexWrap: "wrap" }}>
                           {v && <span style={{ fontSize: "0.68rem", fontWeight: 700, background: v.bg, color: v.color, padding: "0.1rem 0.5rem", borderRadius: 100 }}>{v.label}</span>}
                           {r.psa10Probability != null && <span style={{ fontSize: "0.72rem", color: C.inkSoft }}>~{r.psa10Probability}% PSA 10</span>}
+                          {r.gemPredictScore != null && (
+  <span
+    style={{
+      fontSize: "0.72rem",
+      color: C.amber,
+      fontWeight: 700,
+    }}
+  >
+    Score {r.gemPredictScore}/99
+  </span>
+)}
+{r.marketData?.marketSummary?.rawMedian != null && (
+  <span style={{ fontSize: "0.72rem", color: C.green, fontWeight: 700 }}>
+    FMV ${safeMoney(r.marketData.marketSummary.rawMedian)}
+  </span>
+)}
                           {r.gradingUpside != null && <span style={{ fontSize: "0.72rem", color: r.gradingUpside >= 0 ? C.green : C.red, fontWeight: 600 }}>{r.gradingUpside >= 0 ? "+$" : "-$"}{safeMoney(Math.abs(r.gradingUpside))}</span>}
                         </div>
                       </div>
