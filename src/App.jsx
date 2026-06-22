@@ -1635,32 +1635,70 @@ saved reports, and grading opportunity rankings.
       marginBottom: "0.75rem",
     }}
   >
-    GemPredict Platform
+    Available Today + Coming Soon
+  </div>
+
+  <div style={{ marginTop: "1rem" }}>
+  <div
+    style={{
+      fontSize: "0.72rem",
+      fontWeight: 700,
+      textTransform: "uppercase",
+      letterSpacing: "0.08em",
+      color: C.green,
+      marginBottom: "0.5rem",
+    }}
+  >
+    Available Today
   </div>
 
   <div
     style={{
       display: "grid",
       gridTemplateColumns: "repeat(auto-fit,minmax(220px,1fr))",
-      gap: "0.75rem",
+      gap: "0.5rem",
+      marginBottom: "1rem",
     }}
   >
-    <div>✅ Grading Decision Reports</div>
+    <div>✅ AI Grading Reports</div>
     <div>✅ Live Market Intelligence</div>
-    <div>✅ Comparable Listing Engine</div>
+    <div>✅ Comparable Listings</div>
+    <div>✅ Image Analysis</div>
     <div>✅ Saved Reports</div>
-
-    <div>🚧 Inventory Tracker</div>
-    <div>🚧 Sold Comps Engine</div>
-    <div>🚧 Card Identification Confidence</div>
-    <div>🚧 Collection Value Dashboard</div>
-
-    <div>🚧 Top Cards to Grade</div>
-    <div>🚧 Grading Submission Planner</div>
-    <div>🚧 Population Intelligence</div>
-    <div>🚧 ROI Alerts</div>
+    <div>✅ What To Grade Next</div>
+    <div>✅ Market Confidence Engine</div>
   </div>
 
+  <div
+    style={{
+      fontSize: "0.72rem",
+      fontWeight: 700,
+      textTransform: "uppercase",
+      letterSpacing: "0.08em",
+      color: C.gold,
+      marginBottom: "0.5rem",
+    }}
+  >
+    Coming Soon
+  </div>
+
+  <div
+    style={{
+      display: "grid",
+      gridTemplateColumns: "repeat(auto-fit,minmax(220px,1fr))",
+      gap: "0.5rem",
+    }}
+  >
+    <div>🚧 Inventory Tracker</div>
+    <div>🚧 Bulk Card Uploads</div>
+    <div>🚧 Bulk Submission Builder</div>
+    <div>🚧 Card Identification Confidence</div>
+    <div>🚧 Parallel Recognition</div>
+    <div>🚧 Population Intelligence</div>
+    <div>🚧 Collection Intelligence Dashboard</div>
+    <div>🚧 ROI Alerts</div>
+  </div>
+</div>
   <div
     style={{
       marginTop: "1rem",
@@ -1669,8 +1707,7 @@ saved reports, and grading opportunity rankings.
       lineHeight: 1.5,
     }}
   >
-    Building the Bloomberg Terminal for trading cards — combining grading,
-    market intelligence, collection management, and ROI analysis in one place.
+    GemPredict is evolving into an AI-powered collection intelligence platform for collectors, dealers, flippers, and grading submitters. Analyze cards, track opportunities, manage inventory, and make smarter grading decisions.
   </div>
 </div>
 
