@@ -1795,9 +1795,9 @@ saved reports, and grading opportunity rankings.
       <div style={{ background: C.white, borderTop: "1px solid " + C.border, borderBottom: "1px solid " + C.border, padding: "5rem 1.5rem" }}>
         <div style={{ maxWidth: 900, margin: "0 auto" }}>
           <p style={eyebrowSt}>About GemPredict</p>
-          <h2 style={sectionH2St}>A grading decision tool. Not a price guide.</h2>
+          <h2 style={sectionH2St}>AI Collection Intelligence For Trading Cards.</h2>
           <p style={{ fontSize: "0.95rem", color: C.inkMid, fontWeight: 300, lineHeight: 1.85, maxWidth: 620, marginBottom: "2.5rem" }}>
-            GemPredict is not a live pricing database. It's a pre-submission filter — built to help collectors think clearly before spending money on grading fees.
+            Analyze cards, evaluate grading opportunities, track reports, and make smarter submission decisions with live market intelligence.
           </p>
           <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(260px, 1fr))", gap: "1.25rem" }}>
             {[
