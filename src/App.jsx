@@ -1518,6 +1518,26 @@ if (data.imageAnalysis) setImageAnalysis(data.imageAnalysis);
                 </div>
 
                 <div
+  style={{
+    fontSize: "0.68rem",
+    fontWeight: 700,
+    marginTop: "0.15rem",
+    color:
+      (r.gemPredictScore || 0) >= 85
+        ? C.green
+        : (r.gemPredictScore || 0) >= 70
+        ? C.amber
+        : C.red,
+  }}
+>
+  {(r.gemPredictScore || 0) >= 85
+    ? "🟢 Strong Grade Candidate"
+    : (r.gemPredictScore || 0) >= 70
+    ? "🟡 Good Candidate"
+    : "🟠 Borderline Candidate"}
+</div>
+
+                <div
                   style={{
                     fontSize: "0.72rem",
                     color: C.inkSoft,
