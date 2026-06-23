@@ -828,6 +828,11 @@ backImageMimeType = parsed.backImageMimeType;
       condition
     );
 
+    if (imageAnalysis && !cardName.trim() && identifiedCardName) {
+  prediction.cardTitle = identifiedCardName;
+  prediction.cardMeta = effectiveCardSet || prediction.cardMeta;
+}
+
     logRequest({
   ip,
   cardName: effectiveCardName,
@@ -844,7 +849,6 @@ const marketQuery = [
   effectiveCardSet,
   prediction.cardTitle,
   prediction.cardMeta,
-]
   .filter(Boolean)
   .join(" ")
   .replace(/Prospect Auto or Base/gi, "")
