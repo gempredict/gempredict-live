@@ -849,6 +849,7 @@ const marketQuery = [
   effectiveCardSet,
   prediction.cardTitle,
   prediction.cardMeta,
+]
   .filter(Boolean)
   .join(" ")
   .replace(/Prospect Auto or Base/gi, "")
