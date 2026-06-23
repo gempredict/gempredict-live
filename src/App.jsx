@@ -1043,7 +1043,7 @@ const emailRef    = useRef(null);
   }
 
   async function handleSubmit() {
-    if (!cardName.trim()) return;
+    if (!cardName.trim() && !imageFile) return;
     if (email && !isValidEmail(email)) { setError("Please enter a valid email address."); return; }
     setLoading(true); setError(""); setRateLimitMsg(""); setEmailConfirm(false); setImageAnalysis(null);
 
@@ -1052,7 +1052,7 @@ const emailRef    = useRef(null);
       if (imageFile) {
         // Multipart/form-data when image is present
         const formData = new FormData();
-        formData.append("cardName",  cardName.trim());
+        formData.append("cardName", cardName.trim() || "Unknown card from image");
         formData.append("cardType",  cardType);
         formData.append("cardSet",   cardSet.trim());
         formData.append("condition", condition);
@@ -1088,7 +1088,7 @@ const emailRef    = useRef(null);
 if (data.imageAnalysis) setImageAnalysis(data.imageAnalysis);
       if (data.remaining != null) setRemaining(data.remaining);
       if (data.emailSaved) { setEmailConfirm(true); track("waitlist_signup"); }
-      addToHistory(cardName.trim(), cardType, cardSet.trim());
+      addToHistory(cardName.trim() || "Image upload", cardType, cardSet.trim());
       track("prediction_submitted", {
   cardType,
   condition,
@@ -1227,7 +1227,7 @@ saved reports, and grading opportunity rankings.
                 <label style={labelSt}>Card Name</label>
                 <input ref={cardNameRef} value={cardName} onChange={function(e) { setCardName(e.target.value); }} onKeyDown={function(e) { if (e.key === "Enter") handleSubmit(); }} placeholder="e.g. Charizard Holo, LeBron Rookie, Black Lotus" style={inputSt} />
               </div>
-              <button onClick={handleSubmit} disabled={loading || !cardName.trim()} style={{ padding: "0.85rem 1.75rem", background: loading || !cardName.trim() ? "#94a3b8" : C.ink, color: "#fff", border: "none", borderRadius: 12, fontSize: "1rem", fontWeight: 700, cursor: loading || !cardName.trim() ? "not-allowed" : "pointer", whiteSpace: "nowrap", minWidth: 155, display: "flex", alignItems: "center", justifyContent: "center", gap: "0.5rem" }}>
+              <button onClick={handleSubmit} disabled={loading || (!cardName.trim() && !imageFile)} style={{ padding: "0.85rem 1.75rem", background: loading || (!cardName.trim() && !imageFile) ? "#94a3b8" : C.ink, color: "#fff", border: "none", borderRadius: 12, fontSize: "1rem", fontWeight: 700, cursor: loading || (!cardName.trim() && !imageFile) ? "not-allowed" : "pointer", whiteSpace: "nowrap", minWidth: 155, display: "flex", alignItems: "center", justifyContent: "center", gap: "0.5rem" }}>
                 {loading ? (<><span style={{ width: 18, height: 18, border: "2px solid rgba(255,255,255,0.4)", borderTopColor: "#fff", borderRadius: "50%", animation: "spin 0.7s linear infinite", flexShrink: 0 }} />Analyzing...</>) : "Analyze My Card"}
               </button>
             </div>
