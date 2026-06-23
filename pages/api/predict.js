@@ -776,31 +776,72 @@ backImageMimeType = parsed.backImageMimeType;
   }
 
   try {
-    // Run text prediction and image analysis in parallel when image is present.
-    // Image analysis failure is non-fatal — text prediction still completes.
-    const [prediction, imageAnalysis] = await Promise.all([
-      fetchPrediction(cardName, cardType, cardSet, condition),
-      imageBuffer
-        ? fetchImageAnalysis(
-  imageBuffer,
-  imageMimeType,
-  backImageBuffer,
-  backImageMimeType,
-  cardName,
-  cardType
-).catch(function(err) {
-            console.error("[GemPredict] Image analysis error (non-fatal):", err.message);
-            return null;
-          })
-        : Promise.resolve(null),
-    ]);
+    let imageAnalysis = null;
 
-    logRequest({ ip, cardName, cardType, cardSet, status: "success" });
+    if (imageBuffer) {
+      imageAnalysis = await fetchImageAnalysis(
+        imageBuffer,
+        imageMimeType,
+        backImageBuffer,
+        backImageMimeType,
+        cardName,
+        cardType
+      ).catch(function(err) {
+        console.error("[GemPredict] Image analysis error (non-fatal):", err.message);
+        return null;
+      });
+    }
+
+    const identifiedCardName = imageAnalysis
+      ? [
+          imageAnalysis.identifiedYear,
+          imageAnalysis.identifiedBrandSet,
+          imageAnalysis.identifiedSubject,
+          imageAnalysis.identifiedParallel,
+          imageAnalysis.identifiedCardNumber ? "#" + imageAnalysis.identifiedCardNumber : null,
+        ]
+          .filter(Boolean)
+          .join(" ")
+          .trim()
+      : "";
+
+    const effectiveCardName =
+      cardName && cardName.trim()
+        ? cardName.trim()
+        : identifiedCardName || "Unknown card from image";
+
+    const effectiveCardSet =
+      cardSet && cardSet.trim()
+        ? cardSet.trim()
+        : [
+            imageAnalysis?.identifiedYear,
+            imageAnalysis?.identifiedBrandSet,
+          ]
+            .filter(Boolean)
+            .join(" ")
+            .trim();
+
+    const prediction = await fetchPrediction(
+      effectiveCardName,
+      cardType,
+      effectiveCardSet,
+      condition
+    );
+
+    logRequest({
+  ip,
+  cardName: effectiveCardName,
+  cardType,
+  cardSet: effectiveCardSet,
+  status: "success",
+});
 
     let marketData = null;
 
 try {
 const marketQuery = [
+  effectiveCardName,
+  effectiveCardSet,
   prediction.cardTitle,
   prediction.cardMeta,
 ]
