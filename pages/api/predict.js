@@ -908,9 +908,8 @@ const effectiveCardName =
 });
 
     let marketData = null;
-
 try {
-  const marketQuery = [
+const marketQuery = [
   imageAnalysis?.identifiedSubject,
   imageAnalysis?.identifiedParallel,
   imageAnalysis?.identifiedCardNumber
@@ -918,12 +917,11 @@ try {
     : null,
   effectiveCardName,
   prediction.cardTitle,
-  .replace(/Crimson Haze/gi, "")
-.replace(/Chaos Rising/gi, "")
 ]
-
   .filter(Boolean)
   .join(" ")
+  .replace(/Crimson Haze/gi, "")
+  .replace(/Chaos Rising/gi, "")
   .replace(/Prospect Auto or Base/gi, "")
   .replace(/Prospects/gi, "")
   .replace(/Special Illustration Rare/gi, "SIR")
