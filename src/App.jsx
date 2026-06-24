@@ -1052,7 +1052,7 @@ const emailRef    = useRef(null);
       if (imageFile) {
         // Multipart/form-data when image is present
         const formData = new FormData();
-        formData.append("cardName", cardName.trim() || "Unknown card from image");
+        formData.append("cardName", cardName.trim());
         formData.append("cardType",  cardType);
         formData.append("cardSet",   cardSet.trim());
         formData.append("condition", condition);

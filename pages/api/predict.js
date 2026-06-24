@@ -805,10 +805,13 @@ backImageMimeType = parsed.backImageMimeType;
           .trim()
       : "";
 
-    const effectiveCardName =
-      cardName && cardName.trim()
-        ? cardName.trim()
-        : identifiedCardName || "Unknown card from image";
+    const hasUserCardName =
+  cardName && cardName.trim() && cardName.trim() !== "Unknown card from image";
+
+const effectiveCardName =
+  hasUserCardName
+    ? cardName.trim()
+    : identifiedCardName || "Unknown card from image";
 
     const effectiveCardSet =
       cardSet && cardSet.trim()
@@ -828,7 +831,7 @@ backImageMimeType = parsed.backImageMimeType;
       condition
     );
 
-    if (imageAnalysis && !cardName.trim() && identifiedCardName) {
+    if (imageAnalysis && !hasUserCardName && identifiedCardName) {
   prediction.cardTitle = identifiedCardName;
   prediction.cardMeta = effectiveCardSet || prediction.cardMeta;
 }
