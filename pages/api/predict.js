@@ -752,18 +752,74 @@ backImageMimeType = parsed.backImageMimeType;
   const cardTypeRaw = typeof fields.cardType === "string" ? fields.cardType.trim().toLowerCase() : "";
   const cardType    = VALID_CARD_TYPES.has(cardTypeRaw) ? cardTypeRaw : "tcg";
 
-  if (!cardName && !imageBuffer) {
-  logRequest({ ip, cardName, cardType, cardSet, status: "invalid_input", errorMessage: "missing card name and image" });
+  const hasImage = !!imageBuffer;
+const hasTypedCardName = !!(cardName && cardName.trim());
+
+if (!hasTypedCardName && !hasImage) {
+  logRequest({
+    ip,
+    cardName,
+    cardType,
+    cardSet,
+    status: "invalid_input",
+    errorMessage: "missing card name and image",
+  });
   return res.status(400).json({ error: "Card name or image is required." });
 }
 
-if (cardName && cardName.length < CARD_NAME_MIN) {
-  logRequest({ ip, cardName, cardType, cardSet, status: "invalid_input", errorMessage: "too short" });
-  return res.status(400).json({ error: "Card name must be at least " + CARD_NAME_MIN + " characters." });
+if (hasTypedCardName && cardName.length < CARD_NAME_MIN) {
+  logRequest({
+    ip,
+    cardName,
+    cardType,
+    cardSet,
+    status: "invalid_input",
+    errorMessage: "too short",
+  });
+  return res.status(400).json({
+    error: "Card name must be at least " + CARD_NAME_MIN + " characters.",
+  });
 }
-  if (cardName.length > CARD_NAME_MAX) { logRequest({ ip, cardName, cardType, cardSet, status: "invalid_input", errorMessage: "too long" }); return res.status(400).json({ error: "Card name must be " + CARD_NAME_MAX + " characters or fewer." }); }
-  if (cardSet.length > CARD_SET_MAX)   { logRequest({ ip, cardName, cardType, cardSet, status: "invalid_input", errorMessage: "set too long" }); return res.status(400).json({ error: "Set / year must be " + CARD_SET_MAX + " characters or fewer." }); }
-  if (looksLikeJunk(cardName))         { logRequest({ ip, cardName, cardType, cardSet, status: "invalid_input", errorMessage: "junk input" }); return res.status(400).json({ error: "Please enter a valid card name." }); }
+
+if (hasTypedCardName && cardName.length > CARD_NAME_MAX) {
+  logRequest({
+    ip,
+    cardName,
+    cardType,
+    cardSet,
+    status: "invalid_input",
+    errorMessage: "too long",
+  });
+  return res.status(400).json({
+    error: "Card name must be " + CARD_NAME_MAX + " characters or fewer.",
+  });
+}
+
+if (cardSet.length > CARD_SET_MAX) {
+  logRequest({
+    ip,
+    cardName,
+    cardType,
+    cardSet,
+    status: "invalid_input",
+    errorMessage: "set too long",
+  });
+  return res.status(400).json({
+    error: "Set / year must be " + CARD_SET_MAX + " characters or fewer.",
+  });
+}
+
+if (hasTypedCardName && looksLikeJunk(cardName)) {
+  logRequest({
+    ip,
+    cardName,
+    cardType,
+    cardSet,
+    status: "invalid_input",
+    errorMessage: "junk input",
+  });
+  return res.status(400).json({ error: "Please enter a valid card name." });
+}
 
   // Image size guard (redundant with formidable limit but belt-and-suspenders)
   if (imageBuffer && imageBuffer.length > IMAGE_MAX_BYTES) {
