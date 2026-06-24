@@ -910,16 +910,21 @@ const effectiveCardName =
     let marketData = null;
 
 try {
-const marketQuery = [
+  const marketQuery = [
+  imageAnalysis?.identifiedSubject,
+  imageAnalysis?.identifiedBrandSet,
+  imageAnalysis?.identifiedParallel,
+  imageAnalysis?.identifiedCardNumber
+    ? "#" + imageAnalysis.identifiedCardNumber
+    : null,
   effectiveCardName,
-  effectiveCardSet,
   prediction.cardTitle,
-  prediction.cardMeta,
 ]
   .filter(Boolean)
   .join(" ")
   .replace(/Prospect Auto or Base/gi, "")
   .replace(/Prospects/gi, "")
+  .replace(/Special Illustration Rare/gi, "SIR")
   .replace(/Auto/gi, "")
   .replace(/Base/gi, "")
   .replace(/Parallel/gi, "")
