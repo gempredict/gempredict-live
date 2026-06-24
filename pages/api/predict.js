@@ -912,14 +912,16 @@ const effectiveCardName =
 try {
   const marketQuery = [
   imageAnalysis?.identifiedSubject,
-  imageAnalysis?.identifiedBrandSet,
   imageAnalysis?.identifiedParallel,
   imageAnalysis?.identifiedCardNumber
     ? "#" + imageAnalysis.identifiedCardNumber
     : null,
   effectiveCardName,
   prediction.cardTitle,
+  .replace(/Crimson Haze/gi, "")
+.replace(/Chaos Rising/gi, "")
 ]
+
   .filter(Boolean)
   .join(" ")
   .replace(/Prospect Auto or Base/gi, "")
