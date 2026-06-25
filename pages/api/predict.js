@@ -958,6 +958,8 @@ const liveRawMarket =
   prediction,
   marketData,
   imageAnalysis,
+canonicalCard,
+
   hasImageAnalysis: imageAnalysis !== null,
   remaining: rateCheck.remaining,
   emailSaved,

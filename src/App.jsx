@@ -1080,6 +1080,7 @@ const emailRef    = useRef(null);
   ...data.prediction,
   marketData: data.marketData || null,
   imageAnalysis: data.imageAnalysis || null,
+  canonicalCard: data.canonicalCard || null,
 };
 
   return [newReport, ...prev].slice(0, 5);
