@@ -11,6 +11,10 @@
 //   Text-only (JSON) requests also work: the handler detects content-type
 //   and falls back to req.body when no image is present.
 
+import {
+  buildCanonicalCardFromImageAnalysis,
+  buildMarketQueryFromCanonicalCard,
+} from "../../lib/cardIdentifier";
 import Anthropic from "@anthropic-ai/sdk";
 import supabase from "../../lib/supabaseServer";
 import formidable from "formidable";
@@ -887,6 +891,12 @@ const effectiveCardName =
             .join(" ")
             .trim();
 
+    const canonicalCard = buildCanonicalCardFromImageAnalysis(
+  imageAnalysis,
+  cardName,
+  cardSet
+);        
+
     const prediction = await fetchPrediction(
       effectiveCardName,
       cardType,
@@ -909,29 +919,17 @@ const effectiveCardName =
 
     let marketData = null;
 try {
-const marketQuery = [
-  imageAnalysis?.identifiedSubject,
-  imageAnalysis?.identifiedParallel,
-  imageAnalysis?.identifiedCardNumber
-    ? "#" + imageAnalysis.identifiedCardNumber
-    : null,
-  effectiveCardName,
-  prediction.cardTitle,
-]
-  .filter(Boolean)
-  .join(" ")
-  .replace(/Crimson Haze/gi, "")
-  .replace(/Chaos Rising/gi, "")
-  .replace(/Prospect Auto or Base/gi, "")
-  .replace(/Prospects/gi, "")
-  .replace(/Special Illustration Rare/gi, "SIR")
-  .replace(/Auto/gi, "")
-  .replace(/Base/gi, "")
-  .replace(/Parallel/gi, "")
-  .replace(/,/g, " ")
-  .replace(/\s+/g, " ")
-  .trim();
-
+const marketQuery =
+  buildMarketQueryFromCanonicalCard(canonicalCard) ||
+  [
+    effectiveCardName,
+    prediction.cardTitle,
+  ]
+    .filter(Boolean)
+    .join(" ")
+    .replace(/,/g, " ")
+    .replace(/\s+/g, " ")
+    .trim();
    const baseUrl =
   process.env.NEXT_PUBLIC_SITE_URL || "https://gempredict-live.vercel.app";
 
