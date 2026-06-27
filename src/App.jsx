@@ -1524,9 +1524,7 @@ saved reports, and grading opportunity rankings.
 })}
               </div>
 
-              {/* Image analysis — shown below the first result card when present */}
-              {imageAnalysis && <ImageAnalysisCard data={imageAnalysis} />}
-
+              
               <p style={{ fontSize: "0.72rem", color: C.inkSoft, textAlign: "center", marginTop: "1.25rem" }}>
                 AI estimates based on collector market data. Not affiliated with PSA. Always verify with current listings.
               </p>
