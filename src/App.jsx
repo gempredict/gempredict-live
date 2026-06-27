@@ -468,6 +468,18 @@ function ResultCard({ data, index, onSave, isSaved }) {
   const marketSummary = data.marketData && data.marketData.marketSummary
   ? data.marketData.marketSummary
   : null;
+  const displayTitle =
+  data.canonicalCard?.displayName || data.cardTitle;
+
+const displayMeta =
+  data.canonicalCard
+    ? [
+        data.canonicalCard.year,
+        data.canonicalCard.brandSet,
+        data.canonicalCard.parallel,
+        data.canonicalCard.cardNumber ? "#" + data.canonicalCard.cardNumber : null,
+      ].filter(Boolean).join(" · ")
+    : data.cardMeta;
   const barPct   = Math.min(100, Math.max(4, (Math.abs(profit) / Math.max(data.psa10Value || 1, 1)) * 100));
   const bullets  = getVerdictBullets(data);
   const useCase  = VERDICT_USE_CASE[data.verdict] || VERDICT_USE_CASE.maybe;
@@ -494,8 +506,17 @@ function ResultCard({ data, index, onSave, isSaved }) {
             <div style={{ fontSize: "0.65rem", fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.08em", color: verdict.color }}>Grading Decision Report</div>
             <span style={{ fontSize: "0.6rem", fontWeight: 700, background: C.ink, color: C.gold, padding: "0.1rem 0.4rem", borderRadius: 4, letterSpacing: "0.06em" }}>BETA</span>
           </div>
-          <div style={{ fontFamily: "'Playfair Display', serif", fontSize: "1.1rem", fontWeight: 700, color: C.ink }}>{data.cardTitle}</div>
-          <div style={{ fontSize: "0.75rem", color: C.inkSoft, marginTop: "0.15rem" }}>{data.cardMeta}</div>
+          <div style={{ fontFamily: "'Playfair Display', serif", fontSize: "1.1rem", fontWeight: 700, color: C.ink }}>
+  {displayTitle}
+</div>
+<div style={{ fontSize: "0.75rem", color: C.inkSoft, marginTop: "0.15rem" }}>
+  {displayMeta}
+</div>
+{data.canonicalCard?.confidence != null && (
+  <div style={{ fontSize: "0.68rem", color: C.green, marginTop: "0.3rem", fontWeight: 700 }}>
+    ✓ Card Identity {data.canonicalCard.confidence}% Confidence
+  </div>
+)}
           <div style={{ fontSize: "0.68rem", color: C.inkSoft, marginTop: "0.35rem", fontStyle: "italic" }}>
             Market-based AI estimate using collector pricing patterns.
           </div>
