@@ -1,6 +1,7 @@
 // src/App.jsx — GemPredict main component
 import { useState, useRef, useEffect } from "react";
 import { track } from "@vercel/analytics/react";
+import { buildGemPredictScore } from "../lib/gemPredictScore";
 
 // ─── Constants ────────────────────────────────────────────────────────────────
 const CARD_TYPES = [
@@ -463,6 +464,7 @@ function EmptyState() {
 }
 
 function ResultCard({ data, index, onSave, isSaved }) {
+  const gpScore = buildGemPredictScore(data);
   const verdict  = VERDICTS[data.verdict] || VERDICTS.maybe;
   const profit   = typeof data.gradingUpside === "number" ? data.gradingUpside : 0;
   const marketSummary = data.marketData && data.marketData.marketSummary
@@ -530,6 +532,60 @@ const displayMeta =
       </div>
 
       <div style={{ padding: "1.1rem 1.25rem" }}>
+      <div
+  style={{
+    background: "#0d1117",
+    color: "#fff",
+    borderRadius: 16,
+    padding: "1.4rem",
+    marginBottom: "1.25rem",
+    textAlign: "center",
+  }}
+>
+  <div
+    style={{
+      fontSize: "0.72rem",
+      letterSpacing: "0.12em",
+      textTransform: "uppercase",
+      color: "#c9a84c",
+      fontWeight: 700,
+    }}
+  >
+    GemPredict Score™
+  </div>
+
+  <div
+    style={{
+      fontSize: "3rem",
+      fontWeight: 900,
+      lineHeight: 1,
+      marginTop: ".5rem",
+    }}
+  >
+    {gpScore.score}
+  </div>
+
+  <div
+    style={{
+      fontSize: "1.4rem",
+      color: "#FFD700",
+      marginTop: ".5rem",
+    }}
+  >
+    {"★".repeat(gpScore.stars)}
+    {"☆".repeat(5 - gpScore.stars)}
+  </div>
+
+  <div
+    style={{
+      marginTop: ".6rem",
+      fontWeight: 600,
+      color: "#ddd",
+    }}
+  >
+    {gpScore.recommendation}
+  </div>
+</div>
         <div
   style={{
     background: "#f8f6f2",
