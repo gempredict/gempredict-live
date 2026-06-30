@@ -943,77 +943,9 @@ const marketJson = await marketRes.json();
 const liveRawMarket =
   marketJson?.marketSummary?.rawMedian ?? null;
 
-  let marketData = null;
-
-  try {
-    const baseUrl =
-      process.env.NEXT_PUBLIC_SITE_URL || "https://gempredict-live.vercel.app";
-  
-    const marketQueries = [
-      canonicalCard?.subject && canonicalCard?.cardNumber && canonicalCard?.parallel
-        ? `${canonicalCard.subject} #${canonicalCard.cardNumber} ${canonicalCard.parallel}`
-        : null,
-  
-      canonicalCard?.subject && canonicalCard?.cardNumber
-        ? `${canonicalCard.subject} #${canonicalCard.cardNumber}`
-        : null,
-  
-      canonicalCard?.subject && canonicalCard?.parallel
-        ? `${canonicalCard.subject} ${canonicalCard.parallel}`
-        : null,
-  
-      buildMarketQueryFromCanonicalCard(canonicalCard),
-  
-      effectiveCardName,
-  
-      prediction.cardTitle,
-    ]
-      .filter(Boolean)
-      .map(function(q) {
-        return q
-          .replace(/,/g, " ")
-          .replace(/\s+/g, " ")
-          .trim();
-      })
-      .filter(function(q, i, arr) {
-        return q && arr.indexOf(q) === i;
-      });
-  
-    for (const q of marketQueries) {
-      const marketUrl =
-        `${baseUrl}/api/ebay-search?q=` + encodeURIComponent(q);
-  
-      const marketRes = await fetch(marketUrl);
-      const marketJson = await marketRes.json();
-  
-      if (
-        marketRes.ok &&
-        marketJson.success &&
-        marketJson.marketSummary &&
-        (marketJson.marketSummary.rawComparableCount || 0) > 0
-      ) {
-        marketData = Object.assign({}, marketJson, {
-          queryUsed: q,
-          queryAttempts: marketQueries,
-        });
-        break;
-      }
-    }
-  
-    if (!marketData && marketQueries.length > 0) {
-      const fallbackUrl =
-        `${baseUrl}/api/ebay-search?q=` + encodeURIComponent(marketQueries[0]);
-  
-      const fallbackRes = await fetch(fallbackUrl);
-      const fallbackJson = await fallbackRes.json();
-  
-      if (fallbackRes.ok && fallbackJson.success) {
-        marketData = Object.assign({}, fallbackJson, {
-          queryUsed: marketQueries[0],
-          queryAttempts: marketQueries,
-        });
-      }
-    }
+  if (marketRes.ok && marketJson.success) {
+    marketData = marketJson;
+  }
 } catch (marketErr) {
   marketData = {
     success: false,
