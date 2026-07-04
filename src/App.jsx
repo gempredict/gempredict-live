@@ -1,6 +1,7 @@
 // src/App.jsx — GemPredict main component
 import { useState, useRef, useEffect } from "react";
 import { track } from "@vercel/analytics/react";
+import AtlasPanel from "./components/AtlasPanel";
 import { buildGemPredictScore } from "../lib/gemPredictScore";
 
 // ─── Constants ────────────────────────────────────────────────────────────────
@@ -105,7 +106,7 @@ const GLOBAL_CSS = `
   @keyframes spin   { to { transform: rotate(360deg); } }
   @keyframes fadeUp { from { opacity:0; transform:translateY(14px); } to { opacity:1; transform:translateY(0); } }
   * { box-sizing: border-box; }
-  body { margin: 0; font-family: 'Outfit', system-ui, sans-serif; background: #f5f3ee; }
+  body { margin: 0; font-family: Outfit, system-ui, sans-serif; background: #f5f3ee; }
   .gp-field-row      { display: grid; grid-template-columns: 1fr 1fr; gap: 0.9rem; }
   .gp-search-row     { display: grid; grid-template-columns: 1fr auto; gap: 0.9rem; align-items: end; }
   .gp-value-grid     { display: grid; grid-template-columns: repeat(3,1fr); gap: 0.85rem; }
@@ -487,6 +488,7 @@ const displayMeta =
   const useCase  = VERDICT_USE_CASE[data.verdict] || VERDICT_USE_CASE.maybe;
   const [copied, setCopied] = useState(false);
   const [shared, setShared] = useState(false);
+  const [feedback, setFeedback] = useState(null);
 
   function handleCopy() {
     try { navigator.clipboard.writeText(buildCopySummary(data)); } catch {}
@@ -586,6 +588,9 @@ const displayMeta =
     {gpScore.recommendation}
   </div>
 </div>
+
+<AtlasPanel atlas={data.atlas} />
+
         <div
   style={{
     background: "#f8f6f2",
@@ -992,6 +997,47 @@ const displayMeta =
             {shared ? "✓ Copied" : "Share"}
           </button>
         </div>
+        <div
+  style={{
+    marginTop: "0.85rem",
+    padding: "0.75rem 0.85rem",
+    background: C.cream,
+    border: "1px solid " + C.border,
+    borderRadius: 12,
+  }}
+>
+  <div style={{ fontSize: "0.72rem", fontWeight: 700, color: C.ink, marginBottom: "0.45rem" }}>
+    Was this card identification useful?
+  </div>
+  <div style={{ display: "flex", gap: "0.5rem", flexWrap: "wrap" }}>
+    <button
+      onClick={function() { setFeedback("yes"); }}
+      style={{ fontSize: "0.75rem", fontWeight: 700, padding: "0.4rem 0.75rem", borderRadius: 100, border: "1px solid " + C.border, background: C.white, color: C.green, cursor: "pointer" }}
+    >
+      👍 Yes
+    </button>
+    <button
+      onClick={function() { setFeedback("review"); }}
+      style={{ fontSize: "0.75rem", fontWeight: 700, padding: "0.4rem 0.75rem", borderRadius: 100, border: "1px solid " + C.border, background: C.white, color: C.red, cursor: "pointer" }}
+    >
+      👎 Needs review
+    </button>
+  </div>
+  {feedback && (
+  <div
+    style={{
+      fontSize: "0.72rem",
+      color: feedback === "yes" ? C.green : C.amber,
+      marginTop: "0.6rem",
+      fontWeight: 700,
+    }}
+  >
+    {feedback === "yes"
+      ? "✓ Thanks! Your feedback helps improve GemPredict."
+      : "✓ Thanks! We'll review this identification."}
+  </div>
+)}
+</div>
         <div style={{ fontSize: "0.7rem", color: C.inkSoft, marginTop: "0.75rem", fontStyle: "italic" }}>
            GemPredict is in beta. Market values are estimates from live comparable listings and should be verified before buying, selling, or grading.
         </div>
