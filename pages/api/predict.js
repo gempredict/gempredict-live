@@ -38,7 +38,7 @@ const RATE_LIMIT_WINDOW = 60 * 60 * 1000;
 const CARD_NAME_MIN     = 2;
 const CARD_NAME_MAX     = 80;
 const CARD_SET_MAX      = 60;
-const IMAGE_MAX_BYTES   = 5 * 1024 * 1024; // 5 MB hard limit
+const IMAGE_MAX_BYTES   = 10 * 1024 * 1024;
 
 const VALID_CARD_TYPES = new Set([
   "pokemon", "sports", "mtg", "yugioh", "dragonball", "onepiece", "tcg",
@@ -837,7 +837,7 @@ if (hasTypedCardName && looksLikeJunk(cardName)) {
 
   // Image size guard (redundant with formidable limit but belt-and-suspenders)
   if (imageBuffer && imageBuffer.length > IMAGE_MAX_BYTES) {
-    return res.status(400).json({ error: "Image file is too large. Please upload an image under 5 MB." });
+    return res.status(400).json({ error: "Image file is too large. Please upload an image under 10 MB." });
   }
 
   let emailSaved = false;
