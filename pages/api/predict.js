@@ -11,10 +11,17 @@
 //   Text-only (JSON) requests also work: the handler detects content-type
 //   and falls back to req.body when no image is present.
 
+import atlasOrchestrator from "../../lib/atlasOrchestrator";
+
+import calculateIdentityConfidence from "../../lib/calculateIdentityConfidence";
+
+import buildSearchCandidates from "../../lib/buildSearchCandidates";
+
 import {
   buildCanonicalCardFromImageAnalysis,
   buildMarketQueryFromCanonicalCard,
 } from "../../lib/cardIdentifier";
+
 import Anthropic from "@anthropic-ai/sdk";
 import supabase from "../../lib/supabaseServer";
 import formidable from "formidable";
@@ -623,13 +630,16 @@ const backMime = backImageMimeType &&
 
   "Required fields:\n" +
   "identifiedYear - likely card year if visible or inferable, otherwise null (string or null)\n" +
-"identifiedBrandSet - likely brand/set/product name if visible or inferable, otherwise null (string or null)\n" +
-"identifiedSubject - player, character, or card subject if visible or inferable, otherwise null (string or null)\n" +
-"identifiedCardNumber - card number if visible or inferable, otherwise null (string or null)\n" +
-"identifiedParallel - likely parallel/variant if visible or inferable, otherwise null (string or null)\n" +
+"identifiedFranchise - broad card universe such as Pokemon, Baseball, Basketball, Football, Hockey, Soccer, Disney Lorcana, Star Wars, One Piece, Magic, Yu-Gi-Oh, Marvel, Garbage Pail Kids, or unknown (string)\n" +
+"identifiedManufacturer - likely maker/publisher such as Pokemon, Topps, Panini, Upper Deck, Wizards of the Coast, Ravensburger, Bandai, Konami, or unknown (string)\n" +
+"identifiedBrandSet - likely brand, product, set, or release name if visible or inferable, otherwise null (string or null)\n" +
+"identifiedSubject - player, character, creature, team, or card subject if visible or inferable, otherwise null (string or null)\n" +
+"identifiedCardNumber - collector/card number exactly as visible if possible, otherwise null (string or null)\n" +
+"identifiedParallel - likely parallel, rarity, insert, variant, foil type, refractor type, color, numbered version, or special treatment if visible or inferable, otherwise null (string or null)\n" +
+"identifiedLanguage - likely card language such as English, Japanese, Korean, Chinese, Spanish, French, German, Italian, Portuguese, or unknown (string)\n" +
 "identifiedAutoOrRelic - one of: auto, relic, auto relic, none, unknown (string)\n" +
-"identityConfidence - 0-100 confidence in the card identification from image plus provided card name (integer)\n" +
-"identityNotes - one short sentence explaining what identity details are certain vs uncertain (string)\n" +
+"identityConfidence - 0-100 confidence in the card identity. Be conservative when set, number, language, or parallel are uncertain (integer)\n" +
+"identityNotes - one short sentence explaining which identity facts are strongly supported and which are uncertain (string)\n" +
   "centering - one of: excellent, good, fair, poor (string)\n" +
   "centeringNote - specific visible centering assessment, mention left/right and top/bottom if visible (string)\n" +
   "corners - one of: excellent, good, fair, poor (string)\n" +
@@ -745,7 +755,7 @@ imageMimeType = parsed.imageMimeType;
 backImageBuffer = parsed.backImageBuffer;
 backImageMimeType = parsed.backImageMimeType;
   } catch (parseErr) {
-    console.error("[GemPredict] Request parse error:", parseErr.message);
+    console.error("[GemPredict] Request parse error", parseErr);
     return res.status(400).json({ error: "Could not read request. Please try again." });
   }
 
@@ -895,7 +905,10 @@ const effectiveCardName =
   imageAnalysis,
   cardName,
   cardSet
-);        
+);  
+
+const atlasIdentityConfidence =
+  calculateIdentityConfidence(imageAnalysis);
 
     const prediction = await fetchPrediction(
       effectiveCardName,
@@ -909,6 +922,14 @@ const effectiveCardName =
   prediction.cardMeta = effectiveCardSet || prediction.cardMeta;
 }
 
+const atlas = atlasOrchestrator({
+  imageAnalysis,
+  canonicalCard,
+  marketData: null,
+  gpScore: null,
+  prediction,
+});
+
     logRequest({
   ip,
   cardName: effectiveCardName,
@@ -917,36 +938,66 @@ const effectiveCardName =
   status: "success",
 });
 
-    let marketData = null;
-try {
-const marketQuery =
-  buildMarketQueryFromCanonicalCard(canonicalCard) ||
-  [
-    effectiveCardName,
-    prediction.cardTitle,
-  ]
-    .filter(Boolean)
-    .join(" ")
-    .replace(/,/g, " ")
-    .replace(/\s+/g, " ")
-    .trim();
-   const baseUrl =
-  process.env.NEXT_PUBLIC_SITE_URL || "https://gempredict-live.vercel.app";
+   
+  let marketData = null;
 
-const marketUrl =
-  `${baseUrl}/api/ebay-search?q=` +
-  encodeURIComponent(marketQuery);
+  try {
+    const baseUrl =
+      process.env.NEXT_PUBLIC_SITE_URL || "https://gempredict-live.vercel.app";
+  
+      const marketQueries = [
+        ...buildSearchCandidates(imageAnalysis || {}),
+        buildMarketQueryFromCanonicalCard(canonicalCard),
+        effectiveCardName,
+        prediction.cardTitle,
+      ]
+        .filter(Boolean)
+        .map(function(q) {
+          return q
+            .replace(/,/g, " ")
+            .replace(/\s+/g, " ")
+            .trim();
+        })
+        .filter(function(q, i, arr) {
+          return q && arr.indexOf(q) === i;
+        });
+  
+    for (const q of marketQueries) {
+      const marketUrl =
+        `${baseUrl}/api/ebay-search?q=` + encodeURIComponent(q);
+  
+      const marketRes = await fetch(marketUrl);
+      const marketJson = await marketRes.json();
+  
+      if (
+        marketRes.ok &&
+        marketJson.success &&
+        marketJson.marketSummary &&
+        (marketJson.marketSummary.rawComparableCount || 0) > 0
+      ) {
+        marketData = Object.assign({}, marketJson, {
+          queryUsed: q,
+          queryAttempts: marketQueries,
+        });
+        break;
+      }
+    }
+  
+    if (!marketData && marketQueries.length > 0) {
+      const fallbackUrl =
+        `${baseUrl}/api/ebay-search?q=` + encodeURIComponent(marketQueries[0]);
 
-  const marketRes = await fetch(marketUrl);
-const marketJson = await marketRes.json();
+      const fallbackRes = await fetch(fallbackUrl);
+      const fallbackJson = await fallbackRes.json();
 
-const liveRawMarket =
-  marketJson?.marketSummary?.rawMedian ?? null;
-
-  if (marketRes.ok && marketJson.success) {
-    marketData = marketJson;
-  }
-} catch (marketErr) {
+      if (fallbackRes.ok && fallbackJson.success) {
+        marketData = Object.assign({}, fallbackJson, {
+          queryUsed: marketQueries[0],
+          queryAttempts: marketQueries,
+        });
+      }
+    }
+  } catch (marketErr) {
   marketData = {
     success: false,
     error: "Market data unavailable",
@@ -958,8 +1009,9 @@ const liveRawMarket =
   prediction,
   marketData,
   imageAnalysis,
-canonicalCard,
-
+  atlas,
+  atlasIdentityConfidence,
+  canonicalCard,
   hasImageAnalysis: imageAnalysis !== null,
   remaining: rateCheck.remaining,
   emailSaved,
