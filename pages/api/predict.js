@@ -890,6 +890,24 @@ const effectiveCardName =
     ? cardName.trim()
     : identifiedCardName || "Unknown card from image";
 
+    console.log("[Atlas Identity Debug]", {
+      imageAnalysisIdentity: imageAnalysis
+        ? {
+            year: imageAnalysis.identifiedYear,
+            franchise: imageAnalysis.identifiedFranchise,
+            manufacturer: imageAnalysis.identifiedManufacturer,
+            set: imageAnalysis.identifiedBrandSet,
+            subject: imageAnalysis.identifiedSubject,
+            number: imageAnalysis.identifiedCardNumber,
+            parallel: imageAnalysis.identifiedParallel,
+            language: imageAnalysis.identifiedLanguage,
+            confidence: imageAnalysis.identityConfidence,
+            notes: imageAnalysis.identityNotes,
+          }
+        : null,
+      canonicalCard,
+    });
+
     const effectiveCardSet =
       cardSet && cardSet.trim()
         ? cardSet.trim()
