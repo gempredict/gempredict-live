@@ -54,6 +54,8 @@ export default function AtlasPanel({ atlas }) {
   const market = atlas.marketEvidence || {};
   const decision = atlas.decision || {};
   const evidence = atlas.evidence || [];
+  const recognition = atlas.recognition || {};
+  const recognitionConfidence = recognition.recognitionConfidence || {};
 
   return (
     <div
@@ -98,6 +100,16 @@ export default function AtlasPanel({ atlas }) {
           value={market.confidence != null ? market.confidence + "%" : "—"}
           sub={market.level || "Unknown"}
         />
+
+<Metric
+  label="Recognition"
+  value={
+    recognitionConfidence.score != null
+      ? recognitionConfidence.score + "%"
+      : "—"
+  }
+  sub={recognitionConfidence.level || "Unknown"}
+/>
 
         <Metric
           label="Decision"
