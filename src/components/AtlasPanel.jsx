@@ -56,6 +56,7 @@ export default function AtlasPanel({ atlas }) {
   const evidence = atlas.evidence || [];
   const recognition = atlas.recognition || {};
   const recognitionConfidence = recognition.recognitionConfidence || {};
+  const recognitionHandoff = recognition.handoff || {};
 
   return (
     <div
@@ -117,6 +118,24 @@ export default function AtlasPanel({ atlas }) {
           sub={decision.decision || "review"}
         />
       </div>
+
+      {recognitionHandoff.nextStep && (
+  <div
+    style={{
+      borderTop: "1px solid rgba(255,255,255,0.12)",
+      paddingTop: "0.75rem",
+      marginTop: "0.75rem",
+      fontSize: "0.78rem",
+      color: "#e5e7eb",
+      lineHeight: 1.4,
+    }}
+  >
+    <span style={{ color: "#c9a84c", fontWeight: 800 }}>
+      Recognition Next Step:
+    </span>{" "}
+    {recognitionHandoff.nextStep}
+  </div>
+)}
 
       {evidence.length > 0 && (
         <div
