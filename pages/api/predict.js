@@ -11,6 +11,8 @@
 //   Text-only (JSON) requests also work: the handler detects content-type
 //   and falls back to req.body when no image is present.
 
+import atlasRecognitionOrchestrator from "../../lib/atlasRecognitionOrchestrator";
+
 import atlasOrchestrator from "../../lib/atlasOrchestrator";
 
 import calculateIdentityConfidence from "../../lib/calculateIdentityConfidence";
@@ -855,6 +857,20 @@ if (hasTypedCardName && looksLikeJunk(cardName)) {
   try {
     let imageAnalysis = null;
 
+    const recognition = atlasRecognitionOrchestrator({
+      imageBuffer,
+      imageMimeType,
+      backImageBuffer,
+      backImageMimeType,
+      imageAnalysis,
+      userInput: {
+        cardName,
+        cardSet,
+        cardType,
+      },
+      marketData,
+    });
+
     if (imageBuffer) {
       imageAnalysis = await fetchImageAnalysis(
         imageBuffer,
@@ -890,23 +906,6 @@ const effectiveCardName =
     ? cardName.trim()
     : identifiedCardName || "Unknown card from image";
 
-    console.log("[Atlas Identity Debug]", {
-      imageAnalysisIdentity: imageAnalysis
-        ? {
-            year: imageAnalysis.identifiedYear,
-            franchise: imageAnalysis.identifiedFranchise,
-            manufacturer: imageAnalysis.identifiedManufacturer,
-            set: imageAnalysis.identifiedBrandSet,
-            subject: imageAnalysis.identifiedSubject,
-            number: imageAnalysis.identifiedCardNumber,
-            parallel: imageAnalysis.identifiedParallel,
-            language: imageAnalysis.identifiedLanguage,
-            confidence: imageAnalysis.identityConfidence,
-            notes: imageAnalysis.identityNotes,
-          }
-        : null,
-      canonicalCard,
-    });
 
     const effectiveCardSet =
       cardSet && cardSet.trim()
@@ -923,7 +922,25 @@ const effectiveCardName =
   imageAnalysis,
   cardName,
   cardSet
-);  
+); 
+
+console.log("[Atlas Identity Debug]", {
+  imageAnalysisIdentity: imageAnalysis
+    ? {
+        year: imageAnalysis.identifiedYear,
+        franchise: imageAnalysis.identifiedFranchise,
+        manufacturer: imageAnalysis.identifiedManufacturer,
+        set: imageAnalysis.identifiedBrandSet,
+        subject: imageAnalysis.identifiedSubject,
+        number: imageAnalysis.identifiedCardNumber,
+        parallel: imageAnalysis.identifiedParallel,
+        language: imageAnalysis.identifiedLanguage,
+        confidence: imageAnalysis.identityConfidence,
+        notes: imageAnalysis.identityNotes,
+      }
+    : null,
+  canonicalCard,
+});
 
 const atlasIdentityConfidence =
   calculateIdentityConfidence(imageAnalysis);
@@ -946,6 +963,7 @@ const atlas = atlasOrchestrator({
   marketData: null,
   gpScore: null,
   prediction,
+  recognition,
 });
 
     logRequest({
