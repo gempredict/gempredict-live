@@ -57,6 +57,8 @@ export default function AtlasPanel({ atlas }) {
   const recognition = atlas.recognition || {};
   const recognitionConfidence = recognition.recognitionConfidence || {};
   const recognitionHandoff = recognition.handoff || {};
+  const topCandidate =
+  recognitionConfidence.topCandidate || recognitionHandoff.selectedCandidate || {};
 
   return (
     <div
@@ -118,6 +120,24 @@ export default function AtlasPanel({ atlas }) {
           sub={decision.decision || "review"}
         />
       </div>
+
+      {topCandidate.displayName && (
+  <div
+    style={{
+      borderTop: "1px solid rgba(255,255,255,0.12)",
+      paddingTop: "0.75rem",
+      marginTop: "0.75rem",
+      fontSize: "0.78rem",
+      color: "#e5e7eb",
+      lineHeight: 1.4,
+    }}
+  >
+    <span style={{ color: "#c9a84c", fontWeight: 800 }}>
+      Top Candidate:
+    </span>{" "}
+    {topCandidate.displayName}
+  </div>
+)}
 
       {recognitionHandoff.nextStep && (
   <div
