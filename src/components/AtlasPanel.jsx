@@ -59,6 +59,8 @@ export default function AtlasPanel({ atlas }) {
   const recognitionHandoff = recognition.handoff || {};
   const topCandidate =
   recognitionConfidence.topCandidate || recognitionHandoff.selectedCandidate || {};
+  const recognitionConflicts = recognition.conflicts || {};
+  const recognitionHealth = recognition.health || {};
 
   return (
     <div
@@ -136,6 +138,32 @@ export default function AtlasPanel({ atlas }) {
       Top Candidate:
     </span>{" "}
     {topCandidate.displayName}
+  </div>
+)}
+
+{recognitionConflicts.hasConflicts && (
+  <div
+    style={{
+      marginTop: "0.65rem",
+      fontSize: "0.78rem",
+      color: "#fca5a5",
+      lineHeight: 1.4,
+    }}
+  >
+    ⚠ Recognition evidence has conflicting claims.
+  </div>
+)}
+
+{recognitionHealth.warnings?.length > 0 && (
+  <div
+    style={{
+      marginTop: "0.65rem",
+      fontSize: "0.78rem",
+      color: "#fde68a",
+      lineHeight: 1.4,
+    }}
+  >
+    ⚠ {recognitionHealth.warnings[0]}
   </div>
 )}
 
