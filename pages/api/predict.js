@@ -981,12 +981,19 @@ const atlas = atlasOrchestrator({
     const baseUrl =
       process.env.NEXT_PUBLIC_SITE_URL || "https://gempredict-live.vercel.app";
   
-      const marketQueries = [
-        ...buildSearchCandidates(imageAnalysis || {}),
-        buildMarketQueryFromCanonicalCard(canonicalCard),
-        effectiveCardName,
-        prediction.cardTitle,
-      ]
+      const recognitionTopCandidate =
+  recognition?.recognitionConfidence?.topCandidate || null;
+
+const recognitionCandidateQuery =
+  recognitionTopCandidate?.displayName || null;
+
+const marketQueries = [
+  recognitionCandidateQuery,
+  ...buildSearchCandidates(imageAnalysis || {}),
+  buildMarketQueryFromCanonicalCard(canonicalCard),
+  effectiveCardName,
+  prediction.cardTitle,
+]
         .filter(Boolean)
         .map(function(q) {
           return q
@@ -1046,6 +1053,7 @@ const atlas = atlasOrchestrator({
   marketData,
   imageAnalysis,
   atlas,
+  recognition,
   atlasIdentityConfidence,
   canonicalCard,
   hasImageAnalysis: imageAnalysis !== null,
