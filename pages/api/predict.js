@@ -857,19 +857,6 @@ if (hasTypedCardName && looksLikeJunk(cardName)) {
   try {
     let imageAnalysis = null;
 
-    const recognition = atlasRecognitionOrchestrator({
-      imageBuffer,
-      imageMimeType,
-      backImageBuffer,
-      backImageMimeType,
-      imageAnalysis,
-      userInput: {
-        cardName,
-        cardSet,
-        cardType,
-      },
-      marketData,
-    });
 
     if (imageBuffer) {
       imageAnalysis = await fetchImageAnalysis(
@@ -923,6 +910,20 @@ const effectiveCardName =
   cardName,
   cardSet
 ); 
+
+const recognition = atlasRecognitionOrchestrator({
+  imageBuffer,
+  imageMimeType,
+  backImageBuffer,
+  backImageMimeType,
+  imageAnalysis,
+  userInput: {
+    cardName,
+    cardSet,
+    cardType,
+  },
+  marketData: null,
+});
 
 console.log("[Atlas Identity Debug]", {
   imageAnalysisIdentity: imageAnalysis
