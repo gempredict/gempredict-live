@@ -857,7 +857,6 @@ if (hasTypedCardName && looksLikeJunk(cardName)) {
   try {
     let imageAnalysis = null;
 
-
     if (imageBuffer) {
       imageAnalysis = await fetchImageAnalysis(
         imageBuffer,
@@ -911,7 +910,7 @@ const effectiveCardName =
   cardSet
 ); 
 
-const recognition = atlasRecognitionOrchestrator({
+let recognition = atlasRecognitionOrchestrator({
   imageBuffer,
   imageMimeType,
   backImageBuffer,
@@ -1047,6 +1046,20 @@ const marketQueries = [
     error: "Market data unavailable",
   };
 }
+
+recognition = atlasRecognitionOrchestrator({
+  imageBuffer,
+  imageMimeType,
+  backImageBuffer,
+  backImageMimeType,
+  imageAnalysis,
+  userInput: {
+    cardName,
+    cardSet,
+    cardType,
+  },
+  marketData,
+});
 
     return res.status(200).json({
   success: true,
