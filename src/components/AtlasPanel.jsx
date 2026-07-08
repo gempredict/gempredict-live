@@ -61,6 +61,9 @@ export default function AtlasPanel({ atlas }) {
   recognitionConfidence.topCandidate || recognitionHandoff.selectedCandidate || {};
   const recognitionConflicts = recognition.conflicts || {};
   const recognitionHealth = recognition.health || {};
+  const recognitionDebug = recognition.debug || {};
+  const ebayIdentityCount =
+  recognitionDebug.candidates?.topEbayEvidence || 0;
 
   return (
     <div
@@ -138,6 +141,19 @@ export default function AtlasPanel({ atlas }) {
       Top Candidate:
     </span>{" "}
     {topCandidate.displayName}
+  </div>
+)}
+
+{ebayIdentityCount > 0 && (
+  <div
+    style={{
+      marginTop: "0.65rem",
+      fontSize: "0.78rem",
+      color: "#bbf7d0",
+      lineHeight: 1.4,
+    }}
+  >
+    ✓ eBay identity evidence supports this candidate.
   </div>
 )}
 
