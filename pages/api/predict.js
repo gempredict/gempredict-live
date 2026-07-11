@@ -538,7 +538,7 @@ marketContext +
     "Be realistic. Most raw cards do not get PSA 10. Standard grading fees are approximately $80. Factor that into all ROI calculations and recommendations.";
 
   const message = await anthropic.messages.create({
-    model: "claude-sonnet-4-6", max_tokens: 1000,
+    model: "claude-sonnet-4-6", max_tokens: 2500,
     messages: [{ role: "user", content: prompt }],
   });
 
@@ -622,12 +622,39 @@ const backMime = backImageMimeType &&
   "Important consistency rule:\n" +
   "The final overallScore and estimatedGrade MUST logically follow the category ratings and notes. If centering, corners, edges, and surface are all good or excellent with no meaningful defect, the card should generally project as PSA 9 or better unless image confidence is low. If you assign a lower score, explicitly explain the grade-capping issue.\n\n" +
 
-"Card identification task:\n" +
-"- Identify the card as specifically as possible from the image and provided card name.\n" +
-"- Look for year, brand, set, player/character, card number, parallel, serial numbering, autograph/relic indicators, and visible text.\n" +
-"- Do not invent details. If a detail is uncertain, use null and explain uncertainty in identityNotes.\n" +
-"- identityConfidence should be high only when visible card text and provided card name strongly agree.\n\n" +
+  "Card evidence extraction task:\n" +
+"- Act as a visual evidence extractor, not a card database.\n" +
+"- Report only identity details that are directly readable or clearly visible in the uploaded images.\n" +
+"- Do not use memory of trading-card sets to fill in missing information.\n" +
+"- Do not infer a set from artwork, character, color, rarity style, collector-number pattern, or release timing.\n" +
+"- Do not infer rarity or parallel from a collector number being higher than an assumed set total.\n" +
+"- Do not invent a set code, set name, card number, release year, rarity, or parallel.\n" +
+"- If even one digit of the collector number is unclear, return null for identifiedCardNumber.\n" +
+"- If the exact set name or printed set code is not directly readable, return null for identifiedBrandSet.\n" +
+"- If the parallel or rarity is not explicitly printed or visually unmistakable, return null for identifiedParallel.\n" +
+"- A clearly visible subject name does not prove the set, year, number, rarity, or parallel.\n" +
+"- Use identityNotes to distinguish facts directly observed from details that remain unknown.\n" +
+"- Never describe uncertain information as 'clearly visible.'\n\n" +
 
+"Identity confidence rules:\n" +
+"- 90-100 requires the subject and exact collector number to be directly readable, with set evidence also visible.\n" +
+"- Maximum 75 if the exact collector number is not directly readable.\n" +
+"- Maximum 65 if the set name or set code is not directly readable.\n" +
+"- Maximum 55 if both the number and set are uncertain.\n" +
+"- Returning null is preferable to supplying a plausible guess.\n\n" +
+
+"Required identity fields:\n" +
+"identifiedYear - year only when directly printed and readable, otherwise null (string or null)\n" +
+"identifiedFranchise - broad card universe when directly supported by visible branding or card design, otherwise unknown (string)\n" +
+"identifiedManufacturer - maker or publisher only when directly supported by visible branding or printed text, otherwise unknown (string)\n" +
+"identifiedBrandSet - exact set/product name or printed set code only when directly readable, otherwise null (string or null)\n" +
+"identifiedSubject - player, character, creature, team, or subject only when directly readable or unmistakably visible, otherwise null (string or null)\n" +
+"identifiedCardNumber - collector number exactly as printed only when every character is readable, otherwise null (string or null)\n" +
+"identifiedParallel - parallel, rarity, insert, variant, foil, or treatment only when explicitly printed or visually unmistakable, otherwise null (string or null)\n" +
+"identifiedLanguage - visible card language, otherwise unknown (string)\n" +
+"identifiedAutoOrRelic - one of: auto, relic, auto relic, none, unknown (string)\n" +
+"identityConfidence - 0-100 confidence based only on directly observed identity evidence (integer)\n" +
+"identityNotes - one short sentence listing what was directly observed and what could not be verified (string)\n" +
   "Respond with ONLY a single raw JSON object. No markdown. No backticks. No extra text.\n\n" +
 
   "Required fields:\n" +
@@ -685,7 +712,7 @@ const backMime = backImageMimeType &&
   "Be strict, specific, and internally consistent. Avoid canned language.";
 
   const message = await anthropic.messages.create({
-    model: "claude-sonnet-4-6", max_tokens: 1000,
+    model: "claude-sonnet-4-6", max_tokens: 2500,
     messages: [{
       role: "user",
       content: [
@@ -725,6 +752,11 @@ const backMime = backImageMimeType &&
   const parsed = extractJSON(text);
   if (!parsed) return null;
   return normaliseImageAnalysis(parsed);
+
+  console.log("[Claude] Response length:", text.length);
+console.log(text.slice(0,500));
+console.log("...");
+console.log(text.slice(-500));
 }
 
 // ─── Main handler ─────────────────────────────────────────────────────────────
@@ -857,6 +889,15 @@ if (hasTypedCardName && looksLikeJunk(cardName)) {
   try {
     let imageAnalysis = null;
 
+    console.log("[GemPredict] Image input check", {
+      hasFrontImage: !!imageBuffer,
+      frontBytes: imageBuffer?.length || 0,
+      frontMimeType: imageMimeType || null,
+      hasBackImage: !!backImageBuffer,
+      backBytes: backImageBuffer?.length || 0,
+      backMimeType: backImageMimeType || null,
+    });
+
     if (imageBuffer) {
       imageAnalysis = await fetchImageAnalysis(
         imageBuffer,
@@ -871,13 +912,36 @@ if (hasTypedCardName && looksLikeJunk(cardName)) {
       });
     }
 
+      console.log("[GemPredict] Image analysis result", {
+        returnedNull: imageAnalysis == null,
+        resultType: typeof imageAnalysis,
+        resultKeys:
+          imageAnalysis && typeof imageAnalysis === "object"
+            ? Object.keys(imageAnalysis)
+            : [],
+      });
+      
+      if (imageAnalysis) {
+        console.log("===== IMAGE ANALYSIS =====");
+        console.log({
+          identifiedSubject: imageAnalysis.identifiedSubject,
+          identifiedBrandSet: imageAnalysis.identifiedBrandSet,
+          identifiedCardNumber: imageAnalysis.identifiedCardNumber,
+          identifiedParallel: imageAnalysis.identifiedParallel,
+          identityConfidence: imageAnalysis.identityConfidence,
+          identityNotes: imageAnalysis.identityNotes,
+        });
+        console.log("==========================");
+      }
+      
+
     const identifiedCardName = imageAnalysis
       ? [
-          imageAnalysis.identifiedYear,
-          imageAnalysis.identifiedBrandSet,
-          imageAnalysis.identifiedSubject,
-          imageAnalysis.identifiedParallel,
-          imageAnalysis.identifiedCardNumber ? "#" + imageAnalysis.identifiedCardNumber : null,
+          imageAnalysis?.identifiedYear,
+          imageAnalysis?.identifiedBrandSet,
+          imageAnalysis?.identifiedSubject,
+          imageAnalysis?.identifiedParallel,
+          imageAnalysis?.identifiedCardNumber ? "#" + imageAnalysis.identifiedCardNumber : null,
         ]
           .filter(Boolean)
           .join(" ")
