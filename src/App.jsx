@@ -1405,6 +1405,7 @@ saved reports, and grading opportunity rankings.
                 ref={fileInputRef}
                 type="file"
                 accept="image/*"
+                capture="environment"
                 style={{ display: "none" }}
                 onChange={function(e) { handleImageSelect(e.target.files && e.target.files[0]); }}
               />
@@ -1412,6 +1413,7 @@ saved reports, and grading opportunity rankings.
   ref={backFileInputRef}
   type="file"
   accept="image/*"
+  capture="environment"
   style={{ display: "none" }}
   onChange={function(e) {
     handleBackImageSelect(e.target.files && e.target.files[0]);
