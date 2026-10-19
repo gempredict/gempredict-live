@@ -1,3 +1,4 @@
+import { fetchIdentityEvidence } from "../../lib/marketIdentityEvidence.mjs";
 import { buildEbaySearchParams } from "../../lib/ebayIdentityMatch.mjs";
 // pages/api/predict.js
 // GemPredict — Card grading prediction API route
@@ -925,6 +926,10 @@ console.log("[Atlas Identity Debug]", {
 const atlasIdentityConfidence =
   calculateIdentityConfidence(imageAnalysis);
 
+    // Retrieve neutral evidence independently of valuation success or retries.
+    // It is exposed for later reconciliation and never changes this prediction.
+    const identityEvidence = await fetchIdentityEvidence(canonicalCard);
+
     const prediction = await fetchPrediction(
       effectiveCardName,
       cardType,
@@ -1024,6 +1029,8 @@ const atlas = atlasOrchestrator({
   success: true,
   prediction,
   marketData,
+  identityEvidenceItems: identityEvidence.identityEvidenceItems,
+  identityEvidenceSearch: identityEvidence.search,
   imageAnalysis,
   atlas,
   atlasIdentityConfidence,
