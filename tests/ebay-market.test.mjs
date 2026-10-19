@@ -128,6 +128,22 @@ test('Shining Legends non-holo titles do not imply a holo variant', () => {
   assert.equal(scoreListing(`${listing} Holo`, `${listing} Non-Holo`).comparable, false);
 });
 
+test('canonical Common non-holo matches Regular Non-Holo without losing finish identity', () => {
+  const card = { player: 'Pikachu', year: '2017', set: 'Pokémon Shining Legends', cardNumber: '28/73', parallel: 'Common non-holo' };
+  const listing = '2017 Shining Legends Pikachu 28/73 Regular Non-Holo';
+  const result = match(listing, card);
+  assert.equal(result.comparable, true);
+  assert.ok(result.score >= 60);
+  assert.equal(match(listing.replace('Regular ', ''), card).comparable, true);
+  for (const finish of ['Holo', 'Reverse Holo', 'Holographic']) {
+    assert.equal(match(listing.replace('Non-Holo', finish), card).comparable, false, finish);
+    assert.equal(match(listing, { ...card, parallel: finish }).comparable, false, finish);
+  }
+  assert.equal(match(listing.replace('Regular Non-Holo', ''), card).comparable, false);
+  assert.equal(match(listing, { ...card, parallel: 'Red non-holo' }).comparable, false);
+  assert.equal(match(listing.replace('Regular Non-Holo', 'Red Non-Holo'), card).comparable, false);
+});
+
 test('canonical identity survives URL encoding and broad fallback queries', () => {
   const card = { subject: 'Jayden Daniels', year: '2024', brandSet: 'Donruss Optic', cardNumber: '248', parallel: 'Purple Shock /99', autoOrRelic: 'auto relic' };
   const params = buildEbaySearchParams('broad fallback', card);
