@@ -1,4 +1,4 @@
-import { fetchIdentityEvidence } from "../../lib/marketIdentityEvidence.mjs";
+import { resolveMarketIdentity } from "../../lib/reconcileMarketIdentity.mjs";
 import { buildEbaySearchParams } from "../../lib/ebayIdentityMatch.mjs";
 // pages/api/predict.js
 // GemPredict — Card grading prediction API route
@@ -883,12 +883,12 @@ if (hasTypedCardName && looksLikeJunk(cardName)) {
     const hasUserCardName =
   cardName && cardName.trim() && cardName.trim() !== "Unknown card from image";
 
-const effectiveCardName =
+let effectiveCardName =
   hasUserCardName
     ? cardName.trim()
     : identifiedCardName || "Unknown card from image";
 
-    const effectiveCardSet =
+    let effectiveCardSet =
       cardSet && cardSet.trim()
         ? cardSet.trim()
         : [
@@ -899,7 +899,7 @@ const effectiveCardName =
             .join(" ")
             .trim();
 
-    const canonicalCard = buildCanonicalCardFromImageAnalysis(
+    const originalCanonicalCard = buildCanonicalCardFromImageAnalysis(
   imageAnalysis,
   cardName,
   cardSet
@@ -920,15 +920,30 @@ console.log("[Atlas Identity Debug]", {
         notes: imageAnalysis.identityNotes,
       }
     : null,
-  canonicalCard,
+  canonicalCard: originalCanonicalCard,
 });
 
 const atlasIdentityConfidence =
   calculateIdentityConfidence(imageAnalysis);
 
-    // Retrieve neutral evidence independently of valuation success or retries.
-    // It is exposed for later reconciliation and never changes this prediction.
-    const identityEvidence = await fetchIdentityEvidence(canonicalCard);
+    // Typed identity inputs are protected; neutral listings can reconcile only
+    // the separate vision proposal before any subsequent valuation request.
+    const identityEvidence = await resolveMarketIdentity(originalCanonicalCard, {
+      protectedFields: hasUserCardName ? ["year", "set"] : cardSet.trim() ? ["set"] : [],
+    });
+    const canonicalCard = identityEvidence.canonicalCard;
+    const identityVerification = identityEvidence.identityVerification;
+    const identityCorrected = identityVerification &&
+      [identityVerification.year.status, identityVerification.set.status].includes("corrected");
+    if (identityCorrected) {
+      if (!hasUserCardName) effectiveCardName = canonicalCard.displayName;
+      if (!cardSet.trim()) effectiveCardSet = [canonicalCard.year, canonicalCard.brandSet].filter(Boolean).join(" ");
+    }
+    const reconciledImageIdentity = imageAnalysis && canonicalCard ? {
+      ...imageAnalysis,
+      identifiedYear: canonicalCard.year,
+      identifiedBrandSet: canonicalCard.brandSet,
+    } : imageAnalysis;
 
     const prediction = await fetchPrediction(
       effectiveCardName,
@@ -939,7 +954,7 @@ const atlasIdentityConfidence =
     );
 
     if (imageAnalysis && !hasUserCardName && identifiedCardName) {
-  prediction.cardTitle = identifiedCardName;
+  prediction.cardTitle = effectiveCardName;
   prediction.cardMeta = effectiveCardSet || prediction.cardMeta;
 }
 
@@ -967,7 +982,7 @@ const atlas = atlasOrchestrator({
       process.env.NEXT_PUBLIC_SITE_URL || "https://gempredict-live.vercel.app";
   
       const marketQueries = [
-        ...buildSearchCandidates(imageAnalysis || {}),
+        ...buildSearchCandidates(reconciledImageIdentity || {}),
         buildMarketQueryFromCanonicalCard(canonicalCard),
         effectiveCardName,
         prediction.cardTitle,
@@ -1034,6 +1049,8 @@ const atlas = atlasOrchestrator({
   imageAnalysis,
   atlas,
   atlasIdentityConfidence,
+  originalCanonicalCard,
+  identityVerification,
   canonicalCard,
   hasImageAnalysis: imageAnalysis !== null,
   remaining: rateCheck.remaining,
