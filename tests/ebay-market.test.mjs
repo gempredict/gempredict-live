@@ -78,6 +78,56 @@ test('fractional collector numbers are distinct from serial print runs', () => {
   assert.equal(scoreListing('Charizard #4/102', 'Charizard #4/102').comparable, true);
 });
 
+test('missing year and abbreviated Optic wording are weaker evidence, not conflicts', () => {
+  for (const listing of [
+    'Jayden Daniels Optic #248 Purple Shock',
+    '2024 Panini Optic Jayden Daniels #248 Purple Shock',
+    'Jayden Daniels #248 Purple Shock',
+  ]) {
+    const result = match(listing);
+    assert.equal(result.comparable, true, listing);
+    assert.ok(result.score >= 60, listing);
+    if (!listing.includes('2024')) assert.ok(result.score < match(title).score, listing);
+  }
+  assert.equal(scoreListing('Jayden Daniels Optic #248 Purple Shock', title.replace('Rated Rookie ', '')).comparable, true);
+  const abbreviated = 'Jayden Daniels Optic #248 Purple Shock';
+  for (const wrong of [
+    `2023 ${abbreviated}`,
+    abbreviated.replace('Jayden Daniels', 'Caleb Williams'),
+    abbreviated.replace('#248', '#249'),
+    abbreviated.replace('Optic', 'Select'),
+    abbreviated.replace('Purple', 'Blue'),
+    `${abbreviated} Auto`,
+    `${abbreviated} Relic`,
+  ]) assert.equal(match(wrong).comparable, false, wrong);
+  assert.equal(match('Jayden Daniels Purple Shock').comparable, false);
+});
+
+test('Shining Legends non-holo titles do not imply a holo variant', () => {
+  const card = { player: 'Pikachu', year: '2017', set: 'Pokémon Shining Legends', cardNumber: '28/73', parallel: 'Non-Holo' };
+  for (const listing of [
+    'Pikachu 28/73 Shining Legends Non-Holo',
+    'Pokemon Shining Legends Pikachu #28/73 Non Holo',
+    '2017 Pokémon Shining Legends Pikachu 28/73 Nonholo',
+  ]) {
+    assert.equal(match(listing, card).comparable, true, listing);
+    assert.ok(match(listing, card).score >= 60, listing);
+  }
+  const listing = 'Pikachu #28/73 Shining Legends';
+  assert.equal(match(`${listing} Non-Holo`, { ...card, parallel: null }).comparable, true);
+  for (const finish of ['Holo', 'Holographic', 'Reverse Holo', 'Reverse Holofoil']) {
+    assert.equal(match(`${listing} ${finish}`, card).comparable, false, finish);
+    assert.equal(match(`${listing} Non-Holo`, { ...card, parallel: finish }).comparable, false, finish);
+  }
+  assert.equal(match(`${listing} Holographic`, { ...card, parallel: 'Holo' }).comparable, true);
+  assert.equal(match(`${listing} Reverse Holo`, { ...card, parallel: 'Holo' }).comparable, false);
+  assert.equal(match('Pikachu #28/73 Hidden Fates Non-Holo', card).comparable, false);
+  assert.equal(match('Pikachu #29/73 Shining Legends Non-Holo', card).comparable, false);
+  assert.equal(match('Raichu #28/73 Shining Legends Non-Holo', card).comparable, false);
+  assert.equal(scoreListing(`${listing} Non-Holo`, `${listing} Non-Holo`).comparable, true);
+  assert.equal(scoreListing(`${listing} Holo`, `${listing} Non-Holo`).comparable, false);
+});
+
 test('canonical identity survives URL encoding and broad fallback queries', () => {
   const card = { subject: 'Jayden Daniels', year: '2024', brandSet: 'Donruss Optic', cardNumber: '248', parallel: 'Purple Shock /99', autoOrRelic: 'auto relic' };
   const params = buildEbaySearchParams('broad fallback', card);
@@ -118,6 +168,17 @@ test('API filters valuation, preserves query-only responses, and supports struct
     assert.equal(structured.marketSummary.rawMedian, 25);
     assert.equal(structured.gradedItems.length, 1);
     assert.equal(structured.excludedItems.length, 2);
+    listings = [
+      ['Pikachu 28/73 Shining Legends Non-Holo', '10'],
+      ['Pikachu 28/73 Shining Legends Non Holo', '20'],
+      ['Pikachu 28/73 Shining Legends Holo', '900'],
+      ['Pikachu 28/73 Shining Legends Reverse Holo', '900'],
+      ['Pikachu 28/73 Hidden Fates Non-Holo', '900'],
+    ];
+    const pokemon = await call({ player: 'Pikachu', year: '2017', set: 'Pokémon Shining Legends', cardNumber: '28/73', parallel: 'Non-Holo' });
+    assert.equal(pokemon.marketSummary.rawComparableCount, 2);
+    assert.equal(pokemon.marketSummary.rawMedian, 15);
+    assert.equal(pokemon.excludedItems.length, 3);
     listings = [['Michael Jordan', '10'], ['LeBron James', '1000'], ['Michael Jordan Auto', '500']];
     const queryOnly = await call({ q: 'Michael Jordan' });
     assert.equal(queryOnly.query, 'Michael Jordan');
