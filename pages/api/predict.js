@@ -1,3 +1,4 @@
+import { buildEbaySearchParams } from "../../lib/ebayIdentityMatch.mjs";
 // pages/api/predict.js
 // GemPredict — Card grading prediction API route
 //
@@ -433,7 +434,8 @@ async function fetchPrediction(
   cardName,
   cardType,
   cardSet,
-  condition
+  condition,
+  canonicalCard = null
 ) {
   if (!anthropic) throw new Error("NO_API_KEY");
 
@@ -451,11 +453,6 @@ try {
   ]
     .filter(Boolean)
     .join(" ")
-    .replace(/Prospect Auto or Base/gi, "")
-    .replace(/Prospects/gi, "")
-    .replace(/Auto/gi, "")
-    .replace(/Base/gi, "")
-    .replace(/Parallel/gi, "")
     .replace(/,/g, " ")
     .replace(/\s+/g, " ")
     .trim();
@@ -464,7 +461,7 @@ try {
     process.env.NEXT_PUBLIC_SITE_URL || "https://gempredict-live.vercel.app";
 
   const preMarketUrl =
-    `${baseUrl}/api/ebay-search?q=` + encodeURIComponent(preMarketQuery);
+    `${baseUrl}/api/ebay-search?` + buildEbaySearchParams(preMarketQuery, canonicalCard).toString();
 
   const preMarketRes = await fetch(preMarketUrl);
   const preMarketJson = await preMarketRes.json();
@@ -932,7 +929,8 @@ const atlasIdentityConfidence =
       effectiveCardName,
       cardType,
       effectiveCardSet,
-      condition
+      condition,
+      canonicalCard
     );
 
     if (imageAnalysis && !hasUserCardName && identifiedCardName) {
@@ -982,7 +980,7 @@ const atlas = atlasOrchestrator({
   
     for (const q of marketQueries) {
       const marketUrl =
-        `${baseUrl}/api/ebay-search?q=` + encodeURIComponent(q);
+        `${baseUrl}/api/ebay-search?` + buildEbaySearchParams(q, canonicalCard).toString();
   
       const marketRes = await fetch(marketUrl);
       const marketJson = await marketRes.json();
@@ -1003,7 +1001,7 @@ const atlas = atlasOrchestrator({
   
     if (!marketData && marketQueries.length > 0) {
       const fallbackUrl =
-        `${baseUrl}/api/ebay-search?q=` + encodeURIComponent(marketQueries[0]);
+        `${baseUrl}/api/ebay-search?` + buildEbaySearchParams(marketQueries[0], canonicalCard).toString();
 
       const fallbackRes = await fetch(fallbackUrl);
       const fallbackJson = await fallbackRes.json();

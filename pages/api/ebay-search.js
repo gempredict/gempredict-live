@@ -1,3 +1,5 @@
+import { getListingType, scoreListing, readMarketIdentity, buildStructuredQuery } from "../../lib/ebayIdentityMatch.mjs";
+
 function getMedian(nums) {
   if (!nums.length) return null;
   const sorted = nums.slice().sort(function(a, b) {
@@ -14,99 +16,12 @@ function roundMoney(value) {
     : null;
 }
 
-function getListingType(title, condition) {
-  const t = (title || "").toLowerCase();
-  const c = (condition || "").toLowerCase();
-
-  const isGraded =
-  c === "graded" ||
-  /\bpsa\b|\bbgs\b|\bsgc\b|\bcgc\b/.test(t);
-
-  const isLot =
-    /\blot\b|lot of|\bx2\b|\bx3\b|\bx4\b|\bx5\b|\b2x\b|\b3x\b|\b4x\b|\b5x\b/.test(t);
-
-  const isAutoOrPatch =
-    /\bauto\b|autograph|signature|patch|relic|jersey|memorabilia/.test(t);
-
-  if (isLot || isAutoOrPatch) return "excluded";
-  if (isGraded) return "graded";
-  return "raw";
-}
-
- function scoreListing(title, query) {
-  const t = (title || "").toLowerCase();
-  const q = (query || "").toLowerCase();
-
-  let score = 0;
-  const reasons = [];
-
-  const queryWords = q
-    .split(/\s+/)
-    .map(function(w) { return w.trim(); })
-    .filter(Boolean);
-
-  queryWords.forEach(function(word) {
-    if (t.includes(word)) score += 10;
-  });
-
-  if (t.includes("248")) {
-    score += 20;
-    reasons.push("Same card number");
-  }
-  if (t.includes("purple")) {
-    score += 20;
-    reasons.push("Parallel match");
-  }
-  if (t.includes("shock")) {
-    score += 20;
-    reasons.push("Parallel match");
-  }
-  if (t.includes("rated rookie")) {
-    score += 15;
-    reasons.push("Same rookie type");
-  }
-  if (t.includes("optic")) {
-    score += 10;
-    reasons.push("Same product/set");
-  }
-
-  if (t.includes("psa") || t.includes("bgs") || t.includes("sgc") || t.includes("cgc")) score -= 40;
-  if (t.includes("lot")) score -= 50;
-  if (t.includes("auto") || t.includes("autograph")) score -= 35;
-  if (t.includes("patch") || t.includes("relic")) score -= 35;
-
-  return {
-    score: Math.max(0, score),
-    reasons: Array.from(new Set(reasons)),
-  };
-}
-
 export default async function handler(req, res) {
   try {
-    const identity = {
-  game: typeof req.query.game === "string" ? req.query.game.trim() : null,
-  year: typeof req.query.year === "string" ? req.query.year.trim() : null,
-  brand: typeof req.query.brand === "string" ? req.query.brand.trim() : null,
-  set: typeof req.query.set === "string" ? req.query.set.trim() : null,
-  player: typeof req.query.player === "string" ? req.query.player.trim() : null,
-  cardName: typeof req.query.cardName === "string" ? req.query.cardName.trim() : null,
-  cardNumber: typeof req.query.cardNumber === "string" ? req.query.cardNumber.trim() : null,
-  parallel: typeof req.query.parallel === "string" ? req.query.parallel.trim() : null,
-};
-
-const structuredQuery = [
-  identity.year,
-  identity.brand || identity.set,
-  identity.player || identity.cardName,
-  identity.cardNumber,
-  identity.parallel,
-]
-  .filter(Boolean)
-  .join(" ");
-
-const q = typeof req.query.q === "string" && req.query.q.trim()
-  ? req.query.q.trim()
-  : structuredQuery;
+    const identity = readMarketIdentity(req.query);
+    const q = typeof req.query.q === "string" && req.query.q.trim()
+      ? req.query.q.trim()
+      : buildStructuredQuery(identity);
 
     if (!q) {
       return res.status(400).json({
@@ -181,9 +96,9 @@ const q = typeof req.query.q === "string" && req.query.q.trim()
           : null;
 
         const title = item.title || "";
-        const listingType = getListingType(title, item.condition);
-
-        const match = scoreListing(title, q);
+        const match = scoreListing(title, q, identity);
+        const type = getListingType(title, item.condition);
+        const listingType = type === "raw" && !match.comparable ? "excluded" : type;
 
 return {
   title,
@@ -210,7 +125,8 @@ return {
     const rawComparableItems = items.filter(function(item) {
       return item.listingType === "raw" &&
         item.matchScore >= 60 &&
-        typeof item.priceValue === "number";
+        typeof item.priceValue === "number" &&
+        item.priceValue > 0 && item.price?.currency === "USD";
     });
 
     const gradedItems = items.filter(function(item) {
