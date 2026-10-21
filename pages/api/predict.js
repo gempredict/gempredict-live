@@ -904,7 +904,8 @@ const atlasIdentityConfidence = imageAnalysis
       effectiveCardSet = [canonicalCard.year, canonicalCard.brandSet].filter(Boolean).join(" ");
     }
     const marketData = await selectMarketQuery(canonicalCard, {
-      baseUrl: process.env.NEXT_PUBLIC_SITE_URL || "https://gempredict-live.vercel.app",
+      baseUrl: process.env.NEXT_PUBLIC_SITE_URL,
+      routingEnv: process.env,
       fetchImpl: fetch,
     });
 

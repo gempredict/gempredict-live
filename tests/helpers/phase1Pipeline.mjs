@@ -47,7 +47,7 @@ export async function runPipeline(scenario) {
   const model = { cardTitle: scenario.proposal?.subject || scenario.fields?.cardName || 'Unrecognized card', cardMeta: 'Mock model proposal', psa9Value: 120, psa10Value: 200, psa10Probability: 60, ...scenario.model };
   const context = {
     Buffer, console: { log() {}, error(...args) { errors.push(args.map(value => String(value)).join(" ")); } }, supabase: null,
-    process: { env: { NEXT_PUBLIC_SITE_URL: 'http://stage-a.local' } },
+    process: { env: { NEXT_PUBLIC_SITE_URL: 'http://stage-a.local', ...scenario.routingEnv } },
     logRequest: async () => {},
     buildCanonicalCardFromImageAnalysis, buildCanonicalCardFromText, missingTextIdentityFields,
     calculateGradingEconomics, getUserIdentityProtection, reconcileVariant, parseVariantConfirmation, protectValuation, selectMarketQuery,
