@@ -1,3 +1,4 @@
+import { calculateMarketConfidence } from "../../lib/marketConfidence.mjs";
 import { matchesVariantValuation, expandVariantAliases } from "../../lib/variantVerification.mjs";
 import { getListingType, scoreListing, readMarketIdentity, buildStructuredQuery } from "../../lib/ebayIdentityMatch.mjs";
 
@@ -162,28 +163,35 @@ const sortedRawPrices = rawPrices.slice().sort(function(a, b) {
   return a - b;
 });
 
-const rawTypicalRangeLow = sortedRawPrices.length
+const outlierRangeLow = sortedRawPrices.length
   ? sortedRawPrices[Math.floor(sortedRawPrices.length * 0.25)]
   : null;
 
-const rawTypicalRangeHigh = sortedRawPrices.length
+const outlierRangeHigh = sortedRawPrices.length
   ? sortedRawPrices[Math.floor(sortedRawPrices.length * 0.75)]
   : null;
 
 const filteredRawPrices = rawPrices.filter(function(price) {
-  if (rawTypicalRangeLow == null || rawTypicalRangeHigh == null) return true;
-  return price >= rawTypicalRangeLow * 0.5 && price <= rawTypicalRangeHigh * 1.75;
+  if (outlierRangeLow == null || outlierRangeHigh == null) return true;
+  return price >= outlierRangeLow * 0.5 && price <= outlierRangeHigh * 1.75;
 });
 
 const rawLowest = filteredRawPrices.length ? Math.min.apply(null, filteredRawPrices) : null;
 const rawHighest = filteredRawPrices.length ? Math.max.apply(null, filteredRawPrices) : null;
 const rawMedian = getMedian(filteredRawPrices);
 
-let marketConfidence = 50;
-
-if (filteredRawPrices.length >= 5) marketConfidence += 10;
-if (filteredRawPrices.length >= 10) marketConfidence += 10;
-if (filteredRawPrices.length >= 15) marketConfidence += 10;
+// Keep the reported range, median and confidence on the same observations.
+const sortedUsedPrices = filteredRawPrices.slice().sort((a, b) => a - b);
+const rawTypicalRangeLow = sortedUsedPrices.length
+  ? sortedUsedPrices[Math.floor(sortedUsedPrices.length * 0.25)] : null;
+const rawTypicalRangeHigh = sortedUsedPrices.length
+  ? sortedUsedPrices[Math.floor(sortedUsedPrices.length * 0.75)] : null;
+const marketConfidence = calculateMarketConfidence({
+  rawUsedCount: filteredRawPrices.length,
+  rawMedian,
+  rawTypicalRangeLow,
+  rawTypicalRangeHigh,
+});
 
 const avgMatchScore =
   rawComparableItems.length > 0
@@ -191,12 +199,6 @@ const avgMatchScore =
         return sum + item.matchScore;
       }, 0) / rawComparableItems.length
     : 0;
-
-if (avgMatchScore >= 120) marketConfidence += 10;
-if (avgMatchScore >= 150) marketConfidence += 10;
-
-marketConfidence = Math.max(1, Math.min(99, marketConfidence));
-
 
     return res.status(200).json({
   success: true,
