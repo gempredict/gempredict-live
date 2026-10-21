@@ -105,7 +105,7 @@ export default async function handler(req, res) {
         const title = item.title || "";
         let expandedTitle = expandVariantAliases(title);
         if (/\bstandard art\b/i.test(identity.parallel || "") && /\bbase\b/i.test(title)) expandedTitle += " Standard Art";
-        const match = scoreListing(expandedTitle, q, { ...identity, parallel: expandVariantAliases(identity.parallel || "") });
+        const match = scoreListing(expandedTitle, q, { ...identity, parallel: expandVariantAliases(identity.parallel || "") }, item);
         if (match.comparable && (variant || identity.parallel || identity.autoOrRelic || identity.printRun) && !matchesVariantValuation(item, valuationIdentity)) {
           match.comparable = false;
           match.score = 0;
@@ -118,6 +118,7 @@ return {
   title,
   matchScore: match.score,
   matchReasons: match.reasons,
+  localizedAspects: item.localizedAspects || null,
   listingType,
   price: item.price
     ? {

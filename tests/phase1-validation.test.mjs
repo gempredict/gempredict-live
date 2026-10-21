@@ -9,7 +9,6 @@ import { isValuationTrusted, safeStoredReport, requestVariantRevaluation } from 
 // visible as known Stage A blockers, not counted as successful validation.
 // B1 is repaired; the remaining TODOs still expose B2–B5 unchanged.
 const blockers = {
-  'dragalge-conflicting-sets': 'B2: conflicting sets are priced together; unresolved set still trusted',
   'fanmade-known-identity': 'B3: Fanmade listings/vision warning do not block valuation',
   'model-price-drift': 'B4: model raw/ROI/copy can contradict selected market evidence',
   'fractional-price': 'B4: integer normalization loses fractional market prices',

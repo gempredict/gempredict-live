@@ -31,6 +31,7 @@ try {
     });
     let requestCount = 0;
     let completion = null;
+    let setConfirmation = null;
     await page.route('**/*', async route => {
       const url = route.request().url();
       if (url.endsWith('/api/predict')) {
@@ -49,6 +50,18 @@ try {
           assert.equal(completion.metrics.neutralBrowse, 1);
           assert.equal(completion.metrics.valuationBrowse, 6);
           await route.fulfill({ status: completion.httpStatus, contentType: 'application/json', body: JSON.stringify(completion.payload) });
+          return;
+        }
+        if (scenario.id === 'dragalge-conflicting-sets' && requestCount === 2) {
+          const fields = route.request().postDataJSON();
+          assert.equal(fields.confirmedIdentity.brandSet, 'Obsidian Flames');
+          assert.equal(fields.confirmedIdentity.year, '2023');
+          for (const key of ['rawValue', 'marketData', 'prediction']) assert.equal(fields[key], undefined);
+          setConfirmation = await runPipeline({ ...scenario, textOnly: true, fields });
+          assert.equal(setConfirmation.httpStatus, 200);
+          assert.equal(setConfirmation.metrics.neutralBrowse, 1);
+          assert.equal(setConfirmation.metrics.valuationBrowse, 6);
+          await route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify(setConfirmation.payload) });
           return;
         }
         const initial = scenario.confirmation && requestCount === 1 ? results.find(item => item.id === 'kid-art-unresolved') : result;
@@ -140,7 +153,32 @@ try {
         completionCorrect = true;
         completionAtlasConsistent = completion.payload.atlas.marketEvidence.comparableCount === completion.observed.usedCount;
       }
-      checks.push({ id: result.id, uiCorrect: trusted === scenario.expectedTrusted && numericalAgreement && atlasConsistent && completionAtlasConsistent, b1FlowCorrect: scenario.textOnly ? trusted === scenario.expectedTrusted && numericalAgreement && (scenario.id !== 'text-subject-only' || completionCorrect === true) : undefined, completionCorrect, completionAtlasConsistent, valuationFlowCorrect: trusted === scenario.expectedTrusted && numericalAgreement, atlasConsistent, atlasMarket, showsTrusted: trusted, shownRaw, copied, persistedRaw: saved.rawValue, persistedMedian: saved.marketData.marketSummary.rawMedian, numericalAgreement, pageErrors: errors });
+      let setConfirmationCorrect = null;
+      if (scenario.id === 'dragalge-conflicting-sets') {
+        assert.equal(result.payload.valuationVerification.reason, 'identity_unresolved');
+        // Simulate a report saved before B2, with stale trusted/mixed prices.
+        const legacy = { ...result.report, rawValue: 55, gradingUpside: 100, verdict: 'grade', valuationVerification: { status: 'trusted' }, marketData: { ...result.report.marketData, marketSummary: { ...result.report.marketData.marketSummary, valuationTrusted: true, rawMedian: 55 } } };
+        await page.evaluate(report => localStorage.setItem('gp_saved_reports', JSON.stringify([report])), legacy);
+        await page.reload({ waitUntil: 'domcontentloaded' });
+        await page.getByRole('button', { name: 'Load', exact: true }).click();
+        await page.getByRole('button', { name: 'Copy Summary', exact: true }).click();
+        assert.doesNotMatch(await page.evaluate(() => window.__stageACopy), /\$|Grade It/);
+        assert.equal(await page.getByText('Live Raw Market', { exact: true }).count(), 0);
+        await page.getByRole('button', { name: 'Verify Variant', exact: true }).click();
+        await page.getByLabel('Set / product', { exact: true }).fill('Obsidian Flames');
+        await page.getByRole('button', { name: 'Confirm and revalue', exact: true }).click();
+        await page.getByText('Live Raw Market', { exact: true }).waitFor();
+        assert.equal(requestCount, 2);
+        assert.ok((await page.getByText('Live Raw Market', { exact: true }).locator('..').innerText()).includes('$100'));
+        await page.getByRole('button', { name: 'Copy Summary', exact: true }).click();
+        assert.match(await page.evaluate(() => window.__stageACopy), /Raw: \$100/);
+        const confirmedSaved = await page.evaluate(() => JSON.parse(localStorage.getItem('gp_saved_reports'))[0]);
+        assert.equal(confirmedSaved.rawValue, 100);
+        assert.equal(confirmedSaved.canonicalCard.brandSet, 'Obsidian Flames');
+        setConfirmationCorrect = true;
+        completionAtlasConsistent = setConfirmation.payload.atlas.marketEvidence.comparableCount === setConfirmation.observed.usedCount;
+      }
+      checks.push({ id: result.id, uiCorrect: trusted === scenario.expectedTrusted && numericalAgreement && atlasConsistent && completionAtlasConsistent, b2FlowCorrect: scenario.id === 'dragalge-conflicting-sets' ? !trusted && setConfirmationCorrect === true : undefined, setConfirmationCorrect, b1FlowCorrect: scenario.textOnly ? trusted === scenario.expectedTrusted && numericalAgreement && (scenario.id !== 'text-subject-only' || completionCorrect === true) : undefined, completionCorrect, completionAtlasConsistent, valuationFlowCorrect: trusted === scenario.expectedTrusted && numericalAgreement, atlasConsistent, atlasMarket, showsTrusted: trusted, shownRaw, copied, persistedRaw: saved.rawValue, persistedMedian: saved.marketData.marketSummary.rawMedian, numericalAgreement, pageErrors: errors });
     }
     assert.deepEqual(errors, [], result.id);
     console.log(`${checks.at(-1).uiCorrect ? 'PASS' : 'FAIL'} Stage A browser ${result.id}`);
