@@ -1,9 +1,9 @@
+import { selectMarketQuery } from "../../lib/marketQuerySelection.mjs";
 import { buildCanonicalCardFromText, missingTextIdentityFields } from "../../lib/textCardIdentity.mjs";
 import { reconcileVariant, parseVariantConfirmation } from "../../lib/variantVerification.mjs";
 import { protectValuation } from "../../lib/valuationProtection.mjs";
 import { getUserIdentityProtection } from "../../lib/userIdentityProtection.mjs";
 import { resolveMarketIdentity } from "../../lib/reconcileMarketIdentity.mjs";
-import { buildEbaySearchParams } from "../../lib/ebayIdentityMatch.mjs";
 // pages/api/predict.js
 // GemPredict — Card grading prediction API route
 //
@@ -21,11 +21,9 @@ import atlasOrchestrator from "../../lib/atlasOrchestrator";
 
 import calculateIdentityConfidence from "../../lib/calculateIdentityConfidence";
 
-import buildSearchCandidates from "../../lib/buildSearchCandidates";
 
 import {
   buildCanonicalCardFromImageAnalysis,
-  buildMarketQueryFromCanonicalCard,
 } from "../../lib/cardIdentifier";
 
 import Anthropic from "@anthropic-ai/sdk";
@@ -440,7 +438,8 @@ async function fetchPrediction(
   cardType,
   cardSet,
   condition,
-  canonicalCard = null
+  canonicalCard = null,
+  marketData = null
 ) {
   if (!anthropic) throw new Error("NO_API_KEY");
 
@@ -448,37 +447,10 @@ async function fetchPrediction(
 const setLabel       = cardSet || "not specified";
 const conditionLabel = CONDITION_LABELS[condition] || CONDITION_LABELS.strong;
 
-let preMarketData = null;
-let preLiveRawMarket = null;
-
-try {
-  const preMarketQuery = [
-    cardName,
-    cardSet,
-  ]
-    .filter(Boolean)
-    .join(" ")
-    .replace(/,/g, " ")
-    .replace(/\s+/g, " ")
-    .trim();
-
-  const baseUrl =
-    process.env.NEXT_PUBLIC_SITE_URL || "https://gempredict-live.vercel.app";
-
-  const preMarketUrl =
-    `${baseUrl}/api/ebay-search?` + buildEbaySearchParams(preMarketQuery, canonicalCard).toString();
-
-  const preMarketRes = await fetch(preMarketUrl);
-  const preMarketJson = await preMarketRes.json();
-
-  if (preMarketRes.ok && preMarketJson.success) {
-    preMarketData = preMarketJson;
-    preLiveRawMarket = preMarketJson?.marketSummary?.rawMedian ?? null;
-  }
-} catch (err) {
-  preMarketData = null;
-  preLiveRawMarket = null;
-}
+// Reuse the ranked result supplied by the handler. No second market lookup
+// can drift from the evidence ultimately returned to the caller.
+const preLiveRawMarket = marketData?.marketSummary?.rawUsedCount > 0
+  ? marketData.marketSummary.rawMedian ?? null : null;
 
 const marketContext =
   preLiveRawMarket != null
@@ -979,20 +951,18 @@ const atlasIdentityConfidence =
       if (!hasUserCardName) effectiveCardName = canonicalCard.displayName;
       effectiveCardSet = [canonicalCard.year, canonicalCard.brandSet].filter(Boolean).join(" ");
     }
-    const reconciledImageIdentity = imageAnalysis && canonicalCard ? {
-      ...imageAnalysis,
-      identifiedYear: canonicalCard.year,
-      identifiedBrandSet: canonicalCard.brandSet,
-      identifiedParallel: canonicalCard.parallel,
-      identifiedAutoOrRelic: canonicalCard.autoOrRelic,
-    } : imageAnalysis;
+    const marketData = await selectMarketQuery(canonicalCard, {
+      baseUrl: process.env.NEXT_PUBLIC_SITE_URL || "https://gempredict-live.vercel.app",
+      fetchImpl: fetch,
+    });
 
     const prediction = await fetchPrediction(
       effectiveCardName,
       cardType,
       effectiveCardSet,
       condition,
-      canonicalCard
+      canonicalCard,
+      marketData
     );
 
     if (imageAnalysis && identifiedCardName && (!hasUserCardName || identityAdjusted)) {
@@ -1017,71 +987,6 @@ const atlas = atlasOrchestrator({
 });
 
    
-  let marketData = null;
-
-  try {
-    const baseUrl =
-      process.env.NEXT_PUBLIC_SITE_URL || "https://gempredict-live.vercel.app";
-  
-      const marketQueries = [
-        ...buildSearchCandidates(reconciledImageIdentity || {}),
-        buildMarketQueryFromCanonicalCard(canonicalCard),
-        effectiveCardName,
-        prediction.cardTitle,
-      ]
-        .filter(Boolean)
-        .map(function(q) {
-          return q
-            .replace(/,/g, " ")
-            .replace(/\s+/g, " ")
-            .trim();
-        })
-        .filter(function(q, i, arr) {
-          return q && arr.indexOf(q) === i;
-        });
-  
-    for (const q of marketQueries) {
-      const marketUrl =
-        `${baseUrl}/api/ebay-search?` + buildEbaySearchParams(q, canonicalCard).toString();
-  
-      const marketRes = await fetch(marketUrl);
-      const marketJson = await marketRes.json();
-  
-      if (
-        marketRes.ok &&
-        marketJson.success &&
-        marketJson.marketSummary &&
-        (marketJson.marketSummary.rawComparableCount || 0) > 0
-      ) {
-        marketData = Object.assign({}, marketJson, {
-          queryUsed: q,
-          queryAttempts: marketQueries,
-        });
-        break;
-      }
-    }
-  
-    if (!marketData && marketQueries.length > 0) {
-      const fallbackUrl =
-        `${baseUrl}/api/ebay-search?` + buildEbaySearchParams(marketQueries[0], canonicalCard).toString();
-
-      const fallbackRes = await fetch(fallbackUrl);
-      const fallbackJson = await fallbackRes.json();
-
-      if (fallbackRes.ok && fallbackJson.success) {
-        marketData = Object.assign({}, fallbackJson, {
-          queryUsed: marketQueries[0],
-          queryAttempts: marketQueries,
-        });
-      }
-    }
-  } catch (marketErr) {
-  marketData = {
-    success: false,
-    error: "Market data unavailable",
-  };
-}
-
     return res.status(200).json(protectValuation({
   success: true,
   prediction,

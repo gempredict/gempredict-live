@@ -1,3 +1,4 @@
+import { selectMarketQuery } from '../lib/marketQuerySelection.mjs';
 import { buildCanonicalCardFromText, missingTextIdentityFields } from '../lib/textCardIdentity.mjs';
 import test from 'node:test';
 import assert from 'node:assert/strict';
@@ -22,25 +23,30 @@ const browse = async url => String(url).includes('/oauth2/token') ? { ok: true, 
 
 async function predict(fields, imageAnalysis = null, evidence = neutralListings) {
   const captured = [];
+  const capturedMarkets = [];
+  const marketUrls = [];
+  const neutralQueries = [];
   const context = {
     console: { log() {}, error() {} }, Buffer,
     CARD_NAME_MIN: 2, CARD_NAME_MAX: 80, CARD_SET_MAX: 60, IMAGE_MAX_BYTES: 10485760,
-    RATE_LIMIT_MAX: 5, VALID_CARD_TYPES: new Set(['onepiece']), supabase: null,
+    RATE_LIMIT_MAX: 5, VALID_CARD_TYPES: new Set(['onepiece', 'pokemon']), supabase: null,
     checkRateLimit: () => ({ allowed: true, remaining: 4 }), logRequest: async () => {},
     sanitiseString: value => typeof value === 'string' ? value.trim() : '', looksLikeJunk: () => false, isValidEmail: () => true,
     parseRequest: async () => ({ fields, imageBuffer: imageAnalysis ? Buffer.from('mock-image') : null }),
     fetchImageAnalysis: async () => imageAnalysis,
     calculateIdentityConfidence: () => ({ score: 90 }),
-    parseVariantConfirmation, reconcileVariant, protectValuation, getUserIdentityProtection, buildCanonicalCardFromText, missingTextIdentityFields,
+    selectMarketQuery, parseVariantConfirmation, reconcileVariant, protectValuation, getUserIdentityProtection, buildCanonicalCardFromText, missingTextIdentityFields,
     buildCanonicalCardFromImageAnalysis, buildMarketQueryFromCanonicalCard, buildSearchCandidates, buildEbaySearchParams,
-    resolveMarketIdentity: (proposal, options) => resolve(proposal, { ...options, clientId: 'mock', clientSecret: 'mock', fetchImpl: async url => String(url).includes('/oauth2/token') ? { ok: true, json: async () => ({ access_token: 'mock' }) } : { ok: true, json: async () => ({ itemSummaries: evidence }) } }),
-    fetchPrediction: async (name, type, set, condition, card) => {
+    resolveMarketIdentity: (proposal, options) => resolve(proposal, { ...options, clientId: 'mock', clientSecret: 'mock', fetchImpl: async url => { if (String(url).includes('/oauth2/token')) return { ok: true, json: async () => ({ access_token: 'mock' }) }; neutralQueries.push(new URL(url).searchParams.get('q')); return { ok: true, json: async () => ({ itemSummaries: evidence }) }; } }),
+    fetchPrediction: async (name, type, set, condition, card, market) => {
       captured.push(card);
+      capturedMarkets.push(market);
       return { cardTitle: card.subject, rawValue: 999999, gradingUpside: 999999, expectedNetValue: 999999, verdict: 'grade', action: 'Grade it.', analysis: 'Market upside.' };
     },
     atlasOrchestrator: () => ({ decision: { label: 'Grade Candidate' } }),
     process: { env: { NEXT_PUBLIC_SITE_URL: 'http://mock.local' } },
     fetch: async url => {
+      marketUrls.push(url);
       let code, payload;
       await ebayHandler({ query: Object.fromEntries(new URL(url).searchParams) }, { status(value) { code = value; return this; }, json(value) { payload = value; } });
       return { ok: code === 200, json: async () => payload };
@@ -50,7 +56,7 @@ async function predict(fields, imageAnalysis = null, evidence = neutralListings)
   let code, payload;
   await handler({ method: 'POST', headers: {}, socket: { remoteAddress: 'test' } }, { status(value) { code = value; return this; }, json(value) { payload = value; } });
   assert.equal(code, 200);
-  return { payload, captured };
+  return { payload, captured, capturedMarkets, marketUrls, neutralQueries };
 }
 
 test('real prediction handler revalues selected art and withholds ROI if ambiguity or no exact comparables remain', async () => {
@@ -98,6 +104,31 @@ test('real prediction handler revalues selected art and withholds ROI if ambigui
     const noPrices = await predict({ cardName: identity.subject, cardType: 'onepiece', confirmedCardIdentity: identity, confirmedVariant: { parallel: 'Manga', autoOrRelic: 'none' } });
     assert.equal(noPrices.payload.valuationVerification.reason, 'no_comparable_listings');
     assert.equal(noPrices.payload.prediction.gradingUpside, null);
+    // Year/set correction happens before every ranked valuation request; the
+    // chosen pool is supplied once to prediction and returned unchanged.
+    const zamazentaImage = { identifiedSubject: 'Zamazenta', identifiedYear: '2020', identifiedBrandSet: 'Sword & Shield', identifiedCardNumber: '021/025', identifiedParallel: 'Holo', identifiedAutoOrRelic: 'none' };
+    const zamazentaListings = Array.from({ length: 3 }, (_, i) => ({ itemId: 'z' + i, title: '2021 Celebrations Zamazenta 021/025 Holo', price: { value: '20', currency: 'USD' }, condition: 'Ungraded' }));
+    globalThis.fetch = async url => String(url).includes('/oauth2/token')
+      ? { ok: true, json: async () => ({ access_token: 'mock' }) }
+      : { ok: true, json: async () => ({ itemSummaries: new URL(url).searchParams.get('q').includes('#') ? zamazentaListings.slice(0, 1) : zamazentaListings }) };
+    const corrected = await predict({ cardName: 'Unknown card from image', cardType: 'pokemon' }, zamazentaImage, zamazentaListings);
+    assert.equal(corrected.payload.canonicalCard.year, '2021');
+    assert.equal(corrected.payload.canonicalCard.brandSet, 'Celebrations');
+    assert.equal(corrected.payload.imageAnalysis.identifiedYear, '2020');
+    assert.deepEqual(corrected.neutralQueries, ['Zamazenta 021/025']);
+    assert.equal(corrected.payload.identityEvidenceItems.length, 3);
+    assert.equal(corrected.payload.marketData.marketSummary.rawUsedCount, 3);
+    assert.equal(corrected.payload.marketData.querySelection.attempts.length, corrected.marketUrls.length);
+    assert.ok(corrected.marketUrls.length <= 6);
+    for (const url of corrected.marketUrls) {
+      const params = new URL(url).searchParams;
+      assert.equal(params.get('year'), '2021');
+      assert.equal(params.get('set'), 'Celebrations');
+      assert.ok(!params.get('q').includes('2020') && !params.get('q').includes('Sword'));
+    }
+    assert.equal(corrected.capturedMarkets[0].queryUsed, corrected.payload.marketData.queryUsed);
+    assert.equal(corrected.capturedMarkets[0].marketSummary.rawMedian, corrected.payload.marketData.marketSummary.rawMedian);
+    globalThis.fetch = browse;
     const imageAnalysis = { identifiedSubject: identity.subject, identifiedYear: identity.year, identifiedBrandSet: identity.brandSet, identifiedCardNumber: identity.cardNumber, identifiedParallel: 'Standard Art', identifiedAutoOrRelic: 'none' };
     const ambiguous = await predict({ cardName: identity.subject, cardType: 'onepiece' }, imageAnalysis);
     assert.equal(ambiguous.payload.variantVerification.status, 'needs_confirmation');
