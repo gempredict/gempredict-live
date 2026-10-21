@@ -1,3 +1,4 @@
+import { getUserIdentityProtection } from "../../lib/userIdentityProtection.mjs";
 import { resolveMarketIdentity } from "../../lib/reconcileMarketIdentity.mjs";
 import { buildEbaySearchParams } from "../../lib/ebayIdentityMatch.mjs";
 // pages/api/predict.js
@@ -926,18 +927,18 @@ console.log("[Atlas Identity Debug]", {
 const atlasIdentityConfidence =
   calculateIdentityConfidence(imageAnalysis);
 
-    // Typed identity inputs are protected; neutral listings can reconcile only
-    // the separate vision proposal before any subsequent valuation request.
+    // Protect explicit year/set choices independently; a typed subject alone
+    // does not lock either field against neutral market evidence.
     const identityEvidence = await resolveMarketIdentity(originalCanonicalCard, {
-      protectedFields: hasUserCardName ? ["year", "set"] : cardSet.trim() ? ["set"] : [],
+      ...getUserIdentityProtection({ cardName, cardSet, year: fields.year, set: fields.set, confirmedIdentity: fields.confirmedIdentity }),
     });
     const canonicalCard = identityEvidence.canonicalCard;
     const identityVerification = identityEvidence.identityVerification;
-    const identityCorrected = identityVerification &&
-      [identityVerification.year.status, identityVerification.set.status].includes("corrected");
-    if (identityCorrected) {
+    const identityAdjusted = canonicalCard && originalCanonicalCard &&
+      (canonicalCard.year !== originalCanonicalCard.year || canonicalCard.brandSet !== originalCanonicalCard.brandSet);
+    if (identityAdjusted) {
       if (!hasUserCardName) effectiveCardName = canonicalCard.displayName;
-      if (!cardSet.trim()) effectiveCardSet = [canonicalCard.year, canonicalCard.brandSet].filter(Boolean).join(" ");
+      effectiveCardSet = [canonicalCard.year, canonicalCard.brandSet].filter(Boolean).join(" ");
     }
     const reconciledImageIdentity = imageAnalysis && canonicalCard ? {
       ...imageAnalysis,
@@ -953,8 +954,8 @@ const atlasIdentityConfidence =
       canonicalCard
     );
 
-    if (imageAnalysis && !hasUserCardName && identifiedCardName) {
-  prediction.cardTitle = effectiveCardName;
+    if (imageAnalysis && identifiedCardName && (!hasUserCardName || identityAdjusted)) {
+  prediction.cardTitle = identityAdjusted ? canonicalCard.displayName : effectiveCardName;
   prediction.cardMeta = effectiveCardSet || prediction.cardMeta;
 }
 
