@@ -111,7 +111,7 @@ export default async function handler(req, res) {
           match.score = 0;
           match.reasons.push("Variant mismatch or missing required treatment");
         }
-        const type = getListingType(title, item.condition);
+        const type = getListingType(title, item.condition, item);
         const listingType = type === "raw" && !match.comparable ? "excluded" : type;
 
 return {

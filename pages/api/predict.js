@@ -369,6 +369,8 @@ else if (hasObviousStructuralDamage && !saysNoStructuralDamage) {
     identifiedAutoOrRelic: safeStr(raw.identifiedAutoOrRelic, "unknown"),
     identityConfidence: Math.min(100, Math.max(0, safeInt(raw.identityConfidence, 0))),
     identityNotes: safeStr(raw.identityNotes, "Card identity could not be confidently determined."),
+    authenticityWarning: typeof raw.authenticityWarning === "string" ? raw.authenticityWarning.slice(0, 1000) : null,
+    isUnofficial: raw.isUnofficial === true,
     // Per-attribute ratings
     centering:      safeRating(raw.centering),
     corners:        safeRating(raw.corners),
@@ -994,6 +996,8 @@ const atlas = atlasOrchestrator({
   success: true,
   prediction,
   marketData,
+  authenticityWarnings: Array.isArray(fields.authenticityWarnings) ? fields.authenticityWarnings : [],
+  identityEvidenceExclusions: identityEvidence.identityEvidenceExclusions || [],
   identityEvidenceItems: identityEvidence.identityEvidenceItems,
   identityEvidenceSearch: identityEvidence.search,
   imageAnalysis,

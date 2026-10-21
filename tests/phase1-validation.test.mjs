@@ -7,9 +7,8 @@ import { isValuationTrusted, safeStoredReport, requestVariantRevaluation } from 
 
 // TODO checks assert the desired behavior, and currently FAIL. They are kept
 // visible as known Stage A blockers, not counted as successful validation.
-// B1 is repaired; the remaining TODOs still expose B2–B5 unchanged.
+// B1–B3 are repaired; the remaining TODOs expose B4/B5 unchanged.
 const blockers = {
-  'fanmade-known-identity': 'B3: Fanmade listings/vision warning do not block valuation',
   'model-price-drift': 'B4: model raw/ROI/copy can contradict selected market evidence',
   'fractional-price': 'B4: integer normalization loses fractional market prices',
 };

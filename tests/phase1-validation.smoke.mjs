@@ -64,6 +64,17 @@ try {
           await route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify(setConfirmation.payload) });
           return;
         }
+        if (scenario.id === 'fanmade-known-identity' && requestCount === 2) {
+          const fields = route.request().postDataJSON();
+          assert.ok(fields.authenticityWarnings.length);
+          const clean = scenarios.find(item => item.id === 'pikachu-non-holo');
+          const fresh = await runPipeline({ ...clean, textOnly: true, fields });
+          assert.equal(fresh.metrics.valuationBrowse, 6);
+          assert.equal(fresh.observed.usedCount, 3);
+          assert.equal(fresh.payload.valuationVerification.reason, 'authenticity_unresolved');
+          await route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify(fresh.payload) });
+          return;
+        }
         const initial = scenario.confirmation && requestCount === 1 ? results.find(item => item.id === 'kid-art-unresolved') : result;
         if (scenario.confirmation && requestCount === 2) {
           const input = route.request().postDataJSON();
@@ -152,6 +163,22 @@ try {
         assert.match(await page.evaluate(() => window.__stageACopy), /Raw: \$12/);
         completionCorrect = true;
         completionAtlasConsistent = completion.payload.atlas.marketEvidence.comparableCount === completion.observed.usedCount;
+      }
+      if (scenario.id === 'fanmade-known-identity') {
+        assert.equal(result.payload.valuationVerification.reason, 'authenticity_unresolved');
+        const legacy = { ...result.report, rawValue: 10, gradingUpside: 100, valuationVerification: { status: 'trusted' }, marketData: { ...result.report.marketData, marketSummary: { ...result.report.marketData.marketSummary, valuationTrusted: true, rawMedian: 10 } } };
+        await page.evaluate(report => localStorage.setItem('gp_saved_reports', JSON.stringify([report])), legacy);
+        await page.reload({ waitUntil: 'domcontentloaded' });
+        await page.getByRole('button', { name: 'Load', exact: true }).click();
+        await page.getByRole('button', { name: 'Verify Variant', exact: true }).click();
+        await Promise.all([page.waitForResponse(response => response.url().endsWith('/api/predict')), page.getByRole('button', { name: 'Confirm and revalue', exact: true }).click()]);
+        await page.getByRole('button', { name: 'Verify Variant', exact: true }).waitFor();
+        assert.equal(requestCount, 2);
+        assert.equal(await page.getByText('Live Raw Market', { exact: true }).count(), 0);
+        await page.getByRole('button', { name: 'Copy Summary', exact: true }).click();
+        assert.doesNotMatch(await page.evaluate(() => window.__stageACopy), /\$|Grade It|Skip It/);
+        await page.getByRole('button', { name: 'Share', exact: true }).click();
+        assert.doesNotMatch(await page.evaluate(() => window.__stageACopy), /\$|Grade It|Skip It/);
       }
       let setConfirmationCorrect = null;
       if (scenario.id === 'dragalge-conflicting-sets') {
