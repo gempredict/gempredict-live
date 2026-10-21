@@ -1,3 +1,4 @@
+import { buildCanonicalCardFromText, missingTextIdentityFields } from '../lib/textCardIdentity.mjs';
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
@@ -5,7 +6,7 @@ import vm from 'node:vm';
 import { reconcileVariant, parseVariantConfirmation } from '../lib/variantVerification.mjs';
 import { resolveMarketIdentity as resolve } from '../lib/reconcileMarketIdentity.mjs';
 import { getUserIdentityProtection } from '../lib/userIdentityProtection.mjs';
-import { protectValuation } from '../lib/valuationProtection.mjs';
+import { protectValuation, reportFromPrediction, requestVariantRevaluation } from '../lib/valuationProtection.mjs';
 import { buildCanonicalCardFromImageAnalysis, buildMarketQueryFromCanonicalCard } from '../lib/cardIdentifier.js';
 import buildSearchCandidates from '../lib/buildSearchCandidates.js';
 import { buildEbaySearchParams } from '../lib/ebayIdentityMatch.mjs';
@@ -19,7 +20,7 @@ const marketListings = [listing(1, 'Base', 1), listing(2, 'AA', 80), listing(3, 
 const neutralListings = [listing(10, 'Standard Art', 1), listing(11, 'Standard Art', 1), listing(12, 'AA', 80), listing(13, 'AA', 80)];
 const browse = async url => String(url).includes('/oauth2/token') ? { ok: true, json: async () => ({ access_token: 'mock' }) } : { ok: true, json: async () => ({ itemSummaries: marketListings }) };
 
-async function predict(fields, imageAnalysis = null) {
+async function predict(fields, imageAnalysis = null, evidence = neutralListings) {
   const captured = [];
   const context = {
     console: { log() {}, error() {} }, Buffer,
@@ -30,9 +31,9 @@ async function predict(fields, imageAnalysis = null) {
     parseRequest: async () => ({ fields, imageBuffer: imageAnalysis ? Buffer.from('mock-image') : null }),
     fetchImageAnalysis: async () => imageAnalysis,
     calculateIdentityConfidence: () => ({ score: 90 }),
-    parseVariantConfirmation, reconcileVariant, protectValuation, getUserIdentityProtection,
+    parseVariantConfirmation, reconcileVariant, protectValuation, getUserIdentityProtection, buildCanonicalCardFromText, missingTextIdentityFields,
     buildCanonicalCardFromImageAnalysis, buildMarketQueryFromCanonicalCard, buildSearchCandidates, buildEbaySearchParams,
-    resolveMarketIdentity: (proposal, options) => resolve(proposal, { ...options, clientId: 'mock', clientSecret: 'mock', fetchImpl: async url => String(url).includes('/oauth2/token') ? { ok: true, json: async () => ({ access_token: 'mock' }) } : { ok: true, json: async () => ({ itemSummaries: neutralListings }) } }),
+    resolveMarketIdentity: (proposal, options) => resolve(proposal, { ...options, clientId: 'mock', clientSecret: 'mock', fetchImpl: async url => String(url).includes('/oauth2/token') ? { ok: true, json: async () => ({ access_token: 'mock' }) } : { ok: true, json: async () => ({ itemSummaries: evidence }) } }),
     fetchPrediction: async (name, type, set, condition, card) => {
       captured.push(card);
       return { cardTitle: card.subject, rawValue: 999999, gradingUpside: 999999, expectedNetValue: 999999, verdict: 'grade', action: 'Grade it.', analysis: 'Market upside.' };
@@ -59,6 +60,33 @@ test('real prediction handler revalues selected art and withholds ROI if ambigui
   globalThis.fetch = browse;
   process.env.EBAY_PROD_CLIENT_ID = 'mock'; process.env.EBAY_PROD_CLIENT_SECRET = 'mock';
   try {
+    const incomplete = await predict({ cardName: 'Pikachu', cardType: 'onepiece' });
+    assert.equal(incomplete.payload.valuationVerification.status, 'untrusted');
+    assert.equal(incomplete.payload.prediction.rawValue, null);
+    assert.match(incomplete.payload.variantVerification.explanation, /card number/);
+    assert.match(incomplete.payload.variantVerification.explanation, /no photo is required/);
+    const specified = await predict({ cardName: 'Eustass Captain Kid OP14-014 Standard Art', cardSet: '2026 One Piece', cardType: 'onepiece' });
+    assert.equal(specified.captured[0].subject, identity.subject);
+    assert.equal(specified.captured[0].cardNumber, identity.cardNumber);
+    assert.notEqual(specified.payload.variantVerification.status, 'user_confirmed');
+    assert.equal(specified.payload.valuationVerification.status, 'untrusted');
+    const incompleteKid = await predict({ cardName: identity.subject, cardType: 'onepiece' });
+    let freshCalls = 0;
+    const completed = await requestVariantRevaluation(reportFromPrediction(incompleteKid.payload), { identity, parallel: 'Alternate Art', autoOrRelic: 'none' }, async (url, request) => {
+      freshCalls++;
+      const input = JSON.parse(request.body);
+      assert.equal(input.prediction, undefined);
+      const fresh = await predict(input);
+      assert.equal(fresh.captured[0].parallel, 'Alternate Art');
+      return { ok: true, json: async () => fresh.payload };
+    });
+    assert.equal(freshCalls, 1);
+    assert.equal(completed.valuationVerification.status, 'trusted');
+    assert.equal(completed.marketData.marketSummary.rawMedian, 80);
+    const verifiedText = await predict({ cardName: 'Eustass Captain Kid OP14-014 Standard Art', cardSet: '2026 One Piece', cardType: 'onepiece' }, null, [listing(20, 'Standard Art', 1), listing(21, 'Standard Art', 1), listing(22, 'Base', 1)]);
+    assert.equal(verifiedText.payload.variantVerification.status, 'verified');
+    assert.equal(verifiedText.payload.valuationVerification.status, 'trusted');
+    assert.equal(verifiedText.payload.marketData.marketSummary.rawMedian, 1);
     for (const [parallel, price] of [['Standard Art', 1], ['Alternate Art', 80]]) {
       const result = await predict({ cardName: identity.subject, cardType: 'onepiece', confirmedCardIdentity: identity, confirmedVariant: { parallel, autoOrRelic: 'none' } });
       assert.equal(result.captured[0].parallel, parallel);

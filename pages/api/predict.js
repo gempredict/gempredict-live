@@ -1,3 +1,4 @@
+import { buildCanonicalCardFromText, missingTextIdentityFields } from "../../lib/textCardIdentity.mjs";
 import { reconcileVariant, parseVariantConfirmation } from "../../lib/variantVerification.mjs";
 import { protectValuation } from "../../lib/valuationProtection.mjs";
 import { getUserIdentityProtection } from "../../lib/userIdentityProtection.mjs";
@@ -929,7 +930,7 @@ let effectiveCardName =
   imageAnalysis,
   cardName,
   cardSet
-) || confirmedCardIdentity;
+) || confirmedCardIdentity || (!imageBuffer ? buildCanonicalCardFromText({ ...fields, cardName, cardSet }) : null);
 
 console.log("[Atlas Identity Debug]", {
   imageAnalysisIdentity: imageAnalysis
@@ -963,7 +964,14 @@ const atlasIdentityConfidence =
       search: identityEvidence.search,
     }, confirmedVariant);
     const canonicalCard = variantResult.canonicalCard;
-    const variantVerification = variantResult.variantVerification;
+    let variantVerification = variantResult.variantVerification;
+    // Existing photo-confirmation requests retain their original behavior.
+    const isTextIdentityRequest = !imageBuffer && (!confirmedCardIdentity || fields.textOnlyIdentity === true || fields.textOnlyIdentity === "true");
+    const missingIdentityFields = isTextIdentityRequest ? missingTextIdentityFields(canonicalCard) : [];
+    if (missingIdentityFields.length) {
+      variantVerification = { ...variantVerification, status: "insufficient_evidence", missingIdentityFields,
+        explanation: `Exact identification needs: ${missingIdentityFields.join(", ")}. Use Verify Variant to enter these details and request fresh prices; no photo is required.` };
+    }
     const identityVerification = identityEvidence.identityVerification;
     const identityAdjusted = canonicalCard && originalCanonicalCard &&
       (canonicalCard.year !== originalCanonicalCard.year || canonicalCard.brandSet !== originalCanonicalCard.brandSet || canonicalCard.parallel !== originalCanonicalCard.parallel || canonicalCard.autoOrRelic !== originalCanonicalCard.autoOrRelic || canonicalCard.printRun !== originalCanonicalCard.printRun);

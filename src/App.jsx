@@ -472,13 +472,19 @@ function ResultCard(props) {
 
 function WithheldResultCard({ data, onSave, isSaved, onVerifyVariant, onRescan }) {
   const [editing, setEditing] = useState(false);
+  const [identity, setIdentity] = useState({
+    subject: data.canonicalCard?.subject || data.inputContext?.cardName || "",
+    cardNumber: data.canonicalCard?.cardNumber || "",
+    year: data.canonicalCard?.year || "",
+    brandSet: data.canonicalCard?.brandSet || "",
+  });
   const [version, setVersion] = useState(data.canonicalCard?.parallel || "");
   const [features, setFeatures] = useState(data.canonicalCard?.autoOrRelic === "auto" ? "auto" : data.canonicalCard?.autoOrRelic === "relic" ? "relic" : data.canonicalCard?.autoOrRelic === "auto relic" ? "auto relic" : "none");
   const [busy, setBusy] = useState(false);
   const [message, setMessage] = useState("");
   async function verify() {
     setBusy(true); setMessage("");
-    try { await onVerifyVariant(data, { parallel: version, autoOrRelic: features }); setEditing(false); }
+    try { await onVerifyVariant(data, { parallel: version, autoOrRelic: features, identity }); setEditing(false); }
     catch (error) { setMessage(error.message); }
     finally { setBusy(false); }
   }
@@ -488,8 +494,10 @@ function WithheldResultCard({ data, onSave, isSaved, onVerifyVariant, onRescan }
     <strong>Valuation and grading ROI withheld</strong>
     <p>{reason}</p>
     <p style={{ fontSize: "0.82rem", color: C.inkSoft }}>Condition analysis remains available below. No grading or resale recommendation is made until pricing is reliable.</p>
-    {data.variantVerification?.materialAmbiguity && <button onClick={() => setEditing(!editing)}>Verify Variant</button>}
+    <button onClick={() => setEditing(!editing)}>Verify Variant</button>
     {editing && <div style={{ display: "grid", gap: "0.6rem", marginTop: "0.8rem" }}>
+      <p>Enter the exact identity printed on the card, then check fresh prices. No photo is required.</p>
+      {[["subject", "Card subject"], ["cardNumber", "Card number"], ["year", "Year"], ["brandSet", "Set / product"]].map(([field, label]) => <label key={field}>{label} <input value={identity[field]} onChange={event => setIdentity({ ...identity, [field]: event.target.value })} /></label>)}
       <label>Version / parallel <input value={version} onChange={event => setVersion(event.target.value)} placeholder="e.g. Common non-holo, Standard Art, Green Sand Glitter /99" /></label>
       <label>Autograph / relic <select value={features} onChange={event => setFeatures(event.target.value)}>
         <option value="none">No autograph or relic</option><option value="auto">Autograph</option><option value="relic">Relic</option><option value="auto relic">Autograph and relic</option>
@@ -1242,7 +1250,7 @@ const emailRef    = useRef(null);
       if (!res.ok) { setError(data.error || "Something went wrong. Please try again."); setLoading(false); return; }
 
       setResults(function(prev) {
-  const newReport = { ...reportFromPrediction(data), inputContext: { cardType, condition } };
+  const newReport = { ...reportFromPrediction(data), inputContext: { cardType, condition, cardName, cardSet } };
 
   return [newReport, ...prev].slice(0, 5);
 });

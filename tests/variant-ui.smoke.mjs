@@ -29,6 +29,13 @@ try {
     valuationVerification: { status: 'untrusted', reason: 'variant_unresolved', explanation: 'Standard and alternate artwork evidence conflict.' },
     imageAnalysis: { centering: 'good', corners: 'good', edges: 'good', surface: 'fair', overallScore: 7, imageSummary: 'Visible corner whitening remains available.' },
   };
+  const textOnly = process.env.TEXT_ONLY_SMOKE === '1';
+  if (textOnly) {
+    report.canonicalCard = { subject: 'Eustass Captain Kid', cardNumber: null, year: null, brandSet: null, parallel: null };
+    report.variantVerification = { status: 'insufficient_evidence', materialAmbiguity: false };
+    report.valuationVerification.explanation = 'Enter card number, year, set and version. No photo is required.';
+    report.imageAnalysis = null;
+  }
   await page.addInitScript(value => {
     localStorage.setItem('gp_saved_reports', JSON.stringify([value]));
     Object.defineProperty(navigator, 'clipboard', { value: { writeText: async text => { window.__copied = text; } }, configurable: true });
@@ -41,6 +48,9 @@ try {
       revaluations++;
       const input = route.request().postDataJSON();
       assert.equal(input.confirmedVariant.parallel, 'Alternate Art');
+      assert.equal(input.confirmedCardIdentity.cardNumber, 'OP14-014');
+      assert.equal(input.confirmedIdentity.year, '2026');
+      assert.equal(input.confirmedIdentity.brandSet, 'One Piece');
       assert.equal(input.marketData, undefined);
       assert.equal(input.rawValue, undefined);
       const canonicalCard = { ...report.canonicalCard, parallel: 'Alternate Art', displayName: '2026 One Piece Eustass Captain Kid Alternate Art OP14-014' };
@@ -60,7 +70,7 @@ try {
   assert.ok((await page.locator('body').innerText()).includes('Valuation and grading ROI withheld'));
   assert.ok(!(await page.locator('body').innerText()).includes('987,654'));
   assert.ok(!(await page.locator('body').innerText()).includes('987654'));
-  assert.ok((await page.locator('body').innerText()).includes('Visible corner whitening remains available.'));
+  if (!textOnly) assert.ok((await page.locator('body').innerText()).includes('Visible corner whitening remains available.'));
   const nameInput = page.getByPlaceholder('e.g. Charizard Holo, LeBron Rookie, Black Lotus');
   const setInput = page.getByPlaceholder('e.g. 1999 Base Set, 2003 Topps Chrome');
   await nameInput.fill('Different card'); await setInput.fill('1999 Wrong Set');
@@ -74,6 +84,10 @@ try {
   await page.getByRole('button', { name: 'Share', exact: true }).click();
   assert.doesNotMatch(await page.evaluate(() => window.__copied), /\$|987654|Grade It/);
   await page.getByRole('button', { name: 'Verify Variant', exact: true }).click();
+  await page.getByLabel('Card subject', { exact: true }).fill('Eustass Captain Kid');
+  await page.getByLabel('Card number', { exact: true }).fill('OP14-014');
+  await page.getByLabel('Year', { exact: true }).fill('2026');
+  await page.getByLabel('Set / product', { exact: true }).fill('One Piece');
   await page.getByLabel('Version / parallel').fill('Alternate Art');
   await page.getByRole('button', { name: 'Confirm and revalue' }).click();
   await page.getByText('$80', { exact: true }).first().waitFor();
