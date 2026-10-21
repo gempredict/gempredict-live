@@ -922,8 +922,11 @@ console.log("[Atlas Identity Debug]", {
   canonicalCard: originalCanonicalCard,
 });
 
-const atlasIdentityConfidence =
-  calculateIdentityConfidence(imageAnalysis);
+// This measures visible image identifiers only. Text/confirmation identities
+// still use market verification, but have no image confidence to calculate.
+const atlasIdentityConfidence = imageAnalysis
+  ? calculateIdentityConfidence(imageAnalysis)
+  : null;
 
     // Protect explicit year/set choices independently; a typed subject alone
     // does not lock either field against neutral market evidence.

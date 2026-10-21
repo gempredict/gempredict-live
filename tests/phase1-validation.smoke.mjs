@@ -6,6 +6,7 @@ import { createRequire } from 'node:module';
 import { spawn } from 'node:child_process';
 import { setTimeout as delay } from 'node:timers/promises';
 import { scenarios } from './helpers/phase1Scenarios.mjs';
+import { runPipeline } from './helpers/phase1Pipeline.mjs';
 const { chromium } = createRequire(import.meta.url)('playwright');
 const results = JSON.parse(readFileSync(process.env.PHASE1_VALIDATION_OUTPUT || '/tmp/gp-phase1-stage-a.json', 'utf8'));
 const server = spawn(process.execPath, ['node_modules/next/dist/bin/next', 'start', '--port', '3100', '--hostname', '127.0.0.1'], { stdio: 'ignore' });
@@ -29,10 +30,27 @@ try {
       Object.defineProperty(navigator, 'share', { value: undefined, configurable: true });
     });
     let requestCount = 0;
+    let completion = null;
     await page.route('**/*', async route => {
       const url = route.request().url();
       if (url.endsWith('/api/predict')) {
         requestCount++;
+        if (scenario.id === 'text-subject-only' && requestCount === 2) {
+          const fields = route.request().postDataJSON();
+          assert.equal(fields.confirmedCardIdentity.subject, 'Pikachu');
+          assert.equal(fields.confirmedCardIdentity.cardNumber, '28/73');
+          assert.equal(fields.confirmedCardIdentity.year, '2017');
+          assert.equal(fields.confirmedCardIdentity.brandSet, 'Shining Legends');
+          assert.equal(fields.confirmedVariant.parallel, 'Common non-holo');
+          for (const key of ['rawValue', 'marketData', 'prediction']) assert.equal(fields[key], undefined);
+          const template = scenarios.find(item => item.id === 'text-complete');
+          completion = await runPipeline({ ...template, fields, market: template.market.map(item => ({ ...item, price: { value: '12', currency: 'USD' } })) });
+          assert.equal(completion.httpStatus, 200);
+          assert.equal(completion.metrics.neutralBrowse, 1);
+          assert.equal(completion.metrics.valuationBrowse, 6);
+          await route.fulfill({ status: completion.httpStatus, contentType: 'application/json', body: JSON.stringify(completion.payload) });
+          return;
+        }
         const initial = scenario.confirmation && requestCount === 1 ? results.find(item => item.id === 'kid-art-unresolved') : result;
         if (scenario.confirmation && requestCount === 2) {
           const input = route.request().postDataJSON();
@@ -57,11 +75,12 @@ try {
       await page.getByRole('button', { name: 'Verify Variant', exact: true }).click();
       await page.getByLabel('Version / parallel').fill('Alternate Art');
       await page.getByRole('button', { name: 'Confirm and revalue', exact: true }).click();
-      await page.getByRole('alert').filter({ hasText: result.payload.error }).waitFor();
+      await page.getByText('Live Raw Market', { exact: true }).waitFor();
       assert.equal(requestCount, 2);
-      assert.equal(await page.getByText('Live Raw Market', { exact: true }).count(), 0);
-      checks.push({ id: result.id, uiCorrect: false, reason: 'Fresh confirmation request returns HTTP 500; old price remains withheld', pageErrors: errors });
-    } else if (result.httpStatus !== 200) {
+      assert.equal(result.payload.imageAnalysis, null);
+      assert.equal(result.payload.atlasIdentityConfidence, null);
+    }
+    if (result.httpStatus !== 200) {
       await page.getByText(result.payload.error, { exact: true }).waitFor();
       checks.push({ id: result.id, uiCorrect: false, reason: 'HTTP 500: generic error, no result or Verify Variant action', pageErrors: errors });
     } else {
@@ -101,7 +120,27 @@ try {
         assert.ok(atlasMarket.includes(result.payload.atlas.marketEvidence.confidence + '%'));
       }
       const numericalAgreement = !trusted || result.report.rawValue === result.observed.marketMedian && result.report.expectedNetValue === result.report.expectedGradedValue - result.observed.marketMedian - result.report.psaFee && result.report.gradingUpside === result.report.psa10Value - result.observed.marketMedian - result.report.psaFee;
-      checks.push({ id: result.id, uiCorrect: trusted === scenario.expectedTrusted && numericalAgreement && atlasConsistent, valuationFlowCorrect: trusted === scenario.expectedTrusted && numericalAgreement, atlasConsistent, atlasMarket, showsTrusted: trusted, shownRaw, copied, persistedRaw: saved.rawValue, persistedMedian: saved.marketData.marketSummary.rawMedian, numericalAgreement, pageErrors: errors });
+      let completionCorrect = null;
+      let completionAtlasConsistent = true;
+      if (scenario.id === 'text-subject-only') {
+        await page.getByRole('button', { name: 'Verify Variant', exact: true }).click();
+        await page.getByLabel('Card number', { exact: true }).fill('28/73');
+        await page.getByLabel('Year', { exact: true }).fill('2017');
+        await page.getByLabel('Set / product', { exact: true }).fill('Shining Legends');
+        await page.getByLabel('Version / parallel').fill('Common non-holo');
+        await page.getByRole('button', { name: 'Confirm and revalue', exact: true }).click();
+        await page.getByText('Live Raw Market', { exact: true }).waitFor();
+        assert.equal(requestCount, 2);
+        assert.ok((await page.getByText('Live Raw Market', { exact: true }).locator('..').innerText()).includes('$12'));
+        const completedSaved = await page.evaluate(() => JSON.parse(localStorage.getItem('gp_saved_reports'))[0]);
+        assert.equal(completedSaved.marketData.marketSummary.rawMedian, 12);
+        assert.equal(completedSaved.rawValue, 12);
+        await page.getByRole('button', { name: 'Copy Summary', exact: true }).click();
+        assert.match(await page.evaluate(() => window.__stageACopy), /Raw: \$12/);
+        completionCorrect = true;
+        completionAtlasConsistent = completion.payload.atlas.marketEvidence.comparableCount === completion.observed.usedCount;
+      }
+      checks.push({ id: result.id, uiCorrect: trusted === scenario.expectedTrusted && numericalAgreement && atlasConsistent && completionAtlasConsistent, b1FlowCorrect: scenario.textOnly ? trusted === scenario.expectedTrusted && numericalAgreement && (scenario.id !== 'text-subject-only' || completionCorrect === true) : undefined, completionCorrect, completionAtlasConsistent, valuationFlowCorrect: trusted === scenario.expectedTrusted && numericalAgreement, atlasConsistent, atlasMarket, showsTrusted: trusted, shownRaw, copied, persistedRaw: saved.rawValue, persistedMedian: saved.marketData.marketSummary.rawMedian, numericalAgreement, pageErrors: errors });
     }
     assert.deepEqual(errors, [], result.id);
     console.log(`${checks.at(-1).uiCorrect ? 'PASS' : 'FAIL'} Stage A browser ${result.id}`);

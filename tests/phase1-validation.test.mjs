@@ -3,17 +3,14 @@ import assert from 'node:assert/strict';
 import { writeFileSync } from 'node:fs';
 import { runPipeline } from './helpers/phase1Pipeline.mjs';
 import { scenarios } from './helpers/phase1Scenarios.mjs';
-import { isValuationTrusted, safeStoredReport } from '../lib/valuationProtection.mjs';
+import { isValuationTrusted, safeStoredReport, requestVariantRevaluation } from '../lib/valuationProtection.mjs';
 
 // TODO checks assert the desired behavior, and currently FAIL. They are kept
 // visible as known Stage A blockers, not counted as successful validation.
-// No application behavior is changed to make this validation suite green.
+// B1 is repaired; the remaining TODOs still expose B2–B5 unchanged.
 const blockers = {
   'dragalge-conflicting-sets': 'B2: conflicting sets are priced together; unresolved set still trusted',
   'fanmade-known-identity': 'B3: Fanmade listings/vision warning do not block valuation',
-  'manual-variant-confirmation': 'B1: no-image confirmation also dereferences null image analysis',
-  'text-complete': 'B1: real identity-confidence function dereferences null image analysis',
-  'text-subject-only': 'B1: text-only error prevents manual identification path',
   'model-price-drift': 'B4: model raw/ROI/copy can contradict selected market evidence',
   'fractional-price': 'B4: integer normalization loses fractional market prices',
 };
@@ -60,7 +57,7 @@ test('Stage A measured mocked request counts preserve the six-query budget and s
     assert.equal(metrics.valuationBrowse, metrics.valuationQueries.length);
     assert.equal(metrics.neutralOAuth, metrics.neutralBrowse);
     assert.equal(metrics.claudePrediction, 1);
-    assert.equal(metrics.claudeVision, 1);
+    assert.equal(metrics.claudeVision, scenarios.find(scenario => scenario.id === result.id).textOnly ? 0 : 1);
     assert.equal(Boolean(metrics.neutralQuery?.includes(result.observed.original.year)), false);
   }
 });
@@ -77,6 +74,69 @@ test('Stage A withheld variant/unrecognized results stay safe when saved or copi
     assert.ok(saved.imageAnalysis);
     assert.match(result.copied, /withheld/);
   }
+});
+
+test('B1 no-image requests retain explicit identity and never fabricate image analysis or visual confidence', () => {
+  for (const id of ['text-complete', 'text-subject-only', 'manual-variant-confirmation']) {
+    const result = results.find(item => item.id === id);
+    assert.equal(result.httpStatus, 200);
+    assert.equal(result.payload.imageAnalysis, null);
+    assert.equal(result.payload.hasImageAnalysis, false);
+    assert.equal(result.payload.atlasIdentityConfidence, null);
+    assert.equal(result.metrics.claudeVision, 0);
+    assert.deepEqual(result.errors, []);
+  }
+  const photo = results.find(item => item.id === 'pikachu-non-holo');
+  assert.equal(photo.payload.hasImageAnalysis, true);
+  assert.equal(photo.payload.atlasIdentityConfidence.score, 90);
+  assert.equal(photo.metrics.claudeVision, 1);
+  const complete = results.find(item => item.id === 'text-complete');
+  assert.equal(complete.payload.canonicalCard.subject, 'Pikachu');
+  assert.equal(complete.payload.canonicalCard.cardNumber, '28/73');
+  assert.equal(complete.payload.variantVerification.status, 'verified');
+  assert.equal(complete.payload.identityEvidenceItems.length, 3);
+  assert.equal(complete.metrics.neutralQuery, 'Pikachu 28/73');
+  const partial = results.find(item => item.id === 'text-subject-only');
+  assert.equal(partial.payload.variantVerification.status, 'insufficient_evidence');
+  assert.match(partial.payload.valuationVerification.explanation, /card number.*year.*set.*version/);
+  assert.match(partial.payload.valuationVerification.explanation, /Verify Variant/);
+  assert.equal(partial.metrics.neutralBrowse, 0);
+  const confirmed = results.find(item => item.id === 'manual-variant-confirmation');
+  assert.equal(confirmed.payload.variantVerification.status, 'user_confirmed');
+  assert.equal(confirmed.payload.canonicalCard.parallel, 'Alternate Art');
+  assert.equal(confirmed.observed.marketMedian, 80);
+  assert.equal(confirmed.metrics.neutralBrowse, 1);
+  assert.equal(confirmed.metrics.valuationBrowse, 6);
+});
+
+test('B1 subject-only manual completion invokes the actual handler with fresh identity evidence and valuation', async () => {
+  const partial = results.find(item => item.id === 'text-subject-only');
+  const template = scenarios.find(scenario => scenario.id === 'text-complete');
+  let freshRequests = 0;
+  const completed = await requestVariantRevaluation(partial.report, {
+    identity: { subject: 'Pikachu', cardNumber: '28/73', year: '2017', brandSet: 'Shining Legends' },
+    parallel: 'Common non-holo', autoOrRelic: 'none',
+  }, async (url, request) => {
+    freshRequests++;
+    assert.equal(url, '/api/predict');
+    const fields = JSON.parse(request.body);
+    assert.equal(fields.confirmedCardIdentity.cardNumber, '28/73');
+    assert.equal(fields.confirmedVariant.parallel, 'Common non-holo');
+    assert.equal(fields.textOnlyIdentity, true);
+    for (const key of ['rawValue', 'marketData', 'prediction', 'valuationVerification']) assert.equal(fields[key], undefined);
+    const fresh = await runPipeline({ ...template, fields, market: template.market.map(item => ({ ...item, price: { value: '12', currency: 'USD' } })) });
+    assert.equal(fresh.httpStatus, 200);
+    assert.equal(fresh.metrics.neutralBrowse, 1);
+    assert.equal(fresh.metrics.valuationBrowse, 6);
+    assert.equal(fresh.payload.imageAnalysis, null);
+    return { ok: true, json: async () => fresh.payload };
+  });
+  assert.equal(freshRequests, 1);
+  assert.equal(isValuationTrusted(completed), true);
+  assert.equal(completed.canonicalCard.cardNumber, '28/73');
+  assert.equal(completed.marketData.marketSummary.rawMedian, 12);
+  assert.equal(completed.rawValue, 12);
+  assert.equal(completed.variantVerification.status, 'user_confirmed');
 });
 
 test('Stage A Atlas panel receives selected market evidence', { todo: 'B5: Atlas still receives marketData:null and shows zero comparables' }, () => {

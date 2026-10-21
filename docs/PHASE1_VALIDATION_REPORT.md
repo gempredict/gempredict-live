@@ -1,8 +1,32 @@
-# Phase 1 validation — Stage A
+# Phase 1 validation — Stage A / Stage B Repair 1
 
-**Readiness: FAIL — blocked. No authenticated live testing or deployment authorized or performed.**
+**Readiness: FAIL — B1 repaired; B2–B5 remain blocked. No authenticated live testing or deployment authorized or performed.**
 
-Date: 2026-10-21. Branch: `restore/phase1-identity-market-matching`. Application revision tested: `d8bb9b8`. This change adds validation fixtures/tests and this report only; application behavior, request budget and grading mathematics are unchanged.
+Date: 2026-10-21. Branch: `restore/phase1-identity-market-matching`. Stage A validation baseline: `8384dee` (application revision `d8bb9b8`). Stage B Repair 1 changes only the null-image confidence call in `pages/api/predict.js`, plus regression tests and this report. B2–B5 behavior, confidence formulas, grading mathematics and the request budget are unchanged.
+
+## Stage B Repair 1 — current B1 results
+
+The three committed B1 fixtures were reproduced at baseline: each returned HTTP 500 with `Cannot read properties of null (reading 'identifiedSubject')`. The handler now calls image-identity confidence calculation only when an actual image analysis exists; otherwise `atlasIdentityConfidence` stays **null**. Downstream Atlas already handles absent image analysis, and the real parsing, reconciliation, matching, ranking and valuation-protection functions complete without further null failures.
+
+| B1 scenario | Actual repaired result | Identity / valuation evidence | Outcome |
+| --- | --- | --- | --- |
+| Fully specified text: 2017 Shining Legends Pikachu #28/73 Common non-holo | HTTP 200; explicit identity preserved; variant `verified`; raw $10 | Neutral subject/number retrieval; 3 exact usable listings; 55% confidence; trusted valuation | **B1 PASS**; separate stale Atlas display remains B5 |
+| Subject-only text: Pikachu | HTTP 200; missing number/year/set/version remain null; `insufficient_evidence`; valuation untrusted | No neutral retrieval without a card number; 0 usable listings / 0% in this fixture; no raw/ROI/recommendation exposed; missing-details explanation and Verify Variant action | **B1 PASS**; browser manual completion submits the completed identity, retrieves fresh evidence and new $12 pricing; completed report still has B5 |
+| No-image manual confirmation: Kid Standard proposal → user-confirmed Alternate Art | HTTP 200; `user_confirmed`; canonical version Alternate Art; original Standard proposal retained; raw $80 | Fresh neutral retrieval plus strictly filtered valuation searches; 3 usable listings; 55% confidence; no cached-price fields submitted | **B1 PASS**; separate stale Atlas display remains B5 |
+
+All three repaired API responses have `imageAnalysis: null`, `hasImageAnalysis: false`, and `atlasIdentityConfidence: null`; no vision call is made. Explicit text is not presented as a visual observation. The photo control retains its real image analysis, 90% image identity confidence in the fixture, and its vision call. A previous photo's condition analysis may remain visible in the client after manual confirmation; the fresh API response does not fabricate a new scan.
+
+Validation commands are unchanged from the reproduction section below. Current unit/integration result: **101 checks, 96 PASS and 5 still-failing TODO assertions** (B2, B3, two B4 probes, B5). The three B1 TODO markers are removed; the actual assertions now execute as required passing checks. Two added regression checks cover absent visual confidence/photo preservation and subject-only completion through the actual request helper and handler with fresh $12 evidence. The existing request-count test now expects zero vision calls for no-image scenarios.
+
+`npm run build`: **PASS**. Both previous browser smoke scenarios: **2/2 PASS**. The rerun Stage A browser matrix completes all **16 scenarios: 2 fully PASS, 14 readiness/UI failures**, intentionally exiting 1. All three B1 workflows have passing functional checks, including successful fresh manual completion in the browser. The overall totals remain unchanged because each repaired B1 path now reaches a priced report with the separate B5 Atlas defect; the subject-only report is safely withheld initially, and B5 appears after its successful manual completion. There are no browser page exceptions.
+
+The remaining five executed TODO assertions still reproduce **B2** (trusted mixed-set pricing), **B3** (trusted Fanmade listings), **B4** (model/raw-price and fractional-price drift), and **B5** (Atlas's missing market data). Observed identities, variant statuses, counts, confidence, trust and economics for all 13 photo scenarios were also compared against the pre-repair baseline and are unchanged. Their baseline results below remain unchanged. Phase 1 is **not ready**, and the browser's failing readiness exit must not be presented as a fully passing validation.
+
+Request-budget audit remains unchanged: fully specified text and manual confirmation each now reach 1 neutral OAuth + 1 neutral Browse + 6 valuation OAuth + 6 valuation Browse + 1 Claude prediction, with **zero vision calls**. Subject-only input makes 1 valuation OAuth/Browse pair and 1 prediction, then withholds pricing. Its completed identity starts a fresh neutral/valuation pass. These are mocked call counts, not live latency or integration verification. Live eBay/Anthropic tests remain **NOT TESTED**; no credentials were provisioned and no live external tests were performed.
+
+## Stage A baseline (historical; before B1 repair)
+
+The following original findings and matrix are retained as the source-of-truth baseline. Their B1 HTTP 500 results describe `8384dee`, not the repaired branch.
 
 ## Results and scope
 
@@ -17,7 +41,7 @@ Date: 2026-10-21. Branch: `restore/phase1-identity-market-matching`. Application
 
 | ID | Failure and reproduction | Source |
 | --- | --- | --- |
-| B1 | Fully specified text, subject-only text and no-image variant-confirmation requests return HTTP 500: `Cannot read properties of null (reading 'identifiedSubject')`. No reconciliation/market evidence is produced. Initial text searches show a generic error rather than manual completion. Confirmation retains the old withheld result but cannot revalue. Earlier API tests stubbed the confidence function; earlier UI tests supplied mocked successful API responses. | `pages/api/predict.js:926`, `lib/calculateIdentityConfidence.js:6` |
+| B1 (repaired above) | Fully specified text, subject-only text and no-image variant-confirmation requests return HTTP 500: `Cannot read properties of null (reading 'identifiedSubject')`. No reconciliation/market evidence is produced. Initial text searches show a generic error rather than manual completion. Confirmation retains the old withheld result but cannot revalue. Earlier API tests stubbed the confidence function; earlier UI tests supplied mocked successful API responses. | `pages/api/predict.js:926`, `lib/calculateIdentityConfidence.js:6` |
 | B2 | Dragalge's set vote is split 3/3 and remains `unresolved_conflict`, but pricing accepts all six Paldea Evolved/Obsidian Flames listings. The $10 and $100 pools produce a trusted $55 median and a grading recommendation. An explicit unfamiliar set contradiction is treated as missing set wording; the final safety boundary checks variant resolution, not unresolved year/set identity. | `lib/ebayIdentityMatch.mjs:22`, `lib/valuationProtection.mjs:11` |
 | B3 | Three titles explicitly ending in `Fanmade`, with an original vision note warning of an unofficial card, verify the variant and produce a trusted value. The subject/number match is insufficient to establish an authentic release. The unrecognized card with missing identity is safely withheld, but that does not cover this masquerading case. | `lib/ebayIdentityMatch.mjs:33`, `lib/marketIdentityEvidence.mjs:18`, `lib/valuationProtection.mjs:13` |
 | B4 | The selected median is only a prompt instruction. Model `rawValue` and supplied upside survive normalization. With selected raw **$10**, the probe retains model raw **$150**, upside **-$30**, expected net **-$46**, and `Skip It`. Keeping the same graded estimates but using the selected raw gives upside **+$110** and expected net **+$94**. UI raw/current-cost shows $10 while copy/share says $150 and saved economics retain the contradiction. Separately, a compliant $2.50 raw baseline is rounded to $3, with copy and ROI drift. These are mocked response-handling failures, not claims that a live model returned these values. | `pages/api/predict.js:234`, `pages/api/predict.js:452`, `src/App.jsx:95`, `src/App.jsx:966`, `src/App.jsx:996` |
@@ -91,4 +115,4 @@ The Stage A browser audit intentionally returns failure while the documented blo
 
 ## Recommended next action
 
-Stop Stage A with readiness blocked. Address B1–B5 in separately scoped fixes, replacing the TODO markers only when the desired assertions pass; rerun this matrix and performance audit. Then obtain explicit approval and provision nonproduction integration configuration before any live authenticated testing. Do not merge or deploy on the basis of the existing green regressions alone.
+Stage A remains blocked overall. B1 is now repaired and its TODO markers are removed. Address B2–B5 in separately scoped fixes, replacing their TODO markers only when the desired assertions pass; rerun this matrix and performance audit. Then obtain explicit approval and provision nonproduction integration configuration before any live authenticated testing. Do not merge or deploy on the basis of the existing green regressions alone.
