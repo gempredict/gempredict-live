@@ -1,10 +1,49 @@
-# Phase 1 validation — Stage A / Stage B Repairs 1–4
+# Phase 1 validation — Stage A / Stage B Repairs 1–5
 
-**Readiness: FAIL — B1/B2/B3/B4 repaired; B5 remains blocked. No authenticated live testing or deployment authorized or performed.**
+**Stage A regression readiness: PASS — B1–B5 repaired; the complete mocked browser matrix passes 16/16. Live authenticated integration and production readiness remain NOT TESTED. No live testing or deployment authorized or performed.**
 
-Date: 2026-10-21. Branch: `restore/phase1-identity-market-matching`. Stage A validation baseline: `8384dee` (application revision `d8bb9b8`). Stage B Repair 1 fixed the null-image confidence call in `pages/api/predict.js`. Repair 2 adds set-aware filtering and year/set valuation protection, plus regression coverage and this report. Repair 3 excludes explicitly unofficial evidence and preserves original authenticity warnings across revaluation and saved reports. Repair 4 makes the selected median authoritative for financial normalization, cent-precise economics, recommendations and stored reports. B5/Atlas, confidence formulas, variant thresholds, identity reconciliation, query ranking and request budget are unchanged; the existing economic equations, probability rules and $80 fee are preserved.
+Date: 2026-10-21. Branch: `restore/phase1-identity-market-matching`. Stage A validation baseline: `8384dee` (application revision `d8bb9b8`). Stage B Repair 1 fixed the null-image confidence call in `pages/api/predict.js`. Repair 2 adds set-aware filtering and year/set valuation protection, plus regression coverage and this report. Repair 3 excludes explicitly unofficial evidence and preserves original authenticity warnings across revaluation and saved reports. Repair 4 makes the selected median authoritative for financial normalization, cent-precise economics, recommendations and stored reports. Repair 5 connects Atlas to the selected pool after final valuation protection and removes its independent confidence/decision overrides. Confidence formulas, variant thresholds, identity reconciliation, query ranking, request budget, economic equations, probability rules and the $80 fee are unchanged.
 
-## Stage B Repair 4 — current B4 results
+## Stage B Repair 5 — final B5 results
+
+Starting commit: `a7e2af2`. Before editing, the committed Stage A B5 assertion reproduced **Atlas 0 usable comparables / 0% confidence** beside the selected **3 usable raw listings / 55% confidence**. The assertion now passes normally; no TODO markers remain for B1–B5.
+
+The API now finalizes `protectValuation` before constructing Atlas. Only a trusted result is passed to Atlas, including the actual selected `marketData`, final prediction/score, canonical identity and verification metadata. Atlas also checks the same financial trust boundary itself. There is no additional eBay or Claude request, query selection, price aggregation, market-confidence formula or financial calculation. Its search diagnostics now retain the actual evaluated final-identity queries rather than rebuilding candidates from the original vision proposal.
+
+`marketEvidenceEngine` copies **`rawUsedCount`**, **`marketConfidence`** and **`rawMedian`** from the selected summary. Rejected/graded/outlier listings do not inflate its count. Query metadata, median presence, listing totals and unfiltered comparable counts award no confidence bonuses. Selected-query provenance is retained. Evidence is explicitly labeled **active asking-price listings**; realized sale prices are unavailable. Atlas's panel displays the selected count and confidence together.
+
+Atlas recommendations and decision labels now mirror the finalized B4 verdict: **Consider It** for its conservative positive modeled return, **Skip It** for non-positive expected net. A high GemPredictScore cannot override either. Reasons use the finalized action, and the report stores the same score and grading probability. Image identifier confidence remains a separate diagnostic from independent year/set verification, variant verification, market price reliability and estimated PSA 10 probability. Text/manual requests return **null image confidence and null image-grade explanation**, display “No image”, and are not blocked for lacking a scan. Actual photo condition analysis, explanations and visible-condition warnings remain available without changing the financial verdict.
+
+| Revalidated scenario | Selected evidence / Atlas outcome |
+| --- | --- |
+| Pikachu 2017 Shining Legends #28/73 Common non-holo | 3 usable raw asking-price listings, 55%; Consider It. Holo variants excluded. |
+| Zamazenta corrected to 2021 Celebrations | 3 / 55%; corrected canonical identity retained in Atlas; Consider It. Original 2020 proposal preserved separately. |
+| Ian Happ corrected to 2026 | 3 / 55%; corrected canonical year retained; Consider It. |
+| Dragalge conflicting Paldea Evolved / Obsidian Flames | Unresolved identity keeps Atlas and financial recommendations withheld. Fresh manual Obsidian Flames selection retrieves an exact pool: 3 / 55%; Atlas mirrors the final Skip It verdict. |
+| Eustass Captain Kid OP14-014 Standard / Alternate / Special Art | Each exact version uses 3 / 55%, without mixing art versions. Standard/Alternate mirror Consider It; Special mirrors Skip It. Ambiguous art withholds Atlas entirely. Fresh manual Alternate Art revaluation has 3 / 55% and no fabricated image confidence. |
+| Shane Smith Green Sand Glitter /99 | 3 / 55%; /49 rejected; Consider It. |
+| Fanmade / unrecognized card | Financial output and Atlas withheld, including when a known identity matches listings. Warning provenance survives fresh ordinary confirmation. |
+| Complete / incomplete text-only | Complete identity: 3 / 55%, Consider It, no image confidence. Subject-only identity: withheld; manual completion retrieves fresh $12 evidence, 3 / 55%, and a consistent Atlas recommendation. |
+| B4 drift / fractional prices | Both use 3 / 55% and Consider It. $10 versus model $150 and $2.50 raw retain the exact B4 economics throughout Atlas and the main report. |
+| Additional financial browser probes | $3.17 with expected net −$69.04: Skip It; $0.99 with expected net +$27.13: Consider It. Both Atlas pools match 3 / 55% and remain consistent through saving/reopening/copy/share. |
+| Missing comparables / invalid legacy financial reports | No trusted Atlas pricing, market endorsement or grading recommendation. Old financially sound reports with stale Atlas snapshots hide the inconsistent Atlas only; recorded financial evidence is retained without manufacturing fresh evidence. A fresh valuation can populate a new Atlas snapshot. |
+
+Saved-report checks compare Atlas's top-level/nested selected count, confidence, median, query, canonical identity, score, probability and recommendation with the recorded trustworthy financial report. Old or contradictory Atlas snapshots are hidden. B4's invalid financial reports and B1–B3 unresolved/authenticity cases continue withholding all financial output. The panel also rejects Atlas data without trusted verification metadata.
+
+**Final validation:**
+
+- `PHASE1_VALIDATION_OUTPUT=/tmp/gp-b5-after.json node --test --test-reporter=tap tests/*.test.mjs`: **130 tests, 130 PASS, 0 failures, 0 TODOs**. Six new focused Atlas regression tests cover sample sizes, metadata without bonuses, all trusted Stage A identities, conservative positive/negative decisions, text/manual provenance, withheld cases and stale saved reports.
+- `NEXT_TELEMETRY_DISABLED=1 npm run build`: **PASS**.
+- Both existing variant browser smokes: **2/2 PASS**, including fresh manual revaluation and persistence.
+- Both financial browser scenarios: **2/2 PASS**, now also asserting Atlas count, confidence, terminology and verdict for positive/negative economics.
+- Complete Stage A browser matrix: **16/16 PASS, 0 readiness failures, exit 0**. All initial reports, withheld cases, manual follow-ups, saved/reopened results and copy/share probes pass. **Zero browser page exceptions.** The matrix explicitly checks Atlas's 55% / 3 asking-price listings and final decision, plus absence of fabricated text-only image confidence and completed-sale claims.
+- Compared with the pre-B5 reproduction, all 16 fixtures retain identical original/reconciled identities, year/set/variant statuses, comparable counts, market confidence, valuation trust and finalized prediction objects. Neutral/valuation OAuth and Browse counts and Claude call counts are unchanged. The six-valuation-query budget remains intact.
+
+Files changed: API prediction ordering/wiring; Atlas orchestrator, market-evidence adapter, recommendation/decision/evidence engines and report builder; saved-report Atlas consistency guard; Atlas panel labels/trust guard; focused Atlas tests, Stage A test harness/assertions/browser matrix, financial browser assertions, and this report.
+
+**No known B1–B5 blockers remain in the mocked Stage A regression scope.** This is not live integration or production approval. eBay Browse evidence is active asking prices, not authenticated completed transactions; real latency, rate limits, OAuth and Anthropic responses remain untested. The existing request-performance risks below remain: up to six valuation searches, separate OAuth requests, neutral retrieval and Claude calls can accumulate latency. No request budget or transport retry/timeout policy was changed. Graded values/probabilities remain model estimates; the two-outcome PSA 9/10 model and $80 fee assumptions remain unchanged. Contextual authenticity screening is not authentication, and old saved Atlas snapshots may require a fresh valuation to display. No credentials were provisioned, no live authenticated integrations or production access occurred, and no merge or deployment was performed. Recommended next action: review this checkpoint, then separately authorize live integration validation if desired. Stop after B5.
+
+## Stage B Repair 4 — B4 results at `a7e2af2`
 
 Starting commit: `bbc6289`. Both actual Stage A B4 failures were reproduced before editing. `model-price-drift` selected a $10 median but returned raw $150, expected net −$46 and upside −$30. `fractional-price` selected $2.50 but returned raw $3, expected net $85 and upside $118. Both desired assertions now pass as ordinary tests; their TODO markers are removed.
 

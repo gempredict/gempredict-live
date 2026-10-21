@@ -5,9 +5,7 @@ import { runPipeline } from './helpers/phase1Pipeline.mjs';
 import { scenarios } from './helpers/phase1Scenarios.mjs';
 import { isValuationTrusted, safeStoredReport, requestVariantRevaluation } from '../lib/valuationProtection.mjs';
 
-// TODO checks assert the desired behavior, and currently FAIL. They are kept
-// visible as known Stage A blockers, not counted as successful validation.
-// B1–B4 are repaired; the remaining TODO exposes B5 unchanged.
+// B1–B5 desired behavior now runs as ordinary assertions.
 const blockers = {
 };
 const results = [];
@@ -135,9 +133,11 @@ test('B1 subject-only manual completion invokes the actual handler with fresh id
   assert.equal(completed.variantVerification.status, 'user_confirmed');
 });
 
-test('Stage A Atlas panel receives selected market evidence', { todo: 'B5: Atlas still receives marketData:null and shows zero comparables' }, () => {
+test('Stage A Atlas panel receives selected market evidence', () => {
   const result = results.find(item => item.id === 'pikachu-non-holo');
   assert.equal(result.payload.atlas.marketEvidence.comparableCount, result.observed.usedCount);
+  assert.equal(result.payload.atlas.marketEvidence.confidence, result.observed.marketConfidence);
+  assert.equal(result.payload.atlas.decision.label, 'Consider It');
 });
 
 // Only synthetic fixture data is written, never credentials or real user images.

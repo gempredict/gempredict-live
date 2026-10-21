@@ -922,14 +922,6 @@ const atlasIdentityConfidence = imageAnalysis
   prediction.cardMeta = effectiveCardSet || prediction.cardMeta;
 }
 
-const atlas = atlasOrchestrator({
-  imageAnalysis,
-  canonicalCard,
-  marketData: null,
-  gpScore: null,
-  prediction,
-});
-
     logRequest({
   ip,
   cardName: effectiveCardName,
@@ -939,7 +931,7 @@ const atlas = atlasOrchestrator({
 });
 
    
-    return res.status(200).json(protectValuation({
+    const result = protectValuation({
   success: true,
   prediction,
   marketData,
@@ -948,7 +940,7 @@ const atlas = atlasOrchestrator({
   identityEvidenceItems: identityEvidence.identityEvidenceItems,
   identityEvidenceSearch: identityEvidence.search,
   imageAnalysis,
-  atlas,
+  atlas: null,
   atlasIdentityConfidence,
   originalCanonicalCard: variantProposal,
   identityVerification,
@@ -957,7 +949,11 @@ const atlas = atlasOrchestrator({
   hasImageAnalysis: imageAnalysis !== null,
   remaining: rateCheck.remaining,
   emailSaved,
-}));
+});
+    result.atlas = result.valuationVerification.status === "trusted"
+      ? atlasOrchestrator({ ...result, gpScore: { score: result.prediction.gemPredictScore } })
+      : null;
+    return res.status(200).json(result);
 
   } catch (err) {
     console.error("[GemPredict] Prediction error:", err.status || "", err.message);

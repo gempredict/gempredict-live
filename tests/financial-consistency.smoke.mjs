@@ -47,6 +47,12 @@ try {
       assert.ok(body.includes('$' + formatMoney(price)));
       assert.doesNotMatch(body, /Guaranteed \$150|Grade immediately|Strong Grade Candidate/);
       if (net < 0) assert.ok(body.includes('Skip It'));
+      const decision = await page.getByText('Decision', { exact: true }).locator('..').innerText();
+      assert.ok(decision.includes(net < 0 ? 'Skip It' : 'Consider It'));
+      const market = await page.getByText('Market', { exact: true }).locator('..').innerText();
+      assert.ok(market.includes('55%'));
+      assert.ok(market.includes('3 asking-price listings'));
+      assert.doesNotMatch(body, /comparable sales|completed sales|completed transactions/i);
       await page.getByRole('button', { name: 'Copy Summary', exact: true }).click();
       assert.equal(await page.evaluate(() => window.__copy), result.copied);
       await page.getByRole('button', { name: 'Share', exact: true }).click();

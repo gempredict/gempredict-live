@@ -48,7 +48,7 @@ function Metric({ label, value, sub }) {
 }
 
 export default function AtlasPanel({ atlas }) {
-  if (!atlas) return null;
+  if (!atlas || atlas.valuationVerification?.status !== "trusted") return null;
 
   const identity = atlas.identityConfidence || {};
   const market = atlas.marketEvidence || {};
@@ -88,15 +88,15 @@ export default function AtlasPanel({ atlas }) {
         }}
       >
         <Metric
-          label="Identity"
+          label="Image identity"
           value={identity.score != null ? identity.score + "%" : "—"}
-          sub={identity.level || "Unknown"}
+          sub={atlas.identityConfidence ? identity.level : "No image"}
         />
 
         <Metric
           label="Market"
           value={market.confidence != null ? market.confidence + "%" : "—"}
-          sub={market.level || "Unknown"}
+          sub={`${market.comparableCount ?? 0} asking-price listings · ${market.level || "Unknown"}`}
         />
 
         <Metric

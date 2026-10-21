@@ -144,11 +144,18 @@ try {
       await page.getByRole('button', { name: 'Load', exact: true }).click();
       await page.getByRole('button', { name: 'Copy Summary', exact: true }).click();
       assert.equal(await page.evaluate(() => window.__stageACopy), copied);
-      const atlasConsistent = !trusted || result.payload.atlas.marketEvidence.comparableCount === result.observed.usedCount;
+      const atlasConsistent = !trusted || result.payload.atlas.marketEvidence.comparableCount === result.observed.usedCount && result.payload.atlas.marketEvidence.confidence === result.observed.marketConfidence && result.payload.atlas.decision.decision === result.report.verdict;
       let atlasMarket = null;
       if (trusted) {
         atlasMarket = await page.getByText('Market', { exact: true }).locator('..').innerText();
-        assert.ok(atlasMarket.includes(result.payload.atlas.marketEvidence.confidence + '%'));
+        assert.ok(atlasMarket.includes(result.observed.marketConfidence + '%'));
+        assert.ok(atlasMarket.includes(result.observed.usedCount + ' asking-price listings'));
+        const decision = await page.getByText('Decision', { exact: true }).locator('..').innerText();
+        assert.ok(decision.includes(result.payload.atlas.decision.label));
+        assert.equal(result.payload.atlas.decision.label, result.report.verdict === 'skip' ? 'Skip It' : 'Consider It');
+        const imageMetric = await page.getByText('Image identity', { exact: true }).locator('..').innerText();
+        if (!result.payload.imageAnalysis) { assert.ok(imageMetric.includes('No image')); assert.ok(!imageMetric.includes('%')); }
+        assert.doesNotMatch(await page.locator('body').innerText(), /comparable sales|completed sales|completed transactions/i);
       }
       const numericalAgreement = !trusted || result.report.rawValue === result.observed.marketMedian && result.report.expectedNetValue === result.report.expectedGradedValue - result.observed.marketMedian - result.report.psaFee && result.report.gradingUpside === result.report.psa10Value - result.observed.marketMedian - result.report.psaFee;
       let completionCorrect = null;
