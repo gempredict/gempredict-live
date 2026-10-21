@@ -623,12 +623,16 @@ const backMime = backImageMimeType &&
 "- Identify the card as specifically as possible from the image and provided card name.\n" +
 "- Look for year, brand, set, player/character, card number, parallel, serial numbering, autograph/relic indicators, and visible text.\n" +
 "- Do not invent details. If a detail is uncertain, use null and explain uncertainty in identityNotes.\n" +
+"- Year identification: prioritize a year actually visible on the card or strongly supported by visible product identifiers. General model knowledge alone is not year evidence.\n" +
+"- Never override a visible year merely because you remember a different set release year.\n" +
+"- If a visible copyright year is the best available evidence, you may return it as a cautious proposed year; explain the visible copyright basis in identityNotes and do not describe it as a verified release year.\n" +
+"- If year evidence conflicts or is genuinely uncertain, return identifiedYear as null rather than guessing, and explain the conflict or uncertainty in identityNotes.\n" +
 "- identityConfidence should be high only when visible card text and provided card name strongly agree.\n\n" +
 
   "Respond with ONLY a single raw JSON object. No markdown. No backticks. No extra text.\n\n" +
 
   "Required fields:\n" +
-  "identifiedYear - likely card year if visible or inferable, otherwise null (string or null)\n" +
+  "identifiedYear - cautious proposed year actually visible on the card or strongly supported by visible product identifiers; a best-evidence visible copyright year is allowed with its basis explained in identityNotes; never override a visible year with remembered release-year knowledge; return null for conflicting or genuinely uncertain year evidence (string or null)\n" +
 "identifiedFranchise - broad card universe such as Pokemon, Baseball, Basketball, Football, Hockey, Soccer, Disney Lorcana, Star Wars, One Piece, Magic, Yu-Gi-Oh, Marvel, Garbage Pail Kids, or unknown (string)\n" +
 "identifiedManufacturer - likely maker/publisher such as Pokemon, Topps, Panini, Upper Deck, Wizards of the Coast, Ravensburger, Bandai, Konami, or unknown (string)\n" +
 "identifiedBrandSet - likely brand, product, set, or release name if visible or inferable, otherwise null (string or null)\n" +
@@ -682,7 +686,7 @@ const backMime = backImageMimeType &&
   "Be strict, specific, and internally consistent. Avoid canned language.";
 
   const message = await anthropic.messages.create({
-    model: "claude-sonnet-4-6", max_tokens: 1000,
+    model: "claude-sonnet-4-6", max_tokens: 2000,
     messages: [{
       role: "user",
       content: [
