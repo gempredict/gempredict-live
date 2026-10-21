@@ -1,3 +1,5 @@
+import { reconcileVariant, parseVariantConfirmation } from "../../lib/variantVerification.mjs";
+import { protectValuation } from "../../lib/valuationProtection.mjs";
 import { getUserIdentityProtection } from "../../lib/userIdentityProtection.mjs";
 import { resolveMarketIdentity } from "../../lib/reconcileMarketIdentity.mjs";
 import { buildEbaySearchParams } from "../../lib/ebayIdentityMatch.mjs";
@@ -764,6 +766,25 @@ backImageMimeType = parsed.backImageMimeType;
 
   const cardName  = sanitiseString(fields.cardName  || "");
   const cardSet   = sanitiseString(fields.cardSet   || "");
+  const confirmedVariant = fields.confirmedVariant ? parseVariantConfirmation(fields.confirmedVariant) : null;
+  let confirmedCardIdentity = null;
+  let originalIdentityProposal = null;
+  if (fields.confirmedVariant && !confirmedVariant) return res.status(400).json({ error: "Provide a specific version, such as Base, Common non-holo, Alternate Art or Green Sand Glitter /99." });
+  if (confirmedVariant) {
+    for (const field of ["confirmedCardIdentity", "originalIdentityProposal"]) {
+      if (!fields[field]) continue;
+      try {
+        const input = typeof fields[field] === "string" ? JSON.parse(fields[field]) : fields[field];
+        const card = {};
+        for (const key of ["subject", "cardNumber", "year", "brandSet", "parallel", "autoOrRelic", "printRun"]) card[key] = sanitiseString(input?.[key] || "").slice(0, 140) || null;
+        if (card.subject && card.cardNumber) {
+          if (field === "confirmedCardIdentity") confirmedCardIdentity = card;
+          else originalIdentityProposal = card;
+        }
+      } catch { /* A rescan can still establish the card identity. */ }
+    }
+    if (originalIdentityProposal?.subject !== confirmedCardIdentity?.subject || originalIdentityProposal?.cardNumber !== confirmedCardIdentity?.cardNumber) originalIdentityProposal = null;
+  }
   const email     = sanitiseString(fields.email     || "");
   const condition = ["risky", "strong", "gem"].includes(fields.condition) ? fields.condition : "strong";
   const cardTypeRaw = typeof fields.cardType === "string" ? fields.cardType.trim().toLowerCase() : "";
@@ -908,7 +929,7 @@ let effectiveCardName =
   imageAnalysis,
   cardName,
   cardSet
-);
+) || confirmedCardIdentity;
 
 console.log("[Atlas Identity Debug]", {
   imageAnalysisIdentity: imageAnalysis
@@ -936,10 +957,16 @@ const atlasIdentityConfidence =
     const identityEvidence = await resolveMarketIdentity(originalCanonicalCard, {
       ...getUserIdentityProtection({ cardName, cardSet, year: fields.year, set: fields.set, confirmedIdentity: fields.confirmedIdentity }),
     });
-    const canonicalCard = identityEvidence.canonicalCard;
+    const variantProposal = imageAnalysis ? originalCanonicalCard : originalIdentityProposal || originalCanonicalCard;
+    const variantResult = reconcileVariant(variantProposal, identityEvidence.canonicalCard, {
+      identityEvidenceItems: identityEvidence.identityEvidenceItems,
+      search: identityEvidence.search,
+    }, confirmedVariant);
+    const canonicalCard = variantResult.canonicalCard;
+    const variantVerification = variantResult.variantVerification;
     const identityVerification = identityEvidence.identityVerification;
     const identityAdjusted = canonicalCard && originalCanonicalCard &&
-      (canonicalCard.year !== originalCanonicalCard.year || canonicalCard.brandSet !== originalCanonicalCard.brandSet);
+      (canonicalCard.year !== originalCanonicalCard.year || canonicalCard.brandSet !== originalCanonicalCard.brandSet || canonicalCard.parallel !== originalCanonicalCard.parallel || canonicalCard.autoOrRelic !== originalCanonicalCard.autoOrRelic || canonicalCard.printRun !== originalCanonicalCard.printRun);
     if (identityAdjusted) {
       if (!hasUserCardName) effectiveCardName = canonicalCard.displayName;
       effectiveCardSet = [canonicalCard.year, canonicalCard.brandSet].filter(Boolean).join(" ");
@@ -948,6 +975,8 @@ const atlasIdentityConfidence =
       ...imageAnalysis,
       identifiedYear: canonicalCard.year,
       identifiedBrandSet: canonicalCard.brandSet,
+      identifiedParallel: canonicalCard.parallel,
+      identifiedAutoOrRelic: canonicalCard.autoOrRelic,
     } : imageAnalysis;
 
     const prediction = await fetchPrediction(
@@ -1045,7 +1074,7 @@ const atlas = atlasOrchestrator({
   };
 }
 
-    return res.status(200).json({
+    return res.status(200).json(protectValuation({
   success: true,
   prediction,
   marketData,
@@ -1054,13 +1083,14 @@ const atlas = atlasOrchestrator({
   imageAnalysis,
   atlas,
   atlasIdentityConfidence,
-  originalCanonicalCard,
+  originalCanonicalCard: variantProposal,
   identityVerification,
+  variantVerification,
   canonicalCard,
   hasImageAnalysis: imageAnalysis !== null,
   remaining: rateCheck.remaining,
   emailSaved,
-});
+}));
 
   } catch (err) {
     console.error("[GemPredict] Prediction error:", err.status || "", err.message);

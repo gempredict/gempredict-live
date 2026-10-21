@@ -1,3 +1,4 @@
+import { isValuationTrusted, safeStoredReport, withheldSummary, reportFromPrediction, requestVariantRevaluation } from "../lib/valuationProtection.mjs";
 // src/App.jsx — GemPredict main component
 import { useState, useRef, useEffect } from "react";
 import { track } from "@vercel/analytics/react";
@@ -92,6 +93,7 @@ function getVerdictBullets(data) {
   return bullets.slice(0, 3);
 }
 function buildCopySummary(data) {
+  if (!isValuationTrusted(data)) return withheldSummary(data);
   const v = VERDICTS[data.verdict] ? VERDICTS[data.verdict].label : data.verdict;
   return "GemPredict Report — " + data.cardTitle +
     " | Raw: $" + safeMoney(data.rawValue) +
@@ -464,7 +466,47 @@ function EmptyState() {
   );
 }
 
-function ResultCard({ data, index, onSave, isSaved }) {
+function ResultCard(props) {
+  return isValuationTrusted(props.data) ? <TrustedResultCard {...props} /> : <WithheldResultCard {...props} />;
+}
+
+function WithheldResultCard({ data, onSave, isSaved, onVerifyVariant, onRescan }) {
+  const [editing, setEditing] = useState(false);
+  const [version, setVersion] = useState(data.canonicalCard?.parallel || "");
+  const [features, setFeatures] = useState(data.canonicalCard?.autoOrRelic === "auto" ? "auto" : data.canonicalCard?.autoOrRelic === "relic" ? "relic" : data.canonicalCard?.autoOrRelic === "auto relic" ? "auto relic" : "none");
+  const [busy, setBusy] = useState(false);
+  const [message, setMessage] = useState("");
+  async function verify() {
+    setBusy(true); setMessage("");
+    try { await onVerifyVariant(data, { parallel: version, autoOrRelic: features }); setEditing(false); }
+    catch (error) { setMessage(error.message); }
+    finally { setBusy(false); }
+  }
+  const reason = data.valuationVerification?.explanation || "This version needs a fresh valuation.";
+  return <div style={{ background: C.white, border: "1px solid " + C.border, borderRadius: 18, padding: "1.25rem" }}>
+    <h3 style={{ marginTop: 0 }}>{data.canonicalCard?.displayName || data.cardTitle}</h3>
+    <strong>Valuation and grading ROI withheld</strong>
+    <p>{reason}</p>
+    <p style={{ fontSize: "0.82rem", color: C.inkSoft }}>Condition analysis remains available below. No grading or resale recommendation is made until pricing is reliable.</p>
+    {data.variantVerification?.materialAmbiguity && <button onClick={() => setEditing(!editing)}>Verify Variant</button>}
+    {editing && <div style={{ display: "grid", gap: "0.6rem", marginTop: "0.8rem" }}>
+      <label>Version / parallel <input value={version} onChange={event => setVersion(event.target.value)} placeholder="e.g. Common non-holo, Standard Art, Green Sand Glitter /99" /></label>
+      <label>Autograph / relic <select value={features} onChange={event => setFeatures(event.target.value)}>
+        <option value="none">No autograph or relic</option><option value="auto">Autograph</option><option value="relic">Relic</option><option value="auto relic">Autograph and relic</option>
+      </select></label>
+      <button disabled={busy || !version.trim()} onClick={verify}>{busy ? "Checking fresh prices…" : "Confirm and revalue"}</button>
+    </div>}
+    {message && <p role="alert">{message}</p>}
+    <div style={{ display: "flex", flexWrap: "wrap", gap: "0.6rem", marginTop: "1rem" }}>
+      <button onClick={onRescan}>Rescan</button>
+      <button onClick={() => onSave(safeStoredReport(data))}>{isSaved ? "Saved" : "Save Report"}</button>
+      <button onClick={() => { navigator.clipboard?.writeText(buildCopySummary(data)); }}>Copy Summary</button>
+      <button onClick={() => { const summary = buildCopySummary(data); if (navigator.share) navigator.share({ title: "GemPredict Report", text: summary }).catch(() => {}); else navigator.clipboard?.writeText(summary); }}>Share</button>
+    </div>
+  </div>;
+}
+
+function TrustedResultCard({ data, index, onSave, isSaved }) {
   const gpScore = buildGemPredictScore(data);
   const verdict  = VERDICTS[data.verdict] || VERDICTS.maybe;
   const profit   = typeof data.gradingUpside === "number" ? data.gradingUpside : 0;
@@ -1080,7 +1122,7 @@ const emailRef    = useRef(null);
 
   useEffect(function() {
     setHistory(lsGet(LS_HISTORY) || []);
-    setSavedReports(lsGet(LS_SAVED) || []);
+    setSavedReports((lsGet(LS_SAVED) || []).map(safeStoredReport));
   }, []);
 
   // Revoke object URLs on unmount to avoid memory leaks
@@ -1146,6 +1188,7 @@ const emailRef    = useRef(null);
   }
   function clearHistory() { lsSet(LS_HISTORY, []); setHistory([]); }
   function saveReport(data) {
+    data = safeStoredReport(data);
     setSavedReports(function(prev) {
       const deduped = prev.filter(function(r) { return r.cardTitle !== data.cardTitle; });
       const next = [Object.assign({}, data, { savedAt: Date.now() }), ...deduped].slice(0, 10);
@@ -1199,12 +1242,7 @@ const emailRef    = useRef(null);
       if (!res.ok) { setError(data.error || "Something went wrong. Please try again."); setLoading(false); return; }
 
       setResults(function(prev) {
-  const newReport = {
-  ...data.prediction,
-  marketData: data.marketData || null,
-  imageAnalysis: data.imageAnalysis || null,
-  canonicalCard: data.canonicalCard || null,
-};
+  const newReport = { ...reportFromPrediction(data), inputContext: { cardType, condition } };
 
   return [newReport, ...prev].slice(0, 5);
 });
@@ -1223,6 +1261,24 @@ if (data.imageAnalysis) setImageAnalysis(data.imageAnalysis);
 
     } catch { setError("Network error — check your connection and try again."); }
     finally   { setLoading(false); }
+  }
+
+  async function handleVerifyVariant(report, confirmation) {
+    const fresh = await requestVariantRevaluation(report, confirmation);
+    setResults(previous => previous.map(item => item === report ? fresh : item));
+    setSavedReports(previous => {
+      const next = previous.map(item => item.cardTitle === report.cardTitle ? { ...fresh, savedAt: item.savedAt } : item);
+      lsSet(LS_SAVED, next);
+      return next;
+    });
+  }
+  function rescanVariant() {
+    clearImage();
+    if (backImagePreview) URL.revokeObjectURL(backImagePreview);
+    setBackImageFile(null); setBackImagePreview(null);
+    setCardName(""); setCardSet(""); setError("");
+    fileInputRef.current?.click();
+    cardNameRef.current?.scrollIntoView({ behavior: "smooth", block: "center" });
   }
 
   async function handleWaitlistSubmit() {
@@ -1715,6 +1771,8 @@ if (data.imageAnalysis) setImageAnalysis(data.imageAnalysis);
   return (
     <div key={i}>
       <ResultCard
+        onVerifyVariant={handleVerifyVariant}
+        onRescan={rescanVariant}
         data={r}
         index={i}
         onSave={saveReport}
@@ -1801,6 +1859,7 @@ if (data.imageAnalysis) setImageAnalysis(data.imageAnalysis);
       }}
     >
       {savedReports
+        .filter(isValuationTrusted)
         .slice()
         .sort(function(a, b) {
           const scoreA =
@@ -1898,12 +1957,14 @@ if (data.imageAnalysis) setImageAnalysis(data.imageAnalysis);
               <div style={{ fontSize: "0.72rem", fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.08em", color: C.inkSoft, marginBottom: "0.75rem" }}>Saved Reports</div>
               <div style={{ display: "flex", flexDirection: "column", gap: "0.5rem" }}>
                 {savedReports.map(function(r) {
-                  const v = VERDICTS[r.verdict];
+                  r = safeStoredReport(r);
+                  const v = isValuationTrusted(r) ? VERDICTS[r.verdict] : null;
                   return (
                     <div key={r.cardTitle} style={{ display: "flex", alignItems: "center", gap: "0.75rem", background: C.white, border: "1px solid " + C.border, borderRadius: 12, padding: "0.75rem 1rem" }}>
                       <div style={{ flex: 1, minWidth: 0 }}>
                         <div style={{ fontSize: "0.875rem", fontWeight: 700, color: C.ink, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{r.cardTitle}</div>
                         <div style={{ display: "flex", gap: "0.75rem", marginTop: "0.2rem", flexWrap: "wrap" }}>
+                          {!isValuationTrusted(r) && <span style={{ fontSize: "0.72rem", color: C.amber }}>Valuation withheld — {r.valuationVerification?.reason || "recheck required"}</span>}
                           {v && <span style={{ fontSize: "0.68rem", fontWeight: 700, background: v.bg, color: v.color, padding: "0.1rem 0.5rem", borderRadius: 100 }}>{v.label}</span>}
                           {r.psa10Probability != null && <span style={{ fontSize: "0.72rem", color: C.inkSoft }}>~{r.psa10Probability}% PSA 10</span>}
                           {r.gemPredictScore != null && (
@@ -1925,7 +1986,7 @@ if (data.imageAnalysis) setImageAnalysis(data.imageAnalysis);
                           {r.gradingUpside != null && <span style={{ fontSize: "0.72rem", color: r.gradingUpside >= 0 ? C.green : C.red, fontWeight: 600 }}>{r.gradingUpside >= 0 ? "+$" : "-$"}{safeMoney(Math.abs(r.gradingUpside))}</span>}
                         </div>
                       </div>
-                      <button onClick={function() { fillExample({ name: r.cardTitle, type: "tcg", set: r.cardMeta || "" }); }} style={{ fontSize: "0.72rem", color: C.gold, fontWeight: 600, background: "none", border: "none", cursor: "pointer", flexShrink: 0 }}>Load</button>
+                      <button onClick={function() { setResults(previous => [safeStoredReport(r), ...previous].slice(0, 5)); }} style={{ fontSize: "0.72rem", color: C.gold, fontWeight: 600, background: "none", border: "none", cursor: "pointer", flexShrink: 0 }}>Load</button>
                       <button onClick={function() { removeSavedReport(r.cardTitle); }} style={{ fontSize: "0.72rem", color: C.inkSoft, background: "none", border: "none", cursor: "pointer", flexShrink: 0 }}>✕</button>
                     </div>
                   );

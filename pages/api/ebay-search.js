@@ -1,3 +1,4 @@
+import { matchesVariantValuation, expandVariantAliases } from "../../lib/variantVerification.mjs";
 import { getListingType, scoreListing, readMarketIdentity, buildStructuredQuery } from "../../lib/ebayIdentityMatch.mjs";
 
 function getMedian(nums) {
@@ -19,6 +20,11 @@ function roundMoney(value) {
 export default async function handler(req, res) {
   try {
     const identity = readMarketIdentity(req.query);
+    let variant = null;
+    if (identity.variantIdentity) {
+      try { variant = JSON.parse(identity.variantIdentity); } catch { /* Ignore invalid optional descriptors. */ }
+    }
+    const valuationIdentity = { ...identity, subject: identity.player || identity.cardName, brandSet: identity.set, variant };
     const q = typeof req.query.q === "string" && req.query.q.trim()
       ? req.query.q.trim()
       : buildStructuredQuery(identity);
@@ -96,7 +102,14 @@ export default async function handler(req, res) {
           : null;
 
         const title = item.title || "";
-        const match = scoreListing(title, q, identity);
+        let expandedTitle = expandVariantAliases(title);
+        if (/\bstandard art\b/i.test(identity.parallel || "") && /\bbase\b/i.test(title)) expandedTitle += " Standard Art";
+        const match = scoreListing(expandedTitle, q, { ...identity, parallel: expandVariantAliases(identity.parallel || "") });
+        if (match.comparable && (variant || identity.parallel || identity.autoOrRelic || identity.printRun) && !matchesVariantValuation(item, valuationIdentity)) {
+          match.comparable = false;
+          match.score = 0;
+          match.reasons.push("Variant mismatch or missing required treatment");
+        }
         const type = getListingType(title, item.condition);
         const listingType = type === "raw" && !match.comparable ? "excluded" : type;
 
@@ -193,6 +206,8 @@ marketConfidence = Math.max(1, Math.min(99, marketConfidence));
       total: searchData.total || 0,
       count: items.length,
       marketSummary: {
+        // Query matches alone cannot verify the photographed version.
+        valuationTrusted: false,
         rawComparableCount: rawComparableItems.length,
         rawUsedCount: filteredRawPrices.length,
 rawOutlierCount: rawPrices.length - filteredRawPrices.length,

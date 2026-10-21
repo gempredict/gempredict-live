@@ -20,8 +20,7 @@ export default function Home() {
           content="GemPredict — Know What to Do With Your Cards"
         />
 
-        <metanpm run dev
-        
+        <meta
           property="og:description"
           content="GemPredict helps collectors make smarter decisions by bringing together card identity, visible condition, market evidence, grading outcomes, and total costs."
         />
