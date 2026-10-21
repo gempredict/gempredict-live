@@ -114,7 +114,7 @@ test('unresolved pricing is suppressed in API, atlas, stored reports and copied 
 test('verified ordinary cards retain normal amounts; no comparable prices never grants trust', () => {
   const variantVerification = reconcileVariant(pikachu, pikachu, evidence(pikachu, repeat('Pikachu 28/73 Regular Non-Holo'))).variantVerification;
   const normal = protectValuation({ prediction, marketData: prices, variantVerification });
-  assert.equal(normal.prediction.rawValue, 999);
+  assert.equal(normal.prediction.rawValue, 20);
   assert.equal(normal.marketData.marketSummary.valuationTrusted, true);
   assert.equal(isValuationTrusted(normal), true);
   const missing = protectValuation({ prediction, marketData: { marketSummary: { rawUsedCount: 0, rawMedian: null } }, variantVerification });

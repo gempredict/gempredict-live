@@ -1,3 +1,4 @@
+import { formatMoney } from '../lib/gradingEconomics.mjs';
 // Stage A browser audit against actual mocked-pipeline payloads, not hand-built
 // success reports. Requires build + PHASE1_VALIDATION_OUTPUT test run first.
 import assert from 'node:assert/strict';
@@ -115,7 +116,13 @@ try {
       let shownRaw = null;
       if (trusted) {
         shownRaw = await page.getByText('Live Raw Market', { exact: true }).locator('..').innerText();
-        assert.ok(shownRaw.includes('$' + result.observed.marketMedian));
+        assert.ok(shownRaw.includes('$' + formatMoney(result.observed.marketMedian)));
+        const body = await page.locator('body').innerText();
+        assert.ok(body.includes(result.report.analysis));
+        assert.ok(body.includes(result.report.action));
+        assert.ok(body.includes((result.report.expectedNetValue < 0 ? '-$' : '+$') + formatMoney(Math.abs(result.report.expectedNetValue))));
+        if (result.id === 'model-price-drift') assert.ok(!body.includes('$150'));
+        if (result.id === 'fractional-price') assert.ok(shownRaw.includes('$2.50'));
       } else {
         await page.getByRole('button', { name: 'Verify Variant', exact: true }).click();
         await page.getByLabel('Card number', { exact: true }).waitFor();
@@ -180,6 +187,24 @@ try {
         await page.getByRole('button', { name: 'Share', exact: true }).click();
         assert.doesNotMatch(await page.evaluate(() => window.__stageACopy), /\$|Grade It|Skip It/);
       }
+      if (['model-price-drift', 'fractional-price'].includes(scenario.id)) {
+        assert.equal(saved.rawValue, result.observed.marketMedian);
+        assert.equal(saved.expectedNetValue, result.report.expectedNetValue);
+        assert.equal(saved.gradingUpside, result.report.gradingUpside);
+        assert.equal(saved.verdict, result.report.verdict);
+        // A previously trusted stale report must not regain financial output.
+        const stale = { ...result.report, rawValue: 150, gradingUpside: 9999, verdict: 'grade', analysis: 'Grade now at $150.' };
+        delete stale.financialBasis;
+        await page.evaluate(report => localStorage.setItem('gp_saved_reports', JSON.stringify([report])), stale);
+        await page.reload({ waitUntil: 'domcontentloaded' });
+        await page.getByRole('button', { name: 'Load', exact: true }).click();
+        await page.getByText('Valuation and grading ROI withheld', { exact: true }).waitFor();
+        assert.equal(await page.getByText('Live Raw Market', { exact: true }).count(), 0);
+        await page.getByRole('button', { name: 'Copy Summary', exact: true }).click();
+        assert.doesNotMatch(await page.evaluate(() => window.__stageACopy), /\$|Grade It/);
+        await page.getByRole('button', { name: 'Share', exact: true }).click();
+        assert.doesNotMatch(await page.evaluate(() => window.__stageACopy), /\$|Grade It/);
+      }
       let setConfirmationCorrect = null;
       if (scenario.id === 'dragalge-conflicting-sets') {
         assert.equal(result.payload.valuationVerification.reason, 'identity_unresolved');
@@ -205,7 +230,7 @@ try {
         setConfirmationCorrect = true;
         completionAtlasConsistent = setConfirmation.payload.atlas.marketEvidence.comparableCount === setConfirmation.observed.usedCount;
       }
-      checks.push({ id: result.id, uiCorrect: trusted === scenario.expectedTrusted && numericalAgreement && atlasConsistent && completionAtlasConsistent, b2FlowCorrect: scenario.id === 'dragalge-conflicting-sets' ? !trusted && setConfirmationCorrect === true : undefined, setConfirmationCorrect, b1FlowCorrect: scenario.textOnly ? trusted === scenario.expectedTrusted && numericalAgreement && (scenario.id !== 'text-subject-only' || completionCorrect === true) : undefined, completionCorrect, completionAtlasConsistent, valuationFlowCorrect: trusted === scenario.expectedTrusted && numericalAgreement, atlasConsistent, atlasMarket, showsTrusted: trusted, shownRaw, copied, persistedRaw: saved.rawValue, persistedMedian: saved.marketData.marketSummary.rawMedian, numericalAgreement, pageErrors: errors });
+      checks.push({ id: result.id, uiCorrect: trusted === scenario.expectedTrusted && numericalAgreement && atlasConsistent && completionAtlasConsistent, b2FlowCorrect: scenario.id === 'dragalge-conflicting-sets' ? !trusted && setConfirmationCorrect === true : undefined, setConfirmationCorrect, b4FlowCorrect: ['model-price-drift', 'fractional-price'].includes(scenario.id) ? numericalAgreement : undefined, b1FlowCorrect: scenario.textOnly ? trusted === scenario.expectedTrusted && numericalAgreement && (scenario.id !== 'text-subject-only' || completionCorrect === true) : undefined, completionCorrect, completionAtlasConsistent, valuationFlowCorrect: trusted === scenario.expectedTrusted && numericalAgreement, atlasConsistent, atlasMarket, showsTrusted: trusted, shownRaw, copied, persistedRaw: saved.rawValue, persistedMedian: saved.marketData.marketSummary.rawMedian, numericalAgreement, pageErrors: errors });
     }
     assert.deepEqual(errors, [], result.id);
     console.log(`${checks.at(-1).uiCorrect ? 'PASS' : 'FAIL'} Stage A browser ${result.id}`);

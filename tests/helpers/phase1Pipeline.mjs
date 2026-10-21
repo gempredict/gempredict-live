@@ -1,3 +1,4 @@
+import { calculateGradingEconomics, formatMoney } from '../../lib/gradingEconomics.mjs';
 // Stage A: real route control flow, Claude parsing/normalization, identity/variant
 // reconciliation, eBay eligibility, confidence, ranking and valuation protection.
 // Only transport/image bytes, external SDK replies and database writes are mocked.
@@ -10,7 +11,7 @@ import { getUserIdentityProtection } from '../../lib/userIdentityProtection.mjs'
 import { resolveMarketIdentity } from '../../lib/reconcileMarketIdentity.mjs';
 import { reconcileVariant, parseVariantConfirmation } from '../../lib/variantVerification.mjs';
 import { selectMarketQuery } from '../../lib/marketQuerySelection.mjs';
-import { protectValuation, isValuationTrusted, withheldSummary, reportFromPrediction } from '../../lib/valuationProtection.mjs';
+import { protectValuation, isValuationTrusted, withheldSummary, reportFromPrediction, safeStoredReport } from '../../lib/valuationProtection.mjs';
 import ebayHandler from '../../pages/api/ebay-search.js';
 import buildSearchCandidates from '../../lib/buildSearchCandidates.js';
 import calculateIdentityConfidence from '../../lib/calculateIdentityConfidence.js';
@@ -32,8 +33,8 @@ const atlasOrchestrator = vm.runInNewContext(`${atlasSource}\natlasOrchestrator;
 const app = readFileSync(new URL('../../src/App.jsx', import.meta.url), 'utf8');
 const copySource = app.slice(app.indexOf('function buildCopySummary('), app.indexOf('// ─── CSS'));
 const copySummary = vm.runInNewContext(`${copySource}\nbuildCopySummary;`, {
-  isValuationTrusted, withheldSummary,
-  safeMoney: value => typeof value === 'number' && Number.isFinite(value) ? value.toLocaleString('en-US') : '0',
+  isValuationTrusted, withheldSummary, safeStoredReport,
+  safeMoney: formatMoney,
   VERDICTS: { grade: { label: 'Grade It' }, skip: { label: 'Skip It' }, maybe: { label: 'Consider It' } },
 });
 
@@ -49,7 +50,7 @@ export async function runPipeline(scenario) {
     process: { env: { NEXT_PUBLIC_SITE_URL: 'http://stage-a.local' } },
     logRequest: async () => {},
     buildCanonicalCardFromImageAnalysis, buildCanonicalCardFromText, missingTextIdentityFields,
-    getUserIdentityProtection, reconcileVariant, parseVariantConfirmation, protectValuation, selectMarketQuery,
+    calculateGradingEconomics, getUserIdentityProtection, reconcileVariant, parseVariantConfirmation, protectValuation, selectMarketQuery,
     atlasOrchestrator, calculateIdentityConfidence,
     parseRequest: async () => ({ fields: scenario.fields || { cardName: 'Unknown card from image', cardType: scenario.type || 'pokemon' }, imageBuffer: scenario.textOnly ? null : Buffer.from('mock card image'), imageMimeType: 'image/png' }),
     resolveMarketIdentity: (card, options) => resolveMarketIdentity(card, { ...options, clientId: 'mock', clientSecret: 'mock', fetchImpl: async url => {
@@ -79,7 +80,7 @@ export async function runPipeline(scenario) {
         const rawValue = scenario.model?.rawValue ?? baseline;
         const upside = model.psa10Value - rawValue - 80;
         const net = model.psa10Value * 0.6 + model.psa9Value * 0.4 - rawValue - 80;
-        reply = { ...model, rawValue, gradingUpside: upside, verdict: net > 0 ? 'grade' : 'skip', analysis: `Model used raw $${rawValue}.`, action: net > 0 ? 'Consider grading.' : 'Keep raw.' };
+        reply = { ...model, rawValue, gradingUpside: upside, verdict: net > 0 ? 'grade' : 'skip', analysis: `Model used raw $${rawValue}.`, action: net > 0 ? 'Consider grading.' : 'Keep raw.', ...scenario.predictionReply };
       }
       return { content: [{ type: 'text', text: JSON.stringify(reply) }] };
     } } },

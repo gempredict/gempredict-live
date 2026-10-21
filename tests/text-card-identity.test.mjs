@@ -1,7 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { buildCanonicalCardFromText, missingTextIdentityFields } from '../lib/textCardIdentity.mjs';
-import { requestVariantRevaluation } from '../lib/valuationProtection.mjs';
+import { requestVariantRevaluation, protectValuation } from '../lib/valuationProtection.mjs';
 
 test('fully specified text uses explicit subject, fractional number, year, set and version only', () => {
   const card = buildCanonicalCardFromText({ cardName: 'Pikachu #28/73 Common non-holo', cardSet: '2017 Shining Legends' });
@@ -35,7 +35,7 @@ test('manual completion sends exact identity for fresh valuation without cached 
     assert.equal(body.confirmedIdentity.year, '2017');
     assert.equal(body.rawValue, undefined);
     assert.equal(body.textOnlyIdentity, true);
-    return { ok: true, json: async () => ({ prediction: { rawValue: 2 }, canonicalCard: identity, variantVerification: { status: 'user_confirmed' }, valuationVerification: { status: 'trusted' }, marketData: { marketSummary: { valuationTrusted: true, rawMedian: 2, rawUsedCount: 3 } } }) };
+    return { ok: true, json: async () => protectValuation({ prediction: { rawValue: 2, psa9Value: 10, psa10Value: 20, psa10Probability: 50 }, canonicalCard: identity, variantVerification: { status: 'user_confirmed' }, marketData: { marketSummary: { rawMedian: 2, rawUsedCount: 3 } } }) };
   });
   assert.equal(calls, 1);
   assert.equal(result.rawValue, 2);

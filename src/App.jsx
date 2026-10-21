@@ -3,7 +3,7 @@ import { isValuationTrusted, safeStoredReport, withheldSummary, reportFromPredic
 import { useState, useRef, useEffect } from "react";
 import { track } from "@vercel/analytics/react";
 import AtlasPanel from "./components/AtlasPanel";
-import { buildGemPredictScore } from "../lib/gemPredictScore";
+import { formatMoney } from "../lib/gradingEconomics.mjs";
 
 // ─── Constants ────────────────────────────────────────────────────────────────
 const CARD_TYPES = [
@@ -24,9 +24,9 @@ const EXAMPLES = [
 ];
 
 const VERDICTS = {
-  grade: { label: "Grade It",    bg: "#f0fdf4", color: "#15803d", border: "#86efac", explain: "Strong upside — the PSA 10 premium makes grading clearly worth it." },
+  grade: { label: "Grade It",    bg: "#f0fdf4", color: "#15803d", border: "#86efac", explain: "Review expected return, estimated prices and condition before submitting." },
   skip:  { label: "Skip It",     bg: "#fef2f2", color: "#b91c1c", border: "#fca5a5", explain: "Not worth grading — the cost likely exceeds the value gained." },
-  maybe: { label: "Consider It", bg: "#fffbeb", color: "#b45309", border: "#fde68a", explain: "Borderline — grading upside depends heavily on card condition." },
+  maybe: { label: "Consider It", bg: "#fffbeb", color: "#b45309", border: "#fde68a", explain: "Positive modeled return remains conditional on estimated graded prices and the grading outcome." },
 };
 
 const VERDICT_USE_CASE = {
@@ -63,8 +63,7 @@ function lsSet(key, val) {
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 function safeMoney(val) {
-  const n = typeof val === "number" && isFinite(val) ? val : 0;
-  try { return n.toLocaleString(); } catch { return String(n); }
+  return formatMoney(val);
 }
 function isValidEmail(email) {
   return /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/.test((email || "").trim());
@@ -83,7 +82,7 @@ function getVerdictBullets(data) {
   } else if (v === "skip") {
     if (upside <= 0) bullets.push("Fee-adjusted upside is negative or break-even");
     if (raw > 500)   bullets.push("Raw value is already high — grading risk may outweigh reward");
-    bullets.push(prob < 45 ? "PSA 10 probability is low at ~" + prob + "% — risky submission" : "Grading premium does not justify the submission cost");
+    bullets.push("Probability-weighted proceeds do not exceed raw value plus the grading fee");
     if (bullets.length < 3) bullets.push("Consider selling raw or holding instead");
   } else {
     bullets.push("Upside exists but depends on actual card condition");
@@ -93,6 +92,7 @@ function getVerdictBullets(data) {
   return bullets.slice(0, 3);
 }
 function buildCopySummary(data) {
+  data = safeStoredReport(data);
   if (!isValuationTrusted(data)) return withheldSummary(data);
   const v = VERDICTS[data.verdict] ? VERDICTS[data.verdict].label : data.verdict;
   return "GemPredict Report — " + data.cardTitle +
@@ -100,6 +100,7 @@ function buildCopySummary(data) {
     " | PSA 9: $" + safeMoney(data.psa9Value) +
     " | PSA 10: $" + safeMoney(data.psa10Value) +
     " | Upside: " + (data.gradingUpside >= 0 ? "+$" : "-$") + safeMoney(Math.abs(data.gradingUpside || 0)) +
+    " | Expected net: " + (data.expectedNetValue >= 0 ? "+$" : "-$") + safeMoney(Math.abs(data.expectedNetValue)) +
     " | Verdict: " + v;
 }
 
@@ -515,7 +516,8 @@ function WithheldResultCard({ data, onSave, isSaved, onVerifyVariant, onRescan }
 }
 
 function TrustedResultCard({ data, index, onSave, isSaved }) {
-  const gpScore = buildGemPredictScore(data);
+  const finalizedScore = data.gemPredictScore;
+  const gpScore = { score: finalizedScore, stars: finalizedScore >= 90 ? 5 : finalizedScore >= 80 ? 4 : finalizedScore >= 65 ? 3 : finalizedScore >= 50 ? 2 : 1, recommendation: (VERDICTS[data.verdict] || VERDICTS.maybe).label };
   const verdict  = VERDICTS[data.verdict] || VERDICTS.maybe;
   const profit   = typeof data.gradingUpside === "number" ? data.gradingUpside : 0;
   const marketSummary = data.marketData && data.marketData.marketSummary
@@ -705,13 +707,7 @@ const displayMeta =
     maxWidth: 260,
   }}
 >
-  {data.gemPredictScore >= 85
-    ? "🟢 Strong Grade Candidate"
-    : data.gemPredictScore >= 70
-    ? "🟡 Good Candidate"
-    : data.gemPredictScore >= 55
-    ? "🟠 Consider It"
-    : "🔴 Keep Raw"}
+  {verdict.label}
 </div>
 
 <div
@@ -942,7 +938,7 @@ const displayMeta =
   </div>
 
   <div style={{ fontSize: "0.84rem", color: C.inkMid, lineHeight: 1.6, marginBottom: "0.6rem" }}>
-    {verdict.explain}
+    {data.analysis || verdict.explain}
   </div>
 
   <div style={{ display: "grid", gap: "0.4rem" }}>
@@ -1911,18 +1907,10 @@ if (data.imageAnalysis) setImageAnalysis(data.imageAnalysis);
     fontWeight: 700,
     marginTop: "0.15rem",
     color:
-      (r.gemPredictScore || 0) >= 85
-        ? C.green
-        : (r.gemPredictScore || 0) >= 70
-        ? C.amber
-        : C.red,
+      (VERDICTS[r.verdict] || VERDICTS.maybe).color,
   }}
 >
-  {(r.gemPredictScore || 0) >= 85
-    ? "🟢 Strong Grade Candidate"
-    : (r.gemPredictScore || 0) >= 70
-    ? "🟡 Good Candidate"
-    : "🟠 Borderline Candidate"}
+  {(VERDICTS[r.verdict] || VERDICTS.maybe).label}
 </div>
 
                 <div
@@ -1950,7 +1938,7 @@ if (data.imageAnalysis) setImageAnalysis(data.imageAnalysis);
                   flexShrink: 0,
                 }}
               >
-                Grade →
+                {r.expectedNetValue > 0 ? "Review →" : "Keep Raw"}
               </div>
             </div>
           );

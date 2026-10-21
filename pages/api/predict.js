@@ -1,3 +1,4 @@
+import { calculateGradingEconomics } from '../../lib/gradingEconomics.mjs';
 import { selectMarketQuery } from "../../lib/marketQuerySelection.mjs";
 import { buildCanonicalCardFromText, missingTextIdentityFields } from "../../lib/textCardIdentity.mjs";
 import { reconcileVariant, parseVariantConfirmation } from "../../lib/variantVerification.mjs";
@@ -230,72 +231,18 @@ function extractJSON(text) {
   }
   return null;
 }
-const PSA_FEE = 80;
-function normaliseCard(raw) {
+function normaliseCard(raw, marketMedian = null) {
   if (!raw || typeof raw !== "object" || Array.isArray(raw)) return null;
-  const VALID_VERDICTS = ["grade", "skip", "maybe"];
-  const verdictRaw = typeof raw.verdict === "string" ? raw.verdict.trim().toLowerCase() : "";
-  const verdict    = VALID_VERDICTS.includes(verdictRaw) ? verdictRaw : "maybe";
-  const rawValue = Math.max(0, safeInt(raw.rawValue));
-
-let psa9Value = Math.max(0, safeInt(raw.psa9Value));
-let psa10Value = Math.max(0, safeInt(raw.psa10Value));
-
-if (psa9Value < rawValue) psa9Value = rawValue;
-if (psa10Value < psa9Value) psa10Value = psa9Value;
-if (psa10Value < rawValue) psa10Value = rawValue;
-  const psa10Prob  = Math.min(100, Math.max(0, safeInt(raw.psa10Probability, 50)));
-  const gradingUpside =
-    raw.gradingUpside != null
-        ? safeInt(raw.gradingUpside)
-        : psa10Value - rawValue - PSA_FEE;
-  const psa10ProbDecimal = psa10Prob / 100;
-const psa9ProbDecimal = Math.max(0, 1 - psa10ProbDecimal);
-
-const expectedGradedValue = Math.round(
-  psa10Value * psa10ProbDecimal +
-  psa9Value * psa9ProbDecimal
-);
-
-const expectedNetValue = expectedGradedValue - rawValue - PSA_FEE;
-  let decisionConfidence = 50;
-
-decisionConfidence += Math.round(psa10Prob * 0.3);
-
-if (expectedNetValue > 0) {
-  decisionConfidence += 20;
-}
-
-decisionConfidence = Math.max(1, Math.min(99, decisionConfidence));
-let gemPredictScore = 50;
-
-gemPredictScore += Math.round(psa10Prob * 0.25);
-
-if (expectedNetValue > 0) gemPredictScore += 20;
-if (expectedNetValue > 50) gemPredictScore += 10;
-if (gradingUpside > 0) gemPredictScore += 10;
-if (gradingUpside > 100) gemPredictScore += 10;
-
-gemPredictScore = Math.max(1, Math.min(99, gemPredictScore));
-  const psa9Pop   = raw.psa9Pop  != null ? Math.max(0, safeInt(raw.psa9Pop))  : null;
-  const psa10Pop  = raw.psa10Pop != null ? Math.max(0, safeInt(raw.psa10Pop)) : null;
-  const populationInsight = typeof raw.populationInsight === "string" && raw.populationInsight.trim()
-    ? raw.populationInsight.trim().slice(0, 200) : null;
+  const financials = calculateGradingEconomics(raw, marketMedian ?? raw.rawValue);
+  const psa9Pop = raw.psa9Pop != null ? Math.max(0, safeInt(raw.psa9Pop)) : null;
+  const psa10Pop = raw.psa10Pop != null ? Math.max(0, safeInt(raw.psa10Pop)) : null;
   return {
-    cardTitle:        (typeof raw.cardTitle === "string" && raw.cardTitle.trim() ? raw.cardTitle.trim() : "Unknown Card").slice(0, 120),
-    cardMeta:         (typeof raw.cardMeta  === "string" && raw.cardMeta.trim()  ? raw.cardMeta.trim()  : "Details unavailable").slice(0, 200),
-    rawValue, psa9Value, psa10Value,
-    psa10Probability: psa10Prob,
-    verdict, gradingUpside,
-    analysis: (typeof raw.analysis === "string" && raw.analysis.trim() ? raw.analysis.trim() : "No analysis available.").slice(0, 500),
-    action:   typeof raw.action   === "string" && raw.action.trim()   ? raw.action.trim().slice(0, 200) : null,
-    psa9Pop, psa10Pop, populationInsight,
-    psaFee: PSA_FEE,
-expectedGradedValue,
-expectedNetValue,
-decisionConfidence,
-gemPredictScore,
-};
+    cardTitle: (typeof raw.cardTitle === "string" && raw.cardTitle.trim() ? raw.cardTitle.trim() : "Unknown Card").slice(0, 120),
+    cardMeta: (typeof raw.cardMeta === "string" && raw.cardMeta.trim() ? raw.cardMeta.trim() : "Details unavailable").slice(0, 200),
+    ...financials,
+    psa9Pop, psa10Pop,
+    populationInsight: typeof raw.populationInsight === "string" && raw.populationInsight.trim() ? raw.populationInsight.trim().slice(0, 200) : null,
+  };
 }
 
 // Validate and normalise image analysis response from Claude Vision
@@ -490,12 +437,12 @@ marketContext +
     "Required fields:\n" +
     "cardTitle - full proper card name (string)\n" +
     "cardMeta - set name, year, variant details (string)\n" +
-    "rawValue - realistic ungraded USD market estimate (integer)\n" +
-    "psa9Value - realistic PSA 9 USD estimate (integer)\n" +
-    "psa10Value - realistic PSA 10 USD estimate (integer)\n" +
+    "rawValue - realistic ungraded USD market estimate (number, cents allowed)\n" +
+    "psa9Value - realistic PSA 9 USD estimate (number, cents allowed)\n" +
+    "psa10Value - realistic PSA 10 USD estimate (number, cents allowed)\n" +
     "psa10Probability - honest 0-100 chance of PSA 10 given this condition (integer — be conservative)\n" +
     "verdict - exactly one of: grade, skip, maybe (string)\n" +
-    "gradingUpside - psa10Value minus rawValue minus 80 (integer)\n" +
+    "gradingUpside - psa10Value minus rawValue minus 80 (number, cents allowed)\n" +
     "analysis - 2 sentences max: direct, practical, no filler (string)\n" +
     "action - one sentence starting with a verb, specific to this card and condition (string)\n" +
     "psa9Pop - estimated PSA 9 population count based on collector market knowledge (integer)\n" +
@@ -520,7 +467,7 @@ marketContext +
   if (!text)   throw new Error("EMPTY_RESPONSE");
   const parsed = extractJSON(text);
   if (!parsed) throw new Error("PARSE_FAILED");
-  const result = normaliseCard(parsed);
+  const result = normaliseCard(parsed, preLiveRawMarket);
   if (!result) throw new Error("NORMALISE_FAILED");
   return result;
 }
