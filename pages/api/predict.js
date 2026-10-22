@@ -27,7 +27,7 @@ import {
   buildCanonicalCardFromImageAnalysis,
 } from "../../lib/cardIdentifier";
 
-import Anthropic from "@anthropic-ai/sdk";
+import { createAnthropicClient } from "../../lib/anthropicClient.mjs";
 import supabase from "../../lib/supabaseServer";
 import formidable from "formidable";
 import fs from "fs";
@@ -377,9 +377,7 @@ minorConcerns: safeStr(raw.minorConcerns, "No additional visible concerns identi
   };
 }
 // ─── Anthropic client ─────────────────────────────────────────────────────────
-const anthropic = process.env.CLAUDE_API_KEY
-  ? new Anthropic({ apiKey: process.env.CLAUDE_API_KEY })
-  : null;
+const anthropic = createAnthropicClient();
 
 // ─── Text-only prediction (existing logic, unchanged) ─────────────────────────
 async function fetchPrediction(
