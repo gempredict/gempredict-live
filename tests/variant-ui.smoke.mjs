@@ -97,6 +97,39 @@ try {
   assert.ok(!(await page.locator('body').innerText()).includes('987,654'));
   const saved = await page.evaluate(() => JSON.parse(localStorage.getItem('gp_saved_reports')));
   assert.equal(saved[0].marketData.marketSummary.rawMedian, 80);
+  // Restored iPhone regression: show final catalog identity ahead of the
+  // superseded AI interpretation, even when variant evidence withholds prices.
+  const pikachu = {
+    canonicalCard: { subject: 'Pikachu ex', cardNumber: '149/128', year: '2026', brandSet: '30th Celebration', parallel: 'Holo Special Art', language: 'English', variant: { finish: 'holo', art: 'special art' } },
+    identityVerification: { year: { status: 'corrected', value: '2026' }, set: { status: 'corrected', value: '30th Celebration' }, catalog: {
+      status: 'corrected', source: 'tcgdex', referenceId: '30th-149', conflicts: [], corrections: [{ field: 'brandSet', originalValue: 'Stellar Crown', value: '30th Celebration' }],
+      candidate: { subject: 'Pikachu ex', cardNumber: '149/128', year: '2026', brandSet: '30th Celebration', parallel: 'Special Art', language: 'en', provider: 'tcgdex', variants: { normal: false, holo: true, reverse: false } },
+    } },
+    imageAnalysis: { identifiedSubject: 'Pikachu ex', identifiedYear: '2024', identifiedBrandSet: 'Stellar Crown', identifiedParallel: 'Special Art', identifiedCardNumber: '149/128', identityConfidence: 98,
+      imageSummary: 'Visible corner whitening. High market value justifies grading.', cornersNote: 'Minor whitening at the top corner.', worthGrading: true, worthGradingReason: 'Worth grading for resale profit.', psa10Upside: 'Sell for a premium.', overallScore: 8 },
+    variantVerification: { status: 'insufficient_evidence', explanation: 'Not enough informative listings.' },
+    valuationVerification: { status: 'untrusted' }, marketData: { marketSummary: { rawUsedCount: 0 } },
+  };
+  const photoPage = await browser.newPage();
+  photoPage.on('pageerror', error => errors.push(error.message));
+  await photoPage.addInitScript(value => localStorage.setItem('gp_saved_reports', JSON.stringify([value])), pikachu);
+  await photoPage.route('**/*', route => route.request().url().startsWith('http://127.0.0.1:3100') ? route.continue() : route.abort());
+  await photoPage.goto('http://127.0.0.1:3100', { waitUntil: 'domcontentloaded' });
+  await photoPage.getByRole('button', { name: 'Load', exact: true }).click();
+  await photoPage.getByTestId('photo-final-identity').waitFor();
+  const photoIdentity = await photoPage.getByTestId('photo-final-identity').innerText();
+  assert.match(photoIdentity, /Catalog-supported identity/i);
+  assert.match(photoIdentity, /2026.*30th Celebration.*Pikachu ex.*Holo Special Art.*149\/128/);
+  assert.doesNotMatch(photoIdentity, /Stellar Crown/);
+  const photoText = await photoPage.locator('body').innerText();
+  assert.match(photoText, /Initial AI interpretation — unverified/i);
+  assert.match(photoText, /Initial AI confidence:/);
+  assert.match(photoText, /Stellar Crown/);
+  assert.doesNotMatch(photoText, /High Confidence|High market value|resale profit|Sell for a premium/);
+  assert.match(photoText, /Visible corner whitening/);
+  assert.match(photoText, /Minor whitening at the top corner/);
+  assert.match(photoText, /Grading recommendation withheld/i);
+  await photoPage.close();
   assert.deepEqual(errors, []);
   console.log('PASS browser: unsafe result/saved values hidden, condition retained, copy/share safe, confirmation fetches fresh valuation and updates saved report.');
 } finally {

@@ -1,3 +1,4 @@
+import { identitySearchGate } from '../lib/catalogIdentity.mjs';
 import { isValuationTrusted, safeStoredReport, withheldSummary, reportFromPrediction, requestVariantRevaluation } from "../lib/valuationProtection.mjs";
 // src/App.jsx — GemPredict main component
 import { useState, useRef, useEffect } from "react";
@@ -147,8 +148,14 @@ const eyebrowSt = { fontSize: "0.7rem", fontWeight: 700, letterSpacing: "0.12em"
 const sectionH2St = { fontFamily: "'Playfair Display', serif", fontSize: "clamp(1.8rem, 3vw, 2.4rem)", fontWeight: 900, letterSpacing: "-0.02em", lineHeight: 1.1, marginBottom: "0.75rem" };
 
 // ─── Image Analysis Result component ─────────────────────────────────────────
-function ImageAnalysisCard({ data }) {
+function ImageAnalysisCard({ data, report }) {
   if (!data) return null;
+
+  const canonical = report?.canonicalCard;
+  const catalog = report?.identityVerification?.catalog;
+  const catalogBacked = identitySearchGate(report?.identityVerification, canonical).allowed;
+  const corrected = catalog?.corrections?.length > 0;
+  const trusted = isValuationTrusted(report);
 
   function RatingPill({ rating, label }) {
     const r = RATING_COLORS[rating] || RATING_COLORS.fair;
@@ -198,7 +205,15 @@ function ImageAnalysisCard({ data }) {
         </div>
       </div>
 
-            {/* Card Identification */}
+      {canonical && (
+        <div data-testid="photo-final-identity" style={{ padding: "1rem 1.25rem", background: C.cream }}>
+          <div style={labelSt}>{catalogBacked ? "Catalog-supported identity" : "Current identity — verification pending"}</div>
+          <strong>{[canonical.year, canonical.brandSet, canonical.subject, canonical.parallel, canonical.cardNumber && `#${canonical.cardNumber}`, canonical.language].filter(Boolean).join(" · ")}</strong>
+          {corrected && <p>The independent catalog corrected the initial AI interpretation below.</p>}
+          <p style={{ fontSize: "0.78rem" }}>{trusted ? "Identity and version checks passed with matching market evidence." : "Pricing and grading recommendations remain withheld until all verification checks pass."}</p>
+        </div>
+      )}
+            {/* Initial photo interpretation retained as provenance, not truth. */}
       {(data.identifiedSubject ||
         data.identifiedBrandSet ||
         data.identifiedYear ||
@@ -223,7 +238,7 @@ function ImageAnalysisCard({ data }) {
               marginBottom: "0.55rem",
             }}
           >
-            Card Identification
+            Initial AI interpretation — unverified
           </div>
 
           <div style={{ fontSize: "0.95rem", fontWeight: 800, color: C.ink }}>
@@ -262,18 +277,14 @@ function ImageAnalysisCard({ data }) {
               style={{
                 fontSize: "0.68rem",
                 fontWeight: 700,
-                color: (data.identityConfidence || 0) >= 85 ? C.green : (data.identityConfidence || 0) >= 60 ? C.amber : C.red,
-                background: (data.identityConfidence || 0) >= 85 ? C.greenLight : (data.identityConfidence || 0) >= 60 ? C.goldLight : C.redLight,
-                border: "1px solid " + ((data.identityConfidence || 0) >= 85 ? "#86efac" : (data.identityConfidence || 0) >= 60 ? C.gold : "#fca5a5"),
+                color: C.inkSoft,
+                background: C.cream,
+                border: "1px solid " + C.border,
                 borderRadius: 100,
                 padding: "0.15rem 0.55rem",
               }}
             >
-              {(data.identityConfidence || 0) >= 85
-                ? "High Confidence"
-                : (data.identityConfidence || 0) >= 60
-                ? "Moderate Confidence"
-                : "Low Confidence"}{" "}
+              Initial AI confidence: {" "}
               {data.identityConfidence || 0}%
             </span>
           </div>
@@ -306,7 +317,7 @@ function ImageAnalysisCard({ data }) {
           </span>
           <div>
             <div style={{ fontSize: "0.7rem", fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.07em", color: worthColor, marginBottom: "0.2rem" }}>
-              {worthLabel} — based on visible grading risk
+              {trusted ? `${worthLabel} — based on visible grading risk` : "Grading recommendation withheld"}
             </div>
             <div style={{ fontSize: "0.84rem", color: C.inkMid }}>{data.worthGradingReason}</div>
           </div>
@@ -1785,7 +1796,7 @@ if (data.imageAnalysis) setImageAnalysis(data.imageAnalysis);
       />
 
       {r.imageAnalysis && (
-        <ImageAnalysisCard data={r.imageAnalysis} />
+        <ImageAnalysisCard data={r.imageAnalysis} report={r} />
       )}
     </div>
   );

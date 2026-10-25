@@ -319,3 +319,66 @@ test('default English lookup scope does not silently certify a physical card lan
   assert.equal(completed.payload.canonicalCard.language, 'en');
   assert.equal(isValuationTrusted(completed.report), true);
 });
+
+test('live English Pikachu SIR gains a catalog-supported holo finish after Stellar Crown correction', async () => {
+  const result = await runPipeline({ proposal: { ...proposal, brandSet: 'Stellar Crown' },
+    neutral: listings('2026 Pokemon 30th Celebration Pikachu ex 149/128 English Holo Special Illustration Rare'),
+    market: listings('2026 Pokemon 30th Celebration Pikachu ex 149/128 English Holo Special Illustration Rare'), catalogOptions: transport(), routingEnv: { NODE_ENV: 'development' } });
+  assert.equal(result.payload.canonicalCard.parallel, 'Holo Special Art');
+  assert.equal(result.payload.canonicalCard.variant.finish, 'holo');
+  assert.equal(result.payload.identityVerification.catalog.candidate.parallel, 'Special Art');
+  assert.equal(result.payload.variantVerification.status, 'corrected');
+  assert.equal(result.payload.valuationIdentityGate.allowed, true, JSON.stringify(result.payload.valuationIdentityGate));
+  assert.equal(isValuationTrusted(result.report), true);
+});
+
+test('catalog artwork equivalence requires positively supported and internally consistent finishes', async () => {
+  const result = await resolve(proposal, transport());
+  const verification = result.identityVerification;
+  for (const parallel of ['Holo Special Art', 'Holographic Special Illustration Rare', 'Foil SIR']) {
+    const canonical = { ...result.canonicalCard, parallel, variant: { finish: 'holo', art: 'special art' } };
+    assert.equal(identitySearchGate(verification, canonical).allowed, true, parallel);
+    for (const variants of [null, {}, { holo: false }, { holo: 'true' }]) {
+      const incomplete = { ...verification, catalog: { ...verification.catalog, candidate: { ...verification.catalog.candidate, variants } } };
+      const gate = identitySearchGate(incomplete, canonical);
+      assert.equal(gate.allowed, false);
+      assert.ok(gate.conflicts.includes('finish'));
+    }
+  }
+  for (const parallel of ['Reverse-Holo Special Art', 'Non-Holo Special Art', 'Base', 'Holo Alternate Art', 'Holo Standard Art', 'Holo Special Art Gold']) {
+    assert.equal(identitySearchGate(verification, { ...result.canonicalCard, parallel }).allowed, false, parallel);
+  }
+  for (const finish of ['reverse-holo', 'non-holo', 'reverseholo', 'nonholo']) {
+    assert.equal(identitySearchGate(verification, { ...result.canonicalCard, parallel: 'Holo Special Art', variant: { finish } }).allowed, false, finish);
+  }
+  assert.equal(identitySearchGate(verification, { ...result.canonicalCard, parallel: 'Holo Special Art', variant: { finish: 'holo', art: 'alternate art' } }).allowed, false);
+});
+
+test('live corrected identity does not turn sparse variant evidence or unrelated variants into trusted prices', async () => {
+  const title = '2026 Pokemon 30th Celebration Pikachu ex 149/128 English Holo Special Illustration Rare';
+  const market = [...listings(title), ...['Reverse-Holo Special Art', 'Non-Holo Special Art', 'Base', 'Holo Alternate Art'].flatMap(label => listings(`2026 Pokemon 30th Celebration Pikachu ex 149/128 English ${label}`))];
+  for (const count of [0, 1, 2, 3]) {
+    const result = await runPipeline({ proposal: { ...proposal, brandSet: 'Stellar Crown' }, neutral: listings(title).slice(0, count), market, catalogOptions: transport() });
+    assert.equal(result.payload.canonicalCard.brandSet, '30th Celebration');
+    assert.equal(isValuationTrusted(result.report), count === 3);
+    if (count < 3) assert.equal(result.report.rawValue, null);
+    else {
+      assert.equal(result.payload.marketData.rawComparableItems.length, 3);
+      assert.equal(result.payload.marketData.excludedItems.length, 12);
+    }
+  }
+});
+
+test('withheld live photo reports remove unsupported financial prose and retain visual condition', async () => {
+  const result = await runPipeline({ proposal: { ...proposal, brandSet: 'Stellar Crown' }, neutral: [], market: [], catalogOptions: transport(),
+    vision: { worthGrading: true, worthGradingReason: 'Worth grading because of its high market value.', imageSummary: 'Corners show whitening. This valuable card should be graded for profit.', surfaceNote: 'Light scratches visible. Market value supports grading.' } });
+  assert.equal(result.report.rawValue, null);
+  for (const analysis of [result.payload.imageAnalysis, result.report.imageAnalysis, safeStoredReport({ ...result.report, imageAnalysis: { ...result.report.imageAnalysis, worthGrading: true, worthGradingReason: 'High resale price makes grading worthwhile.' } }).imageAnalysis]) {
+    assert.equal(analysis.worthGrading, null);
+    assert.doesNotMatch(analysis.worthGradingReason, /high market value|resale price|worthwhile/i);
+    assert.equal(analysis.imageSummary, 'Corners show whitening.');
+    assert.equal(analysis.surfaceNote, 'Light scratches visible.');
+    assert.equal(analysis.cornersNote, 'Visible corner whitening.');
+    assert.equal(analysis.estimatedGrade, result.payload.imageAnalysis.estimatedGrade);
+  }
+});

@@ -139,7 +139,9 @@ test('real prediction handler revalues selected art and withholds ROI if ambigui
     assert.equal(ambiguous.payload.prediction.action, null);
     assert.equal(ambiguous.payload.marketData.marketSummary.rawMedian, null);
     assert.equal(ambiguous.payload.atlas, null);
-    assert.equal(ambiguous.payload.imageAnalysis, imageAnalysis);
+    for (const [field, value] of Object.entries(imageAnalysis)) assert.equal(ambiguous.payload.imageAnalysis[field], value);
+    assert.equal(ambiguous.payload.imageAnalysis.worthGrading, null);
+    assert.match(ambiguous.payload.imageAnalysis.worthGradingReason, /withheld/);
   } finally {
     globalThis.fetch = previousFetch;
     if (previousId === undefined) delete process.env.EBAY_PROD_CLIENT_ID; else process.env.EBAY_PROD_CLIENT_ID = previousId;
