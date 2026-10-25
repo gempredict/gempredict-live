@@ -50,7 +50,8 @@ test('Stage A measured mocked request counts preserve the six-query budget and s
     assert.equal(metrics.valuationOAuth, metrics.valuationQueries.length);
     assert.equal(metrics.valuationBrowse, metrics.valuationQueries.length);
     assert.equal(metrics.neutralOAuth, metrics.neutralBrowse);
-    assert.equal(metrics.claudePrediction, 1);
+    assert.equal(metrics.claudePrediction, result.payload.valuationIdentityGate.allowed ? 1 : 0);
+    if (!result.payload.valuationIdentityGate.allowed) assert.equal(metrics.valuationBrowse, 0);
     assert.equal(metrics.claudeVision, scenarios.find(scenario => scenario.id === result.id).textOnly ? 0 : 1);
     assert.equal(Boolean(metrics.neutralQuery?.includes(result.observed.original.year)), false);
   }

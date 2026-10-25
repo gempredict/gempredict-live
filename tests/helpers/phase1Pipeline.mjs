@@ -1,3 +1,4 @@
+import { identitySearchGate } from '../../lib/catalogIdentity.mjs';
 import { calculateGradingEconomics, formatMoney } from '../../lib/gradingEconomics.mjs';
 // Stage A: real route control flow, Claude parsing/normalization, identity/variant
 // reconciliation, eBay eligibility, confidence, ranking and valuation protection.
@@ -50,10 +51,10 @@ export async function runPipeline(scenario) {
     process: { env: { NEXT_PUBLIC_SITE_URL: 'http://stage-a.local', ...scenario.routingEnv } },
     logRequest: async () => {},
     buildCanonicalCardFromImageAnalysis, buildCanonicalCardFromText, missingTextIdentityFields,
-    calculateGradingEconomics, getUserIdentityProtection, reconcileVariant, parseVariantConfirmation, protectValuation, selectMarketQuery,
+    identitySearchGate, calculateGradingEconomics, getUserIdentityProtection, reconcileVariant, parseVariantConfirmation, protectValuation, selectMarketQuery,
     atlasOrchestrator, calculateIdentityConfidence,
     parseRequest: async () => ({ fields: scenario.fields || { cardName: 'Unknown card from image', cardType: scenario.type || 'pokemon' }, imageBuffer: scenario.textOnly ? null : Buffer.from('mock card image'), imageMimeType: 'image/png' }),
-    resolveMarketIdentity: (card, options) => resolveMarketIdentity(card, { ...options, clientId: 'mock', clientSecret: 'mock', fetchImpl: async url => {
+    resolveMarketIdentity: (card, options) => resolveMarketIdentity(card, { ...options, ...scenario.catalogOptions, clientId: 'mock', clientSecret: 'mock', fetchImpl: async url => {
       if (String(url).includes('/oauth2/token')) { metrics.neutralOAuth++; return { ok: true, json: async () => ({ access_token: 'mock' }) }; }
       metrics.neutralBrowse++;
       metrics.neutralQuery = new URL(url).searchParams.get('q');

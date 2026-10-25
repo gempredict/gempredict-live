@@ -1,3 +1,4 @@
+import { mockCatalog } from './helpers/catalogFixtures.mjs';
 import { formatMoney } from '../lib/gradingEconomics.mjs';
 // Stage A browser audit against actual mocked-pipeline payloads, not hand-built
 // success reports. Requires build + PHASE1_VALIDATION_OUTPUT test run first.
@@ -58,7 +59,7 @@ try {
           assert.equal(fields.confirmedIdentity.brandSet, 'Obsidian Flames');
           assert.equal(fields.confirmedIdentity.year, '2023');
           for (const key of ['rawValue', 'marketData', 'prediction']) assert.equal(fields[key], undefined);
-          setConfirmation = await runPipeline({ ...scenario, textOnly: true, fields });
+          setConfirmation = await runPipeline({ ...scenario, textOnly: true, fields, catalogOptions: mockCatalog([{ id: 'mock:selected-set', subject: 'Dragalge', cardNumber: '89/197', year: '2023', brandSet: 'Obsidian Flames' }]) });
           assert.equal(setConfirmation.httpStatus, 200);
           assert.equal(setConfirmation.metrics.neutralBrowse, 1);
           assert.equal(setConfirmation.metrics.valuationBrowse, 6);

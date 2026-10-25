@@ -1,3 +1,4 @@
+import { mockCatalog } from './helpers/catalogFixtures.mjs';
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { scoreListing } from '../lib/ebayIdentityMatch.mjs';
@@ -93,15 +94,16 @@ test('previously trusted saved mixed-set reports are demoted before display/copy
   assert.doesNotMatch(withheldSummary(report), /\$|Grade it|Old prices matched/);
 });
 
-test('real Dragalge pipeline excludes wrong sets from every query count/confidence and withholds mixed identity', async () => {
+test('real Dragalge pipeline blocks all valuation searches while mixed identity is unresolved', async () => {
   const result = await runPipeline(scenarios.find(item => item.id === 'dragalge-conflicting-sets'));
   assert.equal(result.httpStatus, 200);
   assert.equal(result.observed.setStatus, 'unresolved_conflict');
   assert.equal(result.observed.variantStatus, 'verified');
-  assert.equal(result.observed.usedCount, 3);
-  assert.equal(result.observed.marketConfidence, 55);
-  assert.equal(result.payload.marketData.excludedItems.length, 3);
-  assert.ok(result.payload.marketData.querySelection.attempts.every(item => item.rawUsedCount === 3));
+  assert.equal(result.observed.usedCount, 0);
+  assert.equal(result.metrics.valuationBrowse, 0);
+  assert.equal(result.observed.marketConfidence, 0);
+  assert.equal(result.payload.marketData.excludedItems.length, 0);
+  assert.equal(result.payload.marketData.querySelection.attempts.length, 0);
   assert.ok(result.payload.marketData.rawComparableItems.every(item => item.title.includes('Paldea Evolved')));
   assert.equal(result.payload.valuationVerification.reason, 'identity_unresolved');
   assert.doesNotMatch(result.copied, /\$|Grade It/);
@@ -120,7 +122,7 @@ test('manual year/set selection uses fresh matching, honors protected identity a
       assert.equal(fields.confirmedIdentity.brandSet, set);
       assert.equal(fields.confirmedIdentity.year, '2023');
       for (const key of ['rawValue', 'marketData', 'prediction']) assert.equal(fields[key], undefined);
-      const fresh = await runPipeline({ ...template, textOnly: true, fields });
+      const fresh = await runPipeline({ ...template, textOnly: true, fields, catalogOptions: mockCatalog([{ id: 'mock:selected-set', subject: 'Dragalge', cardNumber: '89/197', year: '2023', brandSet: set }]) });
       assert.equal(fresh.payload.identityVerification.year.status, 'user_protected');
       assert.equal(fresh.payload.identityVerification.set.status, 'user_protected');
       assert.equal(fresh.payload.canonicalCard.brandSet, set);
@@ -139,13 +141,14 @@ test('manual year/set selection uses fresh matching, honors protected identity a
 });
 
 
-test('actual Browse structured aspects filter wrong sets before usable counts and confidence', async () => {
+test('conflicting neutral sets block valuation before structured-aspect price pools are fetched', async () => {
   const template = scenarios.find(item => item.id === 'dragalge-conflicting-sets');
   const market = template.market.map(item => ({ ...item, title: 'Dragalge #89/197 Non-Holo', localizedAspects: aspect(item.title.includes('Paldea Evolved') ? 'Paldea Evolved' : 'Obsidian Flames') }));
   const result = await runPipeline({ ...template, market });
-  assert.equal(result.observed.usedCount, 3);
-  assert.equal(result.observed.marketConfidence, 55);
-  assert.equal(result.payload.marketData.excludedItems.length, 3);
+  assert.equal(result.observed.usedCount, 0);
+  assert.equal(result.metrics.valuationBrowse, 0);
+  assert.equal(result.observed.marketConfidence, 0);
+  assert.equal(result.payload.marketData.excludedItems.length, 0);
   assert.equal(result.payload.valuationVerification.reason, 'identity_unresolved');
 });
 
@@ -158,10 +161,11 @@ test('material year conflicts remain untrusted; manually selected year triggers 
   assert.equal(unresolved.payload.identityVerification.year.status, 'unresolved_conflict');
   assert.equal(unresolved.payload.variantVerification.status, 'verified');
   assert.equal(unresolved.payload.valuationVerification.reason, 'identity_unresolved');
-  assert.equal(unresolved.observed.usedCount, 3);
+  assert.equal(unresolved.observed.usedCount, 0);
+  assert.equal(unresolved.metrics.valuationBrowse, 0);
   const confirmed = await requestVariantRevaluation(unresolved.report, { identity: { subject: 'Pikachu', year: '2018', brandSet: 'Shining Legends', cardNumber: '28/73' }, parallel: 'Common non-holo', autoOrRelic: 'none' }, async (url, request) => {
     const fields = JSON.parse(request.body);
-    const fresh = await runPipeline({ ...scenario, textOnly: true, fields });
+    const fresh = await runPipeline({ ...scenario, textOnly: true, fields, catalogOptions: mockCatalog([{ id: 'mock:selected-year', subject: 'Pikachu', cardNumber: '28/73', year: '2018', brandSet: 'Shining Legends' }]) });
     assert.equal(fresh.payload.identityVerification.year.status, 'user_protected');
     assert.equal(fresh.payload.canonicalCard.year, '2018');
     assert.equal(fresh.metrics.neutralBrowse, 1);
@@ -183,7 +187,8 @@ test('inconsistent structured/title set evidence is unresolved even if no single
   assert.equal(result.payload.identityVerification.set.status, 'insufficient_evidence');
   assert.equal(result.payload.identityVerification.set.ambiguousListingCount, 3);
   assert.equal(result.payload.variantVerification.status, 'verified');
-  assert.equal(result.observed.usedCount, 3);
+  assert.equal(result.observed.usedCount, 0);
+  assert.equal(result.metrics.valuationBrowse, 0);
   assert.equal(result.payload.valuationVerification.reason, 'identity_unresolved');
   assert.equal(result.payload.prediction.gradingUpside, null);
 });

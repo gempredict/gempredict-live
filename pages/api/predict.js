@@ -1,3 +1,4 @@
+import { identitySearchGate } from '../../lib/catalogIdentity.mjs';
 import { calculateGradingEconomics } from '../../lib/gradingEconomics.mjs';
 import { selectMarketQuery } from "../../lib/marketQuerySelection.mjs";
 import { buildCanonicalCardFromText, missingTextIdentityFields } from "../../lib/textCardIdentity.mjs";
@@ -895,19 +896,24 @@ const atlasIdentityConfidence = imageAnalysis
         explanation: `Exact identification needs: ${missingIdentityFields.join(", ")}. Use Verify Variant to enter these details and request fresh prices; no photo is required.` };
     }
     const identityVerification = identityEvidence.identityVerification;
+    const valuationIdentityGate = identitySearchGate(identityVerification, canonicalCard);
     const identityAdjusted = canonicalCard && originalCanonicalCard &&
       (canonicalCard.year !== originalCanonicalCard.year || canonicalCard.brandSet !== originalCanonicalCard.brandSet || canonicalCard.parallel !== originalCanonicalCard.parallel || canonicalCard.autoOrRelic !== originalCanonicalCard.autoOrRelic || canonicalCard.printRun !== originalCanonicalCard.printRun);
     if (identityAdjusted) {
       if (!hasUserCardName) effectiveCardName = canonicalCard.displayName;
       effectiveCardSet = [canonicalCard.year, canonicalCard.brandSet].filter(Boolean).join(" ");
     }
-    const marketData = await selectMarketQuery(canonicalCard, {
+    const marketData = valuationIdentityGate.allowed === false
+      ? { success: false, error: "Identity needs independent verification before valuation searches", rawComparableItems: [], excludedItems: [], marketSummary: { rawUsedCount: 0, rawMedian: null, marketConfidence: 0, valuationTrusted: false }, querySelection: { attempts: [], selectedQuery: null, selectionReason: "Identity unresolved; valuation searches withheld" } }
+      : await selectMarketQuery(canonicalCard, {
       baseUrl: process.env.NEXT_PUBLIC_SITE_URL,
       routingEnv: process.env,
       fetchImpl: fetch,
     });
 
-    const prediction = await fetchPrediction(
+    const prediction = valuationIdentityGate.allowed === false
+      ? { cardTitle: canonicalCard?.displayName || effectiveCardName, cardMeta: effectiveCardSet, analysis: null }
+      : await fetchPrediction(
       effectiveCardName,
       cardType,
       effectiveCardSet,
@@ -943,6 +949,15 @@ const atlasIdentityConfidence = imageAnalysis
   atlasIdentityConfidence,
   originalCanonicalCard: variantProposal,
   identityVerification,
+  valuationIdentityGate,
+  ...(process.env.NODE_ENV === "development" ? { identityDiagnostics: {
+    catalog: { ...identityVerification.catalog, diagnostics: identityEvidence.catalogDiagnostics },
+    neutralSearch: identityEvidence.search,
+    accepted: identityEvidence.identityEvidenceItems,
+    rejected: identityEvidence.identityEvidenceExclusions,
+    fieldDecisions: { year: identityVerification.year, set: identityVerification.set },
+    valuationGate: valuationIdentityGate,
+  } } : {}),
   variantVerification,
   canonicalCard,
   hasImageAnalysis: imageAnalysis !== null,

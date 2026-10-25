@@ -1,3 +1,5 @@
+import { mockCatalog } from './helpers/catalogFixtures.mjs';
+import { identitySearchGate } from '../lib/catalogIdentity.mjs';
 import { selectMarketQuery } from '../lib/marketQuerySelection.mjs';
 import { buildCanonicalCardFromText, missingTextIdentityFields } from '../lib/textCardIdentity.mjs';
 import test from 'node:test';
@@ -35,9 +37,9 @@ async function predict(fields, imageAnalysis = null, evidence = neutralListings)
     parseRequest: async () => ({ fields, imageBuffer: imageAnalysis ? Buffer.from('mock-image') : null }),
     fetchImageAnalysis: async () => imageAnalysis,
     calculateIdentityConfidence: () => ({ score: 90 }),
-    selectMarketQuery, parseVariantConfirmation, reconcileVariant, protectValuation, getUserIdentityProtection, buildCanonicalCardFromText, missingTextIdentityFields,
+    identitySearchGate, selectMarketQuery, parseVariantConfirmation, reconcileVariant, protectValuation, getUserIdentityProtection, buildCanonicalCardFromText, missingTextIdentityFields,
     buildCanonicalCardFromImageAnalysis, buildMarketQueryFromCanonicalCard, buildSearchCandidates, buildEbaySearchParams,
-    resolveMarketIdentity: (proposal, options) => resolve(proposal, { ...options, clientId: 'mock', clientSecret: 'mock', fetchImpl: async url => { if (String(url).includes('/oauth2/token')) return { ok: true, json: async () => ({ access_token: 'mock' }) }; neutralQueries.push(new URL(url).searchParams.get('q')); return { ok: true, json: async () => ({ itemSummaries: evidence }) }; } }),
+    resolveMarketIdentity: (proposal, options) => resolve(proposal, { ...options, ...mockCatalog(), clientId: 'mock', clientSecret: 'mock', fetchImpl: async url => { if (String(url).includes('/oauth2/token')) return { ok: true, json: async () => ({ access_token: 'mock' }) }; neutralQueries.push(new URL(url).searchParams.get('q')); return { ok: true, json: async () => ({ itemSummaries: evidence }) }; } }),
     fetchPrediction: async (name, type, set, condition, card, market) => {
       captured.push(card);
       capturedMarkets.push(market);

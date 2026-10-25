@@ -1,3 +1,4 @@
+import { mockCatalog } from './catalogFixtures.mjs';
 export const card = (subject, year, brandSet, cardNumber, parallel) => ({ subject, year, brandSet, cardNumber, parallel, autoOrRelic: 'none' });
 export function listings(title, count = 3, price = 10, prefix = 'a') {
   return Array.from({ length: count }, (_, i) => ({ itemId: `${prefix}-${i}`, title, condition: 'Ungraded', itemWebUrl: `https://www.ebay.com/itm/${prefix}-${i}`, price: { value: String(price), currency: 'USD' } }));
@@ -28,4 +29,4 @@ export const scenarios = [
   { id: 'text-subject-only', textOnly: true, fields: { cardName: 'Pikachu', cardType: 'pokemon' }, neutral: [], market: [...pikaGood, ...pikaBad], expectedTrusted: false },
   { id: 'model-price-drift', proposal: pikachu, neutral: pikaGood, market: pikaGood, model: { rawValue: 150, psa9Value: 160, psa10Value: 200 }, expectedTrusted: true },
   { id: 'fractional-price', proposal: pikachu, neutral: pikaGood, market: listings('2017 Shining Legends Pikachu 28/73 Regular Non-Holo', 3, 2.5), expectedTrusted: true },
-];
+].map(scenario => ({ ...scenario, catalogOptions: mockCatalog() }));
