@@ -309,6 +309,7 @@ else if (hasObviousStructuralDamage && !saysNoStructuralDamage) {
 }  
   return {  
     // Card identity
+    identifiedLanguage: raw.identifiedLanguage != null ? safeStr(raw.identifiedLanguage, null) : null,
     identifiedYear: raw.identifiedYear != null ? safeStr(raw.identifiedYear, null) : null,
     identifiedBrandSet: raw.identifiedBrandSet != null ? safeStr(raw.identifiedBrandSet, null) : null,
     identifiedSubject: raw.identifiedSubject != null ? safeStr(raw.identifiedSubject, null) : null,
@@ -697,7 +698,7 @@ backImageMimeType = parsed.backImageMimeType;
       try {
         const input = typeof fields[field] === "string" ? JSON.parse(fields[field]) : fields[field];
         const card = {};
-        for (const key of ["subject", "cardNumber", "year", "brandSet", "parallel", "autoOrRelic", "printRun"]) card[key] = sanitiseString(input?.[key] || "").slice(0, 140) || null;
+        for (const key of ["subject", "cardNumber", "year", "brandSet", "parallel", "autoOrRelic", "printRun", "language"]) card[key] = sanitiseString(input?.[key] || "").slice(0, 140) || null;
         if (card.subject && card.cardNumber) {
           if (field === "confirmedCardIdentity") confirmedCardIdentity = card;
           else originalIdentityProposal = card;
@@ -879,15 +880,19 @@ const atlasIdentityConfidence = imageAnalysis
     // Protect explicit year/set choices independently; a typed subject alone
     // does not lock either field against neutral market evidence.
     const identityEvidence = await resolveMarketIdentity(originalCanonicalCard, {
+      cardType,
       ...getUserIdentityProtection({ cardName, cardSet, year: fields.year, set: fields.set, confirmedIdentity: fields.confirmedIdentity }),
     });
     const variantProposal = imageAnalysis ? originalCanonicalCard : originalIdentityProposal || originalCanonicalCard;
-    const variantResult = reconcileVariant(variantProposal, identityEvidence.canonicalCard, {
+    const variantResult = reconcileVariant(identityEvidence.identityVerification?.catalog?.source === 'tcgdex' && ['verified', 'corrected'].includes(identityEvidence.identityVerification.catalog.status) ? identityEvidence.canonicalCard : variantProposal, identityEvidence.canonicalCard, {
       identityEvidenceItems: identityEvidence.identityEvidenceItems,
       search: identityEvidence.search,
     }, confirmedVariant);
     const canonicalCard = variantResult.canonicalCard;
     let variantVerification = variantResult.variantVerification;
+    if (identityEvidence.identityVerification?.catalog?.source === 'tcgdex' && (identityEvidence.identityVerification.catalog.requiresConfirmation || ['ambiguous', 'conflict', 'insufficient_evidence'].includes(identityEvidence.identityVerification.catalog.status))) {
+      variantVerification = { ...variantVerification, status: 'needs_confirmation', explanation: 'Independent catalog evidence is conflicting or incomplete. Confirm the printed identity, language and version, or rescan clearer identifiers. Valuation remains withheld.' };
+    }
     // Existing photo-confirmation requests retain their original behavior.
     const isTextIdentityRequest = !imageBuffer && (!confirmedCardIdentity || fields.textOnlyIdentity === true || fields.textOnlyIdentity === "true");
     const missingIdentityFields = isTextIdentityRequest ? missingTextIdentityFields(canonicalCard) : [];

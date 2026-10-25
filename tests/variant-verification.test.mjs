@@ -1,3 +1,4 @@
+import { verifiedIdentity } from './helpers/verifiedIdentity.mjs';
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { collectIdentityEvidence, buildNeutralIdentityQuery } from '../lib/marketIdentityEvidence.mjs';
@@ -113,11 +114,11 @@ test('unresolved pricing is suppressed in API, atlas, stored reports and copied 
 
 test('verified ordinary cards retain normal amounts; no comparable prices never grants trust', () => {
   const variantVerification = reconcileVariant(pikachu, pikachu, evidence(pikachu, repeat('Pikachu 28/73 Regular Non-Holo'))).variantVerification;
-  const normal = protectValuation({ prediction, marketData: prices, variantVerification });
+  const normal = protectValuation({ ...verifiedIdentity(pikachu), prediction, marketData: prices, variantVerification });
   assert.equal(normal.prediction.rawValue, 20);
   assert.equal(normal.marketData.marketSummary.valuationTrusted, true);
   assert.equal(isValuationTrusted(normal), true);
-  const missing = protectValuation({ prediction, marketData: { marketSummary: { rawUsedCount: 0, rawMedian: null } }, variantVerification });
+  const missing = protectValuation({ ...verifiedIdentity(pikachu), prediction, marketData: { marketSummary: { rawUsedCount: 0, rawMedian: null } }, variantVerification });
   assert.equal(missing.valuationVerification.status, 'untrusted');
   assert.equal(missing.valuationVerification.reason, 'no_comparable_listings');
 });
@@ -134,7 +135,7 @@ test('user confirmation requests a new valuation and never submits or unlocks ca
     const resolved = reconcileVariant(kid, kid, evidence(kid, []), body.confirmedVariant);
     assert.equal(resolved.variantVerification.status, 'user_confirmed');
     assert.equal(resolved.canonicalCard.variant.art, 'alternate art');
-    const payload = protectValuation({ prediction: { ...prediction, rawValue: 80 }, canonicalCard: resolved.canonicalCard, variantVerification: resolved.variantVerification, marketData: { marketSummary: { rawUsedCount: 1, rawMedian: 80 } } });
+    const payload = protectValuation({ ...verifiedIdentity(resolved.canonicalCard), prediction: { ...prediction, rawValue: 80 }, canonicalCard: resolved.canonicalCard, variantVerification: resolved.variantVerification, marketData: { marketSummary: { rawUsedCount: 1, rawMedian: 80 } } });
     return { ok: true, json: async () => payload };
   });
   assert.equal(fresh.rawValue, 80);

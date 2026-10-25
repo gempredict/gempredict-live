@@ -54,7 +54,7 @@ export async function runPipeline(scenario) {
     identitySearchGate, calculateGradingEconomics, getUserIdentityProtection, reconcileVariant, parseVariantConfirmation, protectValuation, selectMarketQuery,
     atlasOrchestrator, calculateIdentityConfidence,
     parseRequest: async () => ({ fields: scenario.fields || { cardName: 'Unknown card from image', cardType: scenario.type || 'pokemon' }, imageBuffer: scenario.textOnly ? null : Buffer.from('mock card image'), imageMimeType: 'image/png' }),
-    resolveMarketIdentity: (card, options) => resolveMarketIdentity(card, { ...options, ...scenario.catalogOptions, clientId: 'mock', clientSecret: 'mock', fetchImpl: async url => {
+    resolveMarketIdentity: (card, options) => resolveMarketIdentity(card, { ...options, catalogSource: 'mock-unconfigured', ...scenario.catalogOptions, clientId: 'mock', clientSecret: 'mock', fetchImpl: async url => {
       if (String(url).includes('/oauth2/token')) { metrics.neutralOAuth++; return { ok: true, json: async () => ({ access_token: 'mock' }) }; }
       metrics.neutralBrowse++;
       metrics.neutralQuery = new URL(url).searchParams.get('q');
@@ -73,7 +73,7 @@ export async function runPipeline(scenario) {
       if (vision) {
         metrics.claudeVision++;
         const card = scenario.proposal || {};
-        reply = { identifiedSubject: card.subject, identifiedYear: card.year, identifiedBrandSet: card.brandSet, identifiedCardNumber: card.cardNumber, identifiedParallel: card.parallel, identifiedAutoOrRelic: card.autoOrRelic || 'none', identityConfidence: 90, identityNotes: scenario.notes || 'Mock visible identifiers; not independently verified.', centering: 'good', corners: 'good', edges: 'good', surface: 'good', overallScore: 8, cornersNote: 'Visible corner whitening.', imageSummary: 'Condition remains available.', worthGrading: true, worthGradingReason: 'Visible condition is suitable for grading consideration; economics unassessed.', ...scenario.vision };
+        reply = { identifiedSubject: card.subject, identifiedLanguage: card.language || null, identifiedYear: card.year, identifiedBrandSet: card.brandSet, identifiedCardNumber: card.cardNumber, identifiedParallel: card.parallel, identifiedAutoOrRelic: card.autoOrRelic || 'none', identityConfidence: 90, identityNotes: scenario.notes || 'Mock visible identifiers; not independently verified.', centering: 'good', corners: 'good', edges: 'good', surface: 'good', overallScore: 8, cornersNote: 'Visible corner whitening.', imageSummary: 'Condition remains available.', worthGrading: true, worthGradingReason: 'Visible condition is suitable for grading consideration; economics unassessed.', ...scenario.vision };
       } else {
         metrics.claudePrediction++;
         metrics.predictionPrompt = request.messages[0].content;

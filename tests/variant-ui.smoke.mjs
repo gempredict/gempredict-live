@@ -1,3 +1,4 @@
+import { verifiedIdentity } from './helpers/verifiedIdentity.mjs';
 // Optional browser smoke test: uses the environment's Playwright + Chromium.
 // Run after npm run build: node tests/variant-ui.smoke.mjs
 import assert from 'node:assert/strict';
@@ -55,6 +56,7 @@ try {
       assert.equal(input.rawValue, undefined);
       const canonicalCard = { ...report.canonicalCard, parallel: 'Alternate Art', displayName: '2026 One Piece Eustass Captain Kid Alternate Art OP14-014' };
       const payload = protectValuation({
+        ...verifiedIdentity(canonicalCard),
         prediction: { cardTitle: report.cardTitle, cardMeta: '2026 One Piece Alternate Art', rawValue: 80, psa9Value: 100, psa10Value: 150, gradingUpside: -10, expectedNetValue: -20, verdict: 'maybe', psa10Probability: 50, gemPredictScore: 60 },
         canonicalCard,
         variantVerification: { status: 'user_confirmed' },

@@ -478,6 +478,7 @@ function WithheldResultCard({ data, onSave, isSaved, onVerifyVariant, onRescan }
     cardNumber: data.canonicalCard?.cardNumber || "",
     year: data.canonicalCard?.year || "",
     brandSet: data.canonicalCard?.brandSet || "",
+    language: data.canonicalCard?.language || "",
   });
   const [version, setVersion] = useState(data.canonicalCard?.parallel || "");
   const [features, setFeatures] = useState(data.canonicalCard?.autoOrRelic === "auto" ? "auto" : data.canonicalCard?.autoOrRelic === "relic" ? "relic" : data.canonicalCard?.autoOrRelic === "auto relic" ? "auto relic" : "none");
@@ -498,7 +499,7 @@ function WithheldResultCard({ data, onSave, isSaved, onVerifyVariant, onRescan }
     <button onClick={() => setEditing(!editing)}>Verify Variant</button>
     {editing && <div style={{ display: "grid", gap: "0.6rem", marginTop: "0.8rem" }}>
       <p>Enter the exact identity printed on the card, then check fresh prices. No photo is required.</p>
-      {[["subject", "Card subject"], ["cardNumber", "Card number"], ["year", "Year"], ["brandSet", "Set / product"]].map(([field, label]) => <label key={field}>{label} <input value={identity[field]} onChange={event => setIdentity({ ...identity, [field]: event.target.value })} /></label>)}
+      {[["subject", "Card subject"], ["cardNumber", "Card number"], ["year", "Year"], ["brandSet", "Set / product"], ["language", "Card language"]].map(([field, label]) => <label key={field}>{label} <input value={identity[field]} onChange={event => setIdentity({ ...identity, [field]: event.target.value })} /></label>)}
       <label>Version / parallel <input value={version} onChange={event => setVersion(event.target.value)} placeholder="e.g. Common non-holo, Standard Art, Green Sand Glitter /99" /></label>
       <label>Autograph / relic <select value={features} onChange={event => setFeatures(event.target.value)}>
         <option value="none">No autograph or relic</option><option value="auto">Autograph</option><option value="relic">Relic</option><option value="auto relic">Autograph and relic</option>

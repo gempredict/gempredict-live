@@ -34,7 +34,7 @@ test('independent catalog supports exact identity without accepting partial numb
   const result = await crossCheckCatalog(proposal, lookup([{ ...exact, id: 'partial', cardNumber: '149' }, { ...exact, id: 'wrong', subject: 'Other ex' }, exact]));
   assert.equal(result.status, 'verified');
   assert.deepEqual(result.diagnostics.map(d => d.accepted), [false, false, true]);
-  assert.equal(identitySearchGate({ catalog: result }).allowed, true);
+  assert.equal(identitySearchGate({ catalog: result }, proposal).allowed, true);
 });
 
 test('same collector number across sets, languages or variants stays ambiguous; duplicate records do not vote', async () => {

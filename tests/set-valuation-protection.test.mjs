@@ -1,3 +1,4 @@
+import { verifiedIdentity } from './helpers/verifiedIdentity.mjs';
 import { mockCatalog } from './helpers/catalogFixtures.mjs';
 import test from 'node:test';
 import assert from 'node:assert/strict';
@@ -56,13 +57,13 @@ test('missing and ambiguous seller prose stay uncertain, not falsely confirmed o
   assert.equal(scoreListing('Pikachu #28/73 Holo Phantoms Holographic', 'Pikachu', holoSet).comparable, true);
 });
 
-const payload = { prediction: { rawValue: 55, gradingUpside: 100, expectedNetValue: 100, verdict: 'grade', action: 'Grade it.' }, variantVerification: { status: 'verified' }, marketData: { marketSummary: { rawUsedCount: 3, rawMedian: 10, marketConfidence: 55, valuationTrusted: false } } };
+const payload = { ...verifiedIdentity({ subject: 'Dragalge', cardNumber: '89/197', year: '2023', brandSet: 'Paldea Evolved', parallel: 'Common non-holo' }), prediction: { rawValue: 55, gradingUpside: 100, expectedNetValue: 100, verdict: 'grade', action: 'Grade it.' }, variantVerification: { status: 'verified' }, marketData: { marketSummary: { rawUsedCount: 3, rawMedian: 10, marketConfidence: 55, valuationTrusted: false } } };
 const field = (status, value, conflictingListingCount = 0) => ({ status, value, conflictingListingCount });
 
 test('unresolved year/set conflicts withhold every financial recommendation despite verified variant and prices', () => {
   for (const name of ['year', 'set']) {
     for (const status of ['unresolved_conflict', 'insufficient_evidence']) {
-      const result = protectValuation({ ...payload, identityVerification: { [name]: field(status, name === 'year' ? '2023' : 'Paldea Evolved', 2) } });
+      const result = protectValuation({ ...payload, identityVerification: { ...payload.identityVerification, [name]: field(status, name === 'year' ? '2023' : 'Paldea Evolved', 2) } });
       assert.equal(result.valuationVerification.reason, 'identity_unresolved');
       assert.ok(result.valuationVerification.unresolvedIdentityFields.includes(name));
       assert.equal(result.marketData.marketSummary.rawMedian, null);
@@ -74,16 +75,16 @@ test('unresolved year/set conflicts withhold every financial recommendation desp
 });
 
 test('missing listing wording does not become a conflict; missing canonical set is unresolved; explicit choices remain protected', () => {
-  assert.equal(protectValuation({ ...payload, identityVerification: { set: field('insufficient_evidence', 'Paldea Evolved') } }).valuationVerification.status, 'trusted');
-  for (const value of [null, '', 'unknown', 'N/A']) assert.equal(protectValuation({ ...payload, identityVerification: { set: field('insufficient_evidence', value) } }).valuationVerification.status, 'untrusted');
+  assert.equal(protectValuation({ ...payload, identityVerification: { ...payload.identityVerification, set: field('insufficient_evidence', 'Paldea Evolved') } }).valuationVerification.status, 'trusted');
+  for (const value of [null, '', 'unknown', 'N/A']) assert.equal(protectValuation({ ...payload, identityVerification: { ...payload.identityVerification, set: field('insufficient_evidence', value) } }).valuationVerification.status, 'untrusted');
   for (const status of ['verified', 'corrected', 'user_protected']) {
-    assert.equal(protectValuation({ ...payload, identityVerification: { set: field(status, 'Paldea Evolved', 3) } }).valuationVerification.status, 'trusted');
+    assert.equal(protectValuation({ ...payload, identityVerification: { ...payload.identityVerification, set: field(status, 'Paldea Evolved', 3) } }).valuationVerification.status, 'trusted');
   }
-  assert.equal(protectValuation({ ...payload, identityVerification: { year: { ...field('user_protected', '2023'), userValues: ['2023', '2024'] } } }).valuationVerification.reason, 'identity_unresolved');
+  assert.equal(protectValuation({ ...payload, identityVerification: { ...payload.identityVerification, year: { ...field('user_protected', '2023'), userValues: ['2023', '2024'] } } }).valuationVerification.reason, 'identity_unresolved');
 });
 
 test('previously trusted saved mixed-set reports are demoted before display/copy/share', () => {
-  const report = { ...payload.prediction, variantVerification: payload.variantVerification, marketData: { marketSummary: { ...payload.marketData.marketSummary, valuationTrusted: true } }, identityVerification: { set: field('unresolved_conflict', 'Paldea Evolved', 3) }, valuationVerification: { status: 'trusted', reason: null, explanation: 'Old prices matched.' } };
+  const report = { ...payload.prediction, variantVerification: payload.variantVerification, marketData: { marketSummary: { ...payload.marketData.marketSummary, valuationTrusted: true } }, identityVerification: { ...payload.identityVerification, set: field('unresolved_conflict', 'Paldea Evolved', 3) }, valuationVerification: { status: 'trusted', reason: null, explanation: 'Old prices matched.' } };
   assert.equal(isValuationTrusted(report), false);
   const saved = safeStoredReport(report);
   assert.equal(saved.valuationVerification.reason, 'identity_unresolved');
@@ -197,12 +198,12 @@ test('inconsistent structured/title set evidence is unresolved even if no single
 test('resolved canonical metadata cannot bless an older mixed-set comparable pool', () => {
   const canonicalCard = { subject: 'Dragalge', cardNumber: '89/197', year: '2023', brandSet: 'Paldea Evolved', parallel: 'Common non-holo' };
   const marketData = { ...payload.marketData, rawComparableItems: [{ title }, { title: title.replace('Paldea Evolved', 'Obsidian Flames') }], marketSummary: { ...payload.marketData.marketSummary, rawMedian: 55, valuationTrusted: true } };
-  const report = { ...payload.prediction, canonicalCard, variantVerification: payload.variantVerification, marketData, identityVerification: { set: field('verified', 'Paldea Evolved') }, valuationVerification: { status: 'trusted' } };
+  const report = { ...payload.prediction, canonicalCard, variantVerification: payload.variantVerification, marketData, identityVerification: { ...payload.identityVerification, set: field('verified', 'Paldea Evolved') }, valuationVerification: { status: 'trusted' } };
   assert.equal(isValuationTrusted(report), false);
   assert.equal(safeStoredReport(report).rawValue, null);
   assert.equal(safeStoredReport(report).valuationVerification.reason, 'identity_unresolved');
   assert.doesNotMatch(withheldSummary(report), /\$|Grade it/);
-  const guarded = protectValuation({ ...payload, canonicalCard, marketData, identityVerification: { set: field('user_protected', 'Paldea Evolved') } });
+  const guarded = protectValuation({ ...payload, canonicalCard, marketData, identityVerification: { ...payload.identityVerification, set: field('user_protected', 'Paldea Evolved') } });
   assert.equal(guarded.valuationVerification.reason, 'identity_unresolved');
   assert.equal(guarded.prediction.gradingUpside, null);
 });
