@@ -1,3 +1,4 @@
+import { verifiedVariant } from './helpers/verifiedIdentity.mjs';
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { crossCheckCatalog, identitySearchGate } from '../lib/catalogIdentity.mjs';
@@ -61,7 +62,7 @@ test('misleading multi-card listings and incidental collector numbers cannot ent
 
 test('catalog conflict or ambiguity withholds prices, ROI and saved report trust despite resolved variant', async () => {
   for (const status of ['conflict', 'ambiguous', 'insufficient_evidence']) {
-    const result = protectValuation({ canonicalCard: proposal, identityVerification: { catalog: { status } }, variantVerification: { status: 'verified' }, prediction: { rawValue: 100, gradingUpside: 300, verdict: 'grade' }, marketData: { marketSummary: { rawUsedCount: 3, rawMedian: 100 } } });
+    const result = protectValuation({ canonicalCard: proposal, identityVerification: { catalog: { status } }, variantVerification: verifiedVariant(proposal), prediction: { rawValue: 100, gradingUpside: 300, verdict: 'grade' }, marketData: { marketSummary: { rawUsedCount: 3, rawMedian: 100 } } });
     assert.equal(result.valuationVerification.status, 'untrusted');
     assert.equal(result.prediction.rawValue, null);
     assert.equal(result.prediction.gradingUpside, null);
@@ -101,7 +102,7 @@ test('catalog verification cannot migrate to another variant or set after reconc
   for (const change of [{ parallel: 'Base' }, { brandSet: 'Different Set' }, { cardNumber: '149/191' }]) {
     const card = { ...proposal, ...change };
     assert.equal(identitySearchGate({ catalog }, card).allowed, false);
-    const result = protectValuation({ canonicalCard: card, identityVerification: { catalog }, variantVerification: { status: 'user_confirmed' }, marketData: { marketSummary: { rawUsedCount: 3, rawMedian: 100 } }, prediction: { rawValue: 100 } });
+    const result = protectValuation({ canonicalCard: card, identityVerification: { catalog }, variantVerification: verifiedVariant(card, 'user_confirmed'), marketData: { marketSummary: { rawUsedCount: 3, rawMedian: 100 } }, prediction: { rawValue: 100 } });
     assert.equal(result.prediction.rawValue, null);
   }
 });
@@ -143,7 +144,7 @@ test('neither marketplace verification nor protected user fields substitute for 
     for (const status of ['verified', 'corrected', 'user_protected']) {
       const verification = { catalog, year: { status, value: proposal.year }, set: { status, value: proposal.brandSet } };
       assert.equal(identitySearchGate(verification, proposal).allowed, false);
-      const result = protectValuation({ canonicalCard: proposal, identityVerification: verification, variantVerification: { status: 'verified' }, marketData: { marketSummary: { rawUsedCount: 3, rawMedian: 500 } }, prediction: { rawValue: 500, gradingUpside: 1000 } });
+      const result = protectValuation({ canonicalCard: proposal, identityVerification: verification, variantVerification: verifiedVariant(proposal), marketData: { marketSummary: { rawUsedCount: 3, rawMedian: 500 } }, prediction: { rawValue: 500, gradingUpside: 1000 } });
       assert.equal(result.prediction.rawValue, null);
       assert.equal(result.prediction.gradingUpside, null);
     }

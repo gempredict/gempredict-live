@@ -1,4 +1,4 @@
-import { verifiedIdentity } from './helpers/verifiedIdentity.mjs';
+import { verifiedIdentity, verifiedVariant } from './helpers/verifiedIdentity.mjs';
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { collectIdentityEvidence, buildNeutralIdentityQuery } from '../lib/marketIdentityEvidence.mjs';
@@ -142,7 +142,7 @@ test('user confirmation requests a new valuation and never submits or unlocks ca
   assert.equal(fresh.marketData.marketSummary.rawMedian, 80);
   assert.equal(fresh.imageAnalysis.corners, 'good');
   assert.equal(report.rawValue, 999);
-  const noPrices = await requestVariantRevaluation(report, { parallel: 'Alternate Art' }, async () => ({ ok: true, json: async () => protectValuation({ prediction, variantVerification: { status: 'user_confirmed' }, marketData: null }) }));
+  const noPrices = await requestVariantRevaluation(report, { parallel: 'Alternate Art' }, async () => ({ ok: true, json: async () => protectValuation({ prediction, variantVerification: verifiedVariant(kid, 'user_confirmed'), marketData: null }) }));
   assert.equal(isValuationTrusted(noPrices), false);
   assert.equal(noPrices.rawValue, null);
   assert.equal(parseVariantConfirmation({ parallel: 'Special / Alternate Art' }), null);
@@ -204,7 +204,7 @@ test('unrecognized material labels and contradictory observations stay unresolve
 });
 
 test('stored untrusted reports cannot promote stale prices even if their version was verified', () => {
-  const stored = safeStoredReport({ ...prediction, variantVerification: { status: 'verified' }, valuationVerification: { status: 'untrusted', reason: 'no_comparable_listings' }, marketData: prices });
+  const stored = safeStoredReport({ ...prediction, variantVerification: verifiedVariant(pikachu), valuationVerification: { status: 'untrusted', reason: 'no_comparable_listings' }, marketData: prices });
   assert.equal(stored.rawValue, null);
   assert.equal(stored.marketData.marketSummary.rawMedian, null);
   assert.equal(stored.marketData.marketSummary.valuationTrusted, false);
@@ -219,7 +219,7 @@ test('variant revaluation preserves reconciled year/set and retains the original
     assert.equal(body.confirmedCardIdentity.year, '2026');
     assert.equal(body.confirmedIdentity.brandSet, 'One Piece');
     assert.equal(body.originalIdentityProposal.year, '2025');
-    return { ok: true, json: async () => protectValuation({ prediction, canonicalCard: body.confirmedCardIdentity, originalCanonicalCard: body.originalIdentityProposal, variantVerification: { status: 'user_confirmed' }, marketData: null }) };
+    return { ok: true, json: async () => protectValuation({ prediction, canonicalCard: body.confirmedCardIdentity, originalCanonicalCard: body.originalIdentityProposal, variantVerification: verifiedVariant(kid, 'user_confirmed'), marketData: null }) };
   });
   assert.equal(result.originalCanonicalCard.year, '2025');
   assert.equal(result.canonicalCard.year, '2026');

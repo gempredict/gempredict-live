@@ -1,4 +1,4 @@
-import { verifiedIdentity } from './helpers/verifiedIdentity.mjs';
+import { verifiedIdentity, verifiedVariant } from './helpers/verifiedIdentity.mjs';
 // Optional browser smoke test: uses the environment's Playwright + Chromium.
 // Run after npm run build: node tests/variant-ui.smoke.mjs
 import assert from 'node:assert/strict';
@@ -59,7 +59,7 @@ try {
         ...verifiedIdentity(canonicalCard),
         prediction: { cardTitle: report.cardTitle, cardMeta: '2026 One Piece Alternate Art', rawValue: 80, psa9Value: 100, psa10Value: 150, gradingUpside: -10, expectedNetValue: -20, verdict: 'maybe', psa10Probability: 50, gemPredictScore: 60 },
         canonicalCard,
-        variantVerification: { status: 'user_confirmed' },
+        variantVerification: verifiedVariant(canonicalCard, 'user_confirmed'),
         marketData: { marketSummary: { rawUsedCount: 1, rawMedian: 80 } },
       });
       await route.fulfill({ contentType: 'application/json', body: JSON.stringify(payload) });
@@ -130,6 +130,29 @@ try {
   assert.match(photoText, /Minor whitening at the top corner/);
   assert.match(photoText, /Grading recommendation withheld/i);
   await photoPage.close();
+  // A previously trusted browser report must lose pricing/Atlas when its
+  // variant receipt is erased/downgraded or its comparable facts contradict it.
+  for (const mutation of ['missing', 'downgraded', 'malformed', 'contradictory-listing']) {
+    const stale = structuredClone(saved[0]);
+    if (mutation === 'missing') stale.variantVerification = null;
+    if (mutation === 'downgraded') stale.variantVerification.status = 'needs_confirmation';
+    if (mutation === 'malformed') stale.variantVerification.value = [];
+    if (mutation === 'contradictory-listing') stale.marketData.rawComparableItems = [{ title: '2026 One Piece Eustass Captain Kid OP14-014 Alternate Art', localizedAspects: [{ name: 'Year Manufactured', value: '2024' }] }];
+    const stalePage = await browser.newPage();
+    stalePage.on('pageerror', error => errors.push(error.message));
+    await stalePage.route('**/*', route => route.request().url().startsWith('http://127.0.0.1:3100') ? route.continue() : route.abort());
+    await stalePage.addInitScript(value => localStorage.setItem('gp_saved_reports', JSON.stringify([value])), stale);
+    await stalePage.goto('http://127.0.0.1:3100', { waitUntil: 'domcontentloaded' });
+    await stalePage.getByRole('button', { name: 'Load', exact: true }).click();
+    await stalePage.getByRole('button', { name: 'Verify Variant', exact: true }).waitFor();
+    const text = await stalePage.locator('body').innerText();
+    assert.match(text, /Valuation and grading ROI withheld/, mutation);
+    const resultText = await stalePage.getByText('Valuation and grading ROI withheld', { exact: true }).locator('..').innerText();
+    assert.doesNotMatch(resultText, /\$80/, mutation);
+    assert.doesNotMatch(text, /Selected listing evidence/i, mutation);
+    assert.equal(await stalePage.getByText('Atlas Intelligence', { exact: true }).count(), 0, mutation);
+    await stalePage.close();
+  }
   assert.deepEqual(errors, []);
   console.log('PASS browser: unsafe result/saved values hidden, condition retained, copy/share safe, confirmation fetches fresh valuation and updates saved report.');
 } finally {

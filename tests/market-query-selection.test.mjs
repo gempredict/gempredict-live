@@ -1,3 +1,4 @@
+import { verifiedVariant } from './helpers/verifiedIdentity.mjs';
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
@@ -199,7 +200,7 @@ test('strictly filtered ranking covers Pokémon, corrected year/set, One Piece a
       const protectedResult = protectValuation({ prediction: { rawValue: 20, gradingUpside: 100 }, marketData: selected, variantVerification: { status: 'needs_confirmation' } });
       assert.equal(protectedResult.marketData.marketSummary.valuationTrusted, false);
       assert.equal(protectedResult.prediction.rawValue, null);
-      const noMarket = protectValuation({ marketData: { ...selected, marketSummary: { rawUsedCount: 0, rawMedian: null } }, variantVerification: { status: 'verified' } });
+      const noMarket = protectValuation({ marketData: { ...selected, marketSummary: { rawUsedCount: 0, rawMedian: null } }, variantVerification: verifiedVariant(card) });
       assert.equal(noMarket.valuationVerification.status, 'untrusted');
     }
     assert.deepEqual(evidence, evidenceBefore); // valuation results never vote on identity

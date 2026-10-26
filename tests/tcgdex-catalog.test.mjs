@@ -1,3 +1,4 @@
+import { verifiedVariant } from './helpers/verifiedIdentity.mjs';
 import test, { mock } from 'node:test';
 import https from 'node:https';
 import { EventEmitter } from 'node:events';
@@ -190,7 +191,7 @@ test('non-Pokemon categories do not claim or request TCGdex verification', async
 test('catalog-backed identity cannot migrate to a different restored set or finish', async () => {
   const result = await resolve(proposal, transport());
   assert.equal(identitySearchGate(result.identityVerification, { ...result.canonicalCard, brandSet: 'Surging Sparks' }).allowed, false);
-  const stale = safeStoredReport({ canonicalCard: { ...result.canonicalCard, parallel: 'Base' }, identityVerification: result.identityVerification, valuationVerification: { status: 'trusted' }, variantVerification: { status: 'verified' }, rawValue: 500, marketData: { marketSummary: { rawUsedCount: 3, rawMedian: 500, valuationTrusted: true } } });
+  const stale = safeStoredReport({ canonicalCard: { ...result.canonicalCard, parallel: 'Base' }, identityVerification: result.identityVerification, valuationVerification: { status: 'trusted' }, variantVerification: verifiedVariant({ ...result.canonicalCard, parallel: 'Base' }), rawValue: 500, marketData: { marketSummary: { rawUsedCount: 3, rawMedian: 500, valuationTrusted: true } } });
   assert.equal(stale.rawValue, null);
 });
 

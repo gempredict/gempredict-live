@@ -1,4 +1,4 @@
-import { verifiedIdentity } from './helpers/verifiedIdentity.mjs';
+import { verifiedIdentity, verifiedVariant } from './helpers/verifiedIdentity.mjs';
 import { mockCatalog } from './helpers/catalogFixtures.mjs';
 import test from 'node:test';
 import assert from 'node:assert/strict';
@@ -57,7 +57,8 @@ test('missing and ambiguous seller prose stay uncertain, not falsely confirmed o
   assert.equal(scoreListing('Pikachu #28/73 Holo Phantoms Holographic', 'Pikachu', holoSet).comparable, true);
 });
 
-const payload = { ...verifiedIdentity({ subject: 'Dragalge', cardNumber: '89/197', year: '2023', brandSet: 'Paldea Evolved', parallel: 'Common non-holo' }), prediction: { rawValue: 55, gradingUpside: 100, expectedNetValue: 100, verdict: 'grade', action: 'Grade it.' }, variantVerification: { status: 'verified' }, marketData: { marketSummary: { rawUsedCount: 3, rawMedian: 10, marketConfidence: 55, valuationTrusted: false } } };
+const protectedCard = { subject: 'Dragalge', cardNumber: '89/197', year: '2023', brandSet: 'Paldea Evolved', parallel: 'Common non-holo' };
+const payload = { ...verifiedIdentity(protectedCard), prediction: { rawValue: 55, gradingUpside: 100, expectedNetValue: 100, verdict: 'grade', action: 'Grade it.' }, variantVerification: verifiedVariant(protectedCard), marketData: { marketSummary: { rawUsedCount: 3, rawMedian: 10, marketConfidence: 55, valuationTrusted: false } } };
 const field = (status, value, conflictingListingCount = 0) => ({ status, value, conflictingListingCount });
 
 test('unresolved year/set conflicts withhold every financial recommendation despite verified variant and prices', () => {
@@ -187,10 +188,13 @@ test('inconsistent structured/title set evidence is unresolved even if no single
   const result = await runPipeline({ ...template, neutral, market: correct });
   assert.equal(result.payload.identityVerification.set.status, 'insufficient_evidence');
   assert.equal(result.payload.identityVerification.set.ambiguousListingCount, 3);
-  assert.equal(result.payload.variantVerification.status, 'verified');
+  assert.equal(result.payload.variantVerification.status, 'insufficient_evidence');
+  assert.equal(result.payload.variantVerification.evidenceReferences.length, 0);
+  assert.equal(result.payload.identityEvidenceExclusions.length, 3);
   assert.equal(result.observed.usedCount, 0);
   assert.equal(result.metrics.valuationBrowse, 0);
-  assert.equal(result.payload.valuationVerification.reason, 'identity_unresolved');
+  assert.equal(result.payload.valuationVerification.reason, 'variant_unresolved');
+  assert.ok(result.payload.valuationVerification.unresolvedIdentityFields.includes('set'));
   assert.equal(result.payload.prediction.gradingUpside, null);
 });
 

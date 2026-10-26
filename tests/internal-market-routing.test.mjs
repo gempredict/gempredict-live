@@ -1,4 +1,4 @@
-import { verifiedIdentity } from './helpers/verifiedIdentity.mjs';
+import { verifiedIdentity, verifiedVariant } from './helpers/verifiedIdentity.mjs';
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { createServer } from 'node:http';
@@ -23,7 +23,7 @@ test('missing and invalid origins fail closed without emitting configured secret
     assert.deepEqual(r.queryAttempts, []);
     assert.deepEqual(r.querySelection.attempts, []);
     assert.doesNotMatch(JSON.stringify(r), /password|token=private/);
-    const protectedResult = protectValuation({ ...verifiedIdentity(card), marketData: r, prediction: { rawValue: 10, verdict: 'grade' }, variantVerification: { status: 'verified' } });
+    const protectedResult = protectValuation({ ...verifiedIdentity(card), marketData: r, prediction: { rawValue: 10, verdict: 'grade' }, variantVerification: verifiedVariant(card) });
     assert.equal(protectedResult.valuationVerification.reason, 'no_comparable_listings');
     assert.equal(protectedResult.prediction.rawValue, null);
     assert.equal(protectedResult.atlas, null);
