@@ -2,7 +2,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import { runPipeline } from './helpers/phase1Pipeline.mjs';
 import { scenarios } from './helpers/phase1Scenarios.mjs';
-import { isValuationTrusted, safeStoredReport, protectValuation, withheldSummary } from '../lib/valuationProtection.mjs';
+import { isMarketAnalysisAvailable, safeStoredReport, protectValuation, withheldSummary } from '../lib/valuationProtection.mjs';
 import { catalogIdentityConflicts, identitySearchGate } from '../lib/catalogIdentity.mjs';
 
 const original = (await runPipeline(scenarios.find(item => item.id === 'pikachu-non-holo'))).report;
@@ -10,7 +10,7 @@ const clone = () => structuredClone(original);
 const money = ['rawValue', 'psa9Value', 'psa10Value', 'gradingUpside', 'expectedGradedValue', 'expectedNetValue', 'gemPredictScore', 'decisionConfidence'];
 const summaries = ['rawMedian', 'rawLowest', 'rawHighest', 'fairMarketValue', 'rawTypicalRangeLow', 'rawTypicalRangeHigh'];
 function withheld(report) {
-  assert.equal(isValuationTrusted(report), false);
+  assert.equal(isMarketAnalysisAvailable(report), false);
   const safe = safeStoredReport(report);
   assert.equal(safe.valuationVerification.status, 'untrusted');
   assert.equal(safe.valuationVerification.reason, 'identity_unresolved');
@@ -84,13 +84,14 @@ test('forged trusted summary and gate flags cannot bypass final identity validat
   withheld(report);
 });
 
-test('an unchanged independently verified report retains legitimate prices, recommendations and Atlas', () => {
-  assert.equal(isValuationTrusted(original), true);
+test('an unchanged independently verified asking report retains provisional analysis without Atlas', () => {
+  assert.equal(isMarketAnalysisAvailable(original), true);
   const restored = safeStoredReport(clone());
-  assert.equal(isValuationTrusted(restored), true);
-  assert.deepEqual(restored, clone());
+  assert.equal(isMarketAnalysisAvailable(restored), true);
+  assert.equal(restored.financialDecision.status, 'provisional');
+  assert.equal(restored.verdict, 'provisional');
   assert.equal(restored.rawValue, 10);
-  assert.ok(restored.atlas);
+  assert.equal(restored.atlas, null);
   assert.ok(restored.action);
 });
 

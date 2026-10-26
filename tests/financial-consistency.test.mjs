@@ -1,7 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { calculateGradingEconomics, formatMoney } from '../lib/gradingEconomics.mjs';
-import { safeStoredReport, isValuationTrusted, protectValuation, withheldSummary } from '../lib/valuationProtection.mjs';
+import { safeStoredReport, isMarketAnalysisAvailable, isValuationTrusted, protectValuation, withheldSummary } from '../lib/valuationProtection.mjs';
 import { runPipeline } from './helpers/phase1Pipeline.mjs';
 import { scenarios } from './helpers/phase1Scenarios.mjs';
 const template = scenarios.find(s => s.id === 'pikachu-non-holo');
@@ -17,15 +17,18 @@ test('selected $10 wins over model $150 before PSA safeguards and all downstream
   assert.equal(r.expectedGradedValue, 168);
   assert.equal(r.expectedNetValue, 78);
   assert.equal(r.gradingUpside, 110);
-  assert.equal(r.decisionConfidence, 88);
-  assert.equal(r.gemPredictScore, 99);
-  assert.equal(r.verdict, 'maybe');
-  assert.match(r.analysis, /raw \$10/);
+  assert.equal(r.decisionConfidence, null);
+  assert.equal(r.gemPredictScore, null);
+  assert.equal(r.verdict, 'provisional');
+  assert.match(r.analysis, /raw baseline \$10/);
   assert.doesNotMatch(r.analysis + r.action + result.copied, /\$150|99999|Never grade|Sell for/);
-  assert.match(result.copied, /Raw: \$10.*Upside: \+\$110.*Expected net: \+\$78.*Consider It/);
+  assert.match(result.copied, /Provisional.*Raw baseline: \$10.*Conditional net: \$78/);
   const reopened = safeStoredReport(JSON.parse(JSON.stringify(r)));
-  assert.equal(isValuationTrusted(reopened), true);
-  assert.deepEqual(reopened, JSON.parse(JSON.stringify(r)));
+  assert.equal(isMarketAnalysisAvailable(reopened), true);
+  assert.equal(isValuationTrusted(reopened), false);
+  assert.equal(reopened.rawValue, r.rawValue);
+  assert.equal(reopened.action, r.action);
+  assert.equal(reopened.financialDecision.status, 'provisional');
 });
 
 test('cent-valued raw and graded estimates survive real prediction normalization and copying', async () => {
@@ -44,9 +47,9 @@ test('cent-valued raw and graded estimates survive real prediction normalization
     assert.equal(r.gradingUpside, upside);
     assert.equal(r.psaFee, 80);
     assert.equal(r.psa10Probability, p);
-    assert.equal(r.verdict, net > 0 ? 'maybe' : 'skip');
-    assert.ok(result.copied.includes(`Raw: $${formatMoney(price)}`));
-    assert.ok(result.copied.includes(`Expected net: ${net < 0 ? '-' : '+'}$${formatMoney(Math.abs(net))}`));
+    assert.equal(r.verdict, 'provisional');
+    assert.ok(result.copied.includes(`Raw baseline: $${price}`));
+    assert.ok(result.copied.includes(`Conditional net: $${net}`));
     assert.doesNotMatch(r.analysis + r.action, /guaranteed profits|immediately|150|9999/);
     assert.equal(safeStoredReport(JSON.parse(JSON.stringify(r))).rawValue, price);
   }
@@ -54,16 +57,16 @@ test('cent-valued raw and graded estimates survive real prediction normalization
   assert.equal(formatMoney(1234.01), '1,234.01');
 });
 
-test('negative expected ROI cannot inherit grade recommendations even with positive PSA10 upside', async () => {
+test('negative asking-only scenarios remain provisional even with positive PSA10 upside', async () => {
   const result = await runPipeline({ ...template, model: { psa9Value: 20, psa10Value: 200, psa10Probability: 10 }, predictionReply: { verdict: 'grade', gradingUpside: 999, analysis: 'Certain profit; submit.', action: 'Grade now.' } });
   assert.equal(result.report.expectedGradedValue, 38);
   assert.equal(result.report.expectedNetValue, -52);
   assert.equal(result.report.gradingUpside, 110);
-  assert.equal(result.report.verdict, 'skip');
-  assert.equal(result.report.decisionConfidence, 53);
-  assert.equal(result.report.gemPredictScore, 73);
-  assert.match(result.report.analysis, /expected net is -\$52/);
-  assert.match(result.copied, /Expected net: -\$52.*Skip It/);
+  assert.equal(result.report.verdict, 'provisional');
+  assert.equal(result.report.decisionConfidence, null);
+  assert.equal(result.report.gemPredictScore, null);
+  assert.match(result.report.analysis, /Expected net \$-52/);
+  assert.match(result.copied, /Provisional.*Conditional net: \$-52/);
 });
 
 test('PSA value ordering, probability bounds and cent precision use the selected baseline', () => {

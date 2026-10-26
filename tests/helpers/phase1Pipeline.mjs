@@ -1,3 +1,5 @@
+import { fetchCompletedSales } from "../../lib/completedSales.mjs";
+import { isVariantVerificationTrusted } from "../../lib/valuationProtection.mjs";
 import { predictionPricingReceipt } from "../../lib/pricingDiagnostics.mjs";
 import { isVercelPreview, verifyPreviewIntegration } from '../../lib/previewIntegration.mjs';
 import { MAX_IMAGE_BYTES } from '../../lib/mobileImages.mjs';
@@ -15,7 +17,7 @@ import { getUserIdentityProtection } from '../../lib/userIdentityProtection.mjs'
 import { resolveMarketIdentity } from '../../lib/reconcileMarketIdentity.mjs';
 import { reconcileVariant, parseVariantConfirmation } from '../../lib/variantVerification.mjs';
 import { selectMarketQuery } from '../../lib/marketQuerySelection.mjs';
-import { protectValuation, isValuationTrusted, withheldSummary, reportFromPrediction, safeStoredReport } from '../../lib/valuationProtection.mjs';
+import { marketAnalysisSummary, protectValuation, isValuationTrusted, withheldSummary, reportFromPrediction, safeStoredReport } from '../../lib/valuationProtection.mjs';
 import ebayHandler from '../../pages/api/ebay-search.js';
 import buildSearchCandidates from '../../lib/buildSearchCandidates.js';
 import calculateIdentityConfidence from '../../lib/calculateIdentityConfidence.js';
@@ -37,7 +39,7 @@ export const atlasOrchestrator = vm.runInNewContext(`${atlasSource}\natlasOrches
 const app = readFileSync(new URL('../../src/App.jsx', import.meta.url), 'utf8');
 const copySource = app.slice(app.indexOf('function buildCopySummary('), app.indexOf('// ─── CSS'));
 const copySummary = vm.runInNewContext(`${copySource}\nbuildCopySummary;`, {
-  isValuationTrusted, withheldSummary, safeStoredReport,
+  marketAnalysisSummary, isValuationTrusted, withheldSummary, safeStoredReport,
   safeMoney: formatMoney,
   VERDICTS: { grade: { label: 'Grade It' }, skip: { label: 'Skip It' }, maybe: { label: 'Consider It' } },
 });
@@ -50,7 +52,7 @@ export async function runPipeline(scenario) {
   const errors = [];
   const model = { cardTitle: scenario.proposal?.subject || scenario.fields?.cardName || 'Unrecognized card', cardMeta: 'Mock model proposal', psa9Value: 120, psa10Value: 200, psa10Probability: 60, ...scenario.model };
   const context = {
-    predictionPricingReceipt, isVercelPreview, verifyPreviewIntegration: options => verifyPreviewIntegration({ ...options, ...(scenario.assetCheck ? { verifyAssets: scenario.assetCheck } : {}) }),
+    isVariantVerificationTrusted, fetchCompletedSales: card => fetchCompletedSales(card, { provider: scenario.soldProvider || null }), predictionPricingReceipt, isVercelPreview, verifyPreviewIntegration: options => verifyPreviewIntegration({ ...options, ...(scenario.assetCheck ? { verifyAssets: scenario.assetCheck } : {}) }),
     MAX_IMAGE_BYTES, Buffer, console: { log(label, data) { if (String(label).startsWith('[GemPredict] Pricing')) metrics.pricingLogs.push(JSON.parse(data)); }, error(...args) { errors.push(args.map(value => String(value)).join(" ")); } }, supabase: null,
     process: { env: { NEXT_PUBLIC_SITE_URL: 'http://stage-a.local', ...scenario.routingEnv } },
     logRequest: async () => { metrics.logCalls++; },

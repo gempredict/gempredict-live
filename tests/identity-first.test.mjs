@@ -1,7 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { conditionPresentation, readVisualEvidence } from '../lib/visualEvidence.mjs';
-import { visualConditionAnalysis, isValuationTrusted, safeStoredReport } from '../lib/valuationProtection.mjs';
+import { visualConditionAnalysis, isMarketAnalysisAvailable, safeStoredReport } from '../lib/valuationProtection.mjs';
 import { liveReportScenario, listings, title } from './helpers/liveReportFixture.mjs';
 import { runPipeline } from './helpers/phase1Pipeline.mjs';
 import { verifiedIdentity } from './helpers/verifiedIdentity.mjs';
@@ -46,7 +46,7 @@ test('actual Obsidian Flames 90% scan is corrected before retrieval; serialized 
   const base = liveReportScenario();
   const result = await runPipeline({ ...base, proposal: { ...base.proposal, brandSet: 'Obsidian Flames' }, vision: raw, market: listings(title.replace('Holo Special Illustration Rare', 'Reverse Holo Special Illustration Rare')) });
   assert.equal(result.payload.valuationIdentityGate.allowed, true); assert.equal(result.report.canonicalCard.brandSet, '30th Celebration');
-  assert.equal(result.report.rawValue, null); assert.equal(result.report.atlas, null); assert.equal(isValuationTrusted(result.report), false);
+  assert.equal(result.report.rawValue, null); assert.equal(result.report.atlas, null); assert.equal(isMarketAnalysisAvailable(result.report), false);
   assert.doesNotMatch(result.report.imageAnalysis.imageSummary, /Obsidian Flames|PSA 10/);
   const logs = result.metrics.pricingLogs;
   assert.equal(logs.length, 1 + result.report.pricingDiagnostics.searches.length);
@@ -69,7 +69,7 @@ test('bounded retrieval restores prices for real matching test records ranked be
       return wrong.slice(0, Math.min(cap, options.limit));
     } });
     assert.equal(result.metrics.valuationBrowse, 6, 'same request budget; no additional provider requests or pages');
-    assert.equal(isValuationTrusted(result.report), cap === 100);
+    assert.equal(isMarketAnalysisAvailable(result.report), cap === 100);
     assert.equal(result.report.marketData.marketSummary.rawUsedCount, cap === 100 ? 3 : 0);
     assert.equal(result.report.rawValue, cap === 100 ? 40 : null);
     assert.ok(result.report.pricingDiagnostics.searches.every(search => search.providerTotal === 134 && search.retrievedCount === cap && search.unexaminedProviderCount === 134 - cap));

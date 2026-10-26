@@ -101,7 +101,7 @@ try {
       await page.getByRole('button', { name: 'Verify Variant', exact: true }).click();
       await page.getByLabel('Version / parallel').fill('Alternate Art');
       await page.getByRole('button', { name: 'Confirm and revalue', exact: true }).click();
-      await page.getByText('Live Raw Market', { exact: true }).waitFor();
+      await page.getByTestId('market-evidence-analysis').waitFor();
       assert.equal(requestCount, 2);
       assert.equal(result.payload.imageAnalysis, null);
       assert.equal(result.payload.atlasIdentityConfidence, null);
@@ -112,16 +112,16 @@ try {
     } else {
       await page.getByRole('button', { name: 'Copy Summary', exact: true }).waitFor();
       const withheld = await page.getByText('Valuation and grading ROI withheld', { exact: true }).count() > 0;
-      const trusted = result.observed.valuationStatus === 'trusted';
-      assert.equal(withheld, !trusted, result.id + ': UI honors API trust');
+      const analysisAvailable = result.observed.valuationStatus === 'provisional';
+      assert.equal(withheld, !analysisAvailable, result.id + ': UI honors API trust');
       let shownRaw = null;
-      if (trusted) {
-        shownRaw = await page.getByText('Live Raw Market', { exact: true }).locator('..').innerText();
+      if (analysisAvailable) {
+        shownRaw = await page.getByTestId('market-evidence-analysis').innerText();
         assert.ok(shownRaw.includes('$' + formatMoney(result.observed.marketMedian)));
         const body = await page.locator('body').innerText();
-        assert.ok(body.includes(result.report.analysis));
-        assert.ok(body.includes(result.report.action));
-        assert.ok(body.includes((result.report.expectedNetValue < 0 ? '-$' : '+$') + formatMoney(Math.abs(result.report.expectedNetValue))));
+        assert.ok(body.includes('Provisional market analysis'));
+        assert.doesNotMatch(await page.getByTestId('market-evidence-analysis').locator('..').innerText(), /Grade It|Skip It|Consider It/);
+        assert.ok(body.includes('$' + formatMoney(result.report.expectedNetValue)));
         if (result.id === 'model-price-drift') assert.ok(!body.includes('$150'));
         if (result.id === 'fractional-price') assert.ok(shownRaw.includes('$2.50'));
       } else {
@@ -145,20 +145,10 @@ try {
       await page.getByRole('button', { name: 'Load', exact: true }).click();
       await page.getByRole('button', { name: 'Copy Summary', exact: true }).click();
       assert.equal(await page.evaluate(() => window.__stageACopy), copied);
-      const atlasConsistent = !trusted || result.payload.atlas.marketEvidence.comparableCount === result.observed.usedCount && result.payload.atlas.marketEvidence.confidence === result.observed.marketConfidence && result.payload.atlas.decision.decision === result.report.verdict;
-      let atlasMarket = null;
-      if (trusted) {
-        atlasMarket = await page.getByText('Market', { exact: true }).locator('..').innerText();
-        assert.ok(atlasMarket.includes(result.observed.marketConfidence + '%'));
-        assert.ok(atlasMarket.includes(result.observed.usedCount + ' asking-price listings'));
-        const decision = await page.getByText('Decision', { exact: true }).locator('..').innerText();
-        assert.ok(decision.includes(result.payload.atlas.decision.label));
-        assert.equal(result.payload.atlas.decision.label, result.report.verdict === 'skip' ? 'Skip It' : 'Consider It');
-        const imageMetric = await page.getByText('Image identity', { exact: true }).locator('..').innerText();
-        if (!result.payload.imageAnalysis) { assert.ok(imageMetric.includes('No image')); assert.ok(!imageMetric.includes('%')); }
-        assert.doesNotMatch(await page.locator('body').innerText(), /comparable sales|completed sales|completed transactions/i);
-      }
-      const numericalAgreement = !trusted || result.report.rawValue === result.observed.marketMedian && result.report.expectedNetValue === result.report.expectedGradedValue - result.observed.marketMedian - result.report.psaFee && result.report.gradingUpside === result.report.psa10Value - result.observed.marketMedian - result.report.psaFee;
+      const atlasConsistent = result.payload.atlas === null;
+      const atlasMarket = null;
+      assert.equal(await page.getByText('Atlas Intelligence', { exact: true }).count(), 0);
+      const numericalAgreement = !analysisAvailable || result.report.rawValue === result.observed.marketMedian && result.report.expectedNetValue === result.report.expectedGradedValue - result.observed.marketMedian - result.report.psaFee && result.report.gradingUpside === result.report.psa10Value - result.observed.marketMedian - result.report.psaFee;
       let completionCorrect = null;
       let completionAtlasConsistent = true;
       if (scenario.id === 'text-subject-only') {
@@ -168,16 +158,16 @@ try {
         await page.getByLabel('Set / product', { exact: true }).fill('Shining Legends');
         await page.getByLabel('Version / parallel').fill('Common non-holo');
         await page.getByRole('button', { name: 'Confirm and revalue', exact: true }).click();
-        await page.getByText('Live Raw Market', { exact: true }).waitFor();
+        await page.getByTestId('market-evidence-analysis').waitFor();
         assert.equal(requestCount, 2);
-        assert.ok((await page.getByText('Live Raw Market', { exact: true }).locator('..').innerText()).includes('$12'));
+        assert.ok((await page.getByTestId('market-evidence-analysis').innerText()).includes('$12'));
         const completedSaved = await page.evaluate(() => JSON.parse(localStorage.getItem('gp_saved_reports'))[0]);
         assert.equal(completedSaved.marketData.marketSummary.rawMedian, 12);
         assert.equal(completedSaved.rawValue, 12);
         await page.getByRole('button', { name: 'Copy Summary', exact: true }).click();
-        assert.match(await page.evaluate(() => window.__stageACopy), /Raw: \$12/);
+        assert.match(await page.evaluate(() => window.__stageACopy), /Raw baseline: \$12/);
         completionCorrect = true;
-        completionAtlasConsistent = completion.payload.atlas.marketEvidence.comparableCount === completion.observed.usedCount;
+        completionAtlasConsistent = completion.payload.atlas === null;
       }
       if (scenario.id === 'fanmade-known-identity') {
         assert.equal(result.payload.valuationVerification.reason, 'authenticity_unresolved');
@@ -227,18 +217,18 @@ try {
         await page.getByRole('button', { name: 'Verify Variant', exact: true }).click();
         await page.getByLabel('Set / product', { exact: true }).fill('Obsidian Flames');
         await page.getByRole('button', { name: 'Confirm and revalue', exact: true }).click();
-        await page.getByText('Live Raw Market', { exact: true }).waitFor();
+        await page.getByTestId('market-evidence-analysis').waitFor();
         assert.equal(requestCount, 2);
-        assert.ok((await page.getByText('Live Raw Market', { exact: true }).locator('..').innerText()).includes('$100'));
+        assert.ok((await page.getByTestId('market-evidence-analysis').innerText()).includes('$100'));
         await page.getByRole('button', { name: 'Copy Summary', exact: true }).click();
-        assert.match(await page.evaluate(() => window.__stageACopy), /Raw: \$100/);
+        assert.match(await page.evaluate(() => window.__stageACopy), /Raw baseline: \$100/);
         const confirmedSaved = await page.evaluate(() => JSON.parse(localStorage.getItem('gp_saved_reports'))[0]);
         assert.equal(confirmedSaved.rawValue, 100);
         assert.equal(confirmedSaved.canonicalCard.brandSet, 'Obsidian Flames');
         setConfirmationCorrect = true;
-        completionAtlasConsistent = setConfirmation.payload.atlas.marketEvidence.comparableCount === setConfirmation.observed.usedCount;
+        completionAtlasConsistent = setConfirmation.payload.atlas === null;
       }
-      checks.push({ id: result.id, uiCorrect: trusted === scenario.expectedTrusted && numericalAgreement && atlasConsistent && completionAtlasConsistent, b2FlowCorrect: scenario.id === 'dragalge-conflicting-sets' ? !trusted && setConfirmationCorrect === true : undefined, setConfirmationCorrect, b4FlowCorrect: ['model-price-drift', 'fractional-price'].includes(scenario.id) ? numericalAgreement : undefined, b1FlowCorrect: scenario.textOnly ? trusted === scenario.expectedTrusted && numericalAgreement && (scenario.id !== 'text-subject-only' || completionCorrect === true) : undefined, completionCorrect, completionAtlasConsistent, valuationFlowCorrect: trusted === scenario.expectedTrusted && numericalAgreement, atlasConsistent, atlasMarket, showsTrusted: trusted, shownRaw, copied, persistedRaw: saved.rawValue, persistedMedian: saved.marketData.marketSummary.rawMedian, numericalAgreement, pageErrors: errors });
+      checks.push({ id: result.id, uiCorrect: analysisAvailable === scenario.expectedTrusted && numericalAgreement && atlasConsistent && completionAtlasConsistent, b2FlowCorrect: scenario.id === 'dragalge-conflicting-sets' ? !analysisAvailable && setConfirmationCorrect === true : undefined, setConfirmationCorrect, b4FlowCorrect: ['model-price-drift', 'fractional-price'].includes(scenario.id) ? numericalAgreement : undefined, b1FlowCorrect: scenario.textOnly ? analysisAvailable === scenario.expectedTrusted && numericalAgreement && (scenario.id !== 'text-subject-only' || completionCorrect === true) : undefined, completionCorrect, completionAtlasConsistent, valuationFlowCorrect: analysisAvailable === scenario.expectedTrusted && numericalAgreement, atlasConsistent, atlasMarket, showsTrusted: analysisAvailable, shownRaw, copied, persistedRaw: saved.rawValue, persistedMedian: saved.marketData.marketSummary.rawMedian, numericalAgreement, pageErrors: errors });
     }
     assert.deepEqual(errors, [], result.id);
     console.log(`${checks.at(-1).uiCorrect ? 'PASS' : 'FAIL'} Stage A browser ${result.id}`);

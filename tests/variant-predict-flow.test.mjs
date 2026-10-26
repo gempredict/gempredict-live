@@ -1,3 +1,5 @@
+import { fetchCompletedSales } from "../lib/completedSales.mjs";
+import { isVariantVerificationTrusted } from "../lib/valuationProtection.mjs";
 import { predictionPricingReceipt } from "../lib/pricingDiagnostics.mjs";
 import { isVercelPreview, verifyPreviewIntegration } from '../lib/previewIntegration.mjs';
 import { mockCatalog } from './helpers/catalogFixtures.mjs';
@@ -31,7 +33,7 @@ async function predict(fields, imageAnalysis = null, evidence = neutralListings)
   const marketUrls = [];
   const neutralQueries = [];
   const context = {
-    predictionPricingReceipt, isVercelPreview, verifyPreviewIntegration,
+    isVariantVerificationTrusted, fetchCompletedSales, predictionPricingReceipt, isVercelPreview, verifyPreviewIntegration,
     console: { log() {}, error() {} }, Buffer,
     CARD_NAME_MIN: 2, CARD_NAME_MAX: 80, CARD_SET_MAX: 60, IMAGE_MAX_BYTES: 10485760,
     RATE_LIMIT_MAX: 5, VALID_CARD_TYPES: new Set(['onepiece', 'pokemon']), supabase: null,
@@ -92,18 +94,18 @@ test('real prediction handler revalues selected art and withholds ROI if ambigui
       return { ok: true, status: 200, headers: new Headers({ 'content-type': 'application/json' }), json: async () => fresh.payload };
     });
     assert.equal(freshCalls, 1);
-    assert.equal(completed.valuationVerification.status, 'trusted');
+    assert.equal(completed.valuationVerification.status, 'provisional');
     assert.equal(completed.marketData.marketSummary.rawMedian, 80);
     const verifiedText = await predict({ cardName: 'Eustass Captain Kid OP14-014 Standard Art', cardSet: '2026 One Piece', cardType: 'onepiece' }, null, [listing(20, 'Standard Art', 1), listing(21, 'Standard Art', 1), listing(22, 'Base', 1)]);
     assert.equal(verifiedText.payload.variantVerification.status, 'verified');
-    assert.equal(verifiedText.payload.valuationVerification.status, 'trusted');
+    assert.equal(verifiedText.payload.valuationVerification.status, 'provisional');
     assert.equal(verifiedText.payload.marketData.marketSummary.rawMedian, 1);
     for (const [parallel, price] of [['Standard Art', 1], ['Alternate Art', 80]]) {
       const result = await predict({ cardName: identity.subject, cardType: 'onepiece', confirmedCardIdentity: identity, confirmedVariant: { parallel, autoOrRelic: 'none' } });
       assert.equal(result.captured[0].parallel, parallel);
       assert.equal(result.payload.variantVerification.status, 'user_confirmed');
       assert.equal(result.payload.marketData.marketSummary.rawMedian, price);
-      assert.equal(result.payload.valuationVerification.status, 'trusted');
+      assert.equal(result.payload.valuationVerification.status, 'provisional');
       assert.equal(result.payload.originalCanonicalCard.parallel, 'Special Art');
     }
     const noPrices = await predict({ cardName: identity.subject, cardType: 'onepiece', confirmedCardIdentity: identity, confirmedVariant: { parallel: 'Manga', autoOrRelic: 'none' } });

@@ -6,7 +6,7 @@ import { createHash } from 'node:crypto';
 import { validateCatalogSnapshot, parseCatalogLiteral, reconcileHostedPrinting } from '../lib/tcgdexSnapshot.mjs';
 import { createTcgDexCatalog } from '../lib/tcgdexCatalog.mjs';
 import { identitySearchGate } from '../lib/catalogIdentity.mjs';
-import { isValuationTrusted, safeStoredReport } from '../lib/valuationProtection.mjs';
+import { isMarketAnalysisAvailable, safeStoredReport } from '../lib/valuationProtection.mjs';
 import { runPipeline } from './helpers/phase1Pipeline.mjs';
 function persist(name, report) {
   const file = process.env.FRESHNESS_VALIDATION_OUTPUT;
@@ -115,7 +115,7 @@ test('actual handler corrects stale catalog printing before valuation and retain
   assert.equal(result.payload.canonicalCard.parallel, 'Holo Special Art');
   assert.equal(result.payload.canonicalCard.brandSet, '30th Celebration');
   assert.equal(result.payload.valuationIdentityGate.allowed, true);
-  assert.equal(isValuationTrusted(result.report), true);
+  assert.equal(isMarketAnalysisAvailable(result.report), true);
   assert.equal(result.payload.marketData.rawComparableItems.length, 3);
   assert.equal(result.payload.marketData.excludedItems.length, 12);
   assert.equal(catalog.calls.length, 3); // No GitHub request per scan.
@@ -131,7 +131,7 @@ test('actual handler corrects stale catalog printing before valuation and retain
   }
   persist('corrected', result.report);
   const restored = safeStoredReport({ ...result.report, imageAnalysis: { ...result.report.imageAnalysis, imageSummary: 'Stellar Crown has sharp edges. Surface scratches visible.' } });
-  assert.equal(isValuationTrusted(restored), true);
+  assert.equal(isMarketAnalysisAvailable(restored), true);
   assert.doesNotMatch(restored.imageAnalysis.imageSummary, /Stellar Crown/);
   assert.match(restored.imageAnalysis.imageSummary, /Visible corner whitening/);
   for (const field of ['subject', 'cardNumber', 'year', 'brandSet']) {
@@ -143,7 +143,7 @@ test('actual handler corrects stale catalog printing before valuation and retain
 test('fallback cannot bypass sparse variants, protected identity choices or genuinely newer hosted contradictions', async () => {
   for (const neutral of [[], listings(title, 2)]) {
     const result = await runPipeline({ proposal, neutral, market: listings(), catalogOptions: transport() });
-    assert.equal(isValuationTrusted(result.report), false);
+    assert.equal(isMarketAnalysisAvailable(result.report), false);
     assert.equal(result.report.rawValue, null);
   }
   const protectedResult = await runPipeline({ proposal, fields: { cardType: 'pokemon', cardName: 'Unknown card from image', confirmedIdentity: { year: '2024', brandSet: 'Stellar Crown' } }, neutral: listings(), market: listings(), catalogOptions: transport() });
@@ -193,6 +193,6 @@ test('the exact trusted Pikachu fixture is preserved through protected same-depl
   assert.equal(result.payload.canonicalCard.brandSet, '30th Celebration');
   assert.equal(result.payload.canonicalCard.parallel, 'Holo Special Art');
   assert.equal(result.payload.valuationIdentityGate.allowed, true);
-  assert.equal(isValuationTrusted(result.report), true);
+  assert.equal(isMarketAnalysisAvailable(result.report), true);
   assert.equal(result.report.rawValue, 40);
 });

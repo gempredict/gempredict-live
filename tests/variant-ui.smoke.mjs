@@ -54,7 +54,7 @@ try {
       assert.equal(input.confirmedIdentity.brandSet, 'One Piece');
       assert.equal(input.marketData, undefined);
       assert.equal(input.rawValue, undefined);
-      const canonicalCard = { ...report.canonicalCard, parallel: 'Alternate Art', displayName: '2026 One Piece Eustass Captain Kid Alternate Art OP14-014' };
+      const canonicalCard = { ...input.confirmedCardIdentity, parallel: 'Alternate Art', displayName: '2026 One Piece Eustass Captain Kid Alternate Art OP14-014' };
       const payload = protectValuation({
         ...verifiedIdentity(canonicalCard),
         prediction: { cardTitle: report.cardTitle, cardMeta: '2026 One Piece Alternate Art', rawValue: 80, psa9Value: 100, psa10Value: 150, gradingUpside: -10, expectedNetValue: -20, verdict: 'maybe', psa10Probability: 50, gemPredictScore: 60 },
@@ -92,7 +92,8 @@ try {
   await page.getByLabel('Set / product', { exact: true }).fill('One Piece');
   await page.getByLabel('Version / parallel').fill('Alternate Art');
   await page.getByRole('button', { name: 'Confirm and revalue' }).click();
-  await page.getByText('$80', { exact: true }).first().waitFor();
+  await page.getByTestId('market-evidence-analysis').waitFor();
+  assert.match(await page.getByTestId('market-evidence-analysis').innerText(), /\$80/);
   assert.equal(revaluations, 1);
   assert.ok(!(await page.locator('body').innerText()).includes('987,654'));
   const saved = await page.evaluate(() => JSON.parse(localStorage.getItem('gp_saved_reports')));

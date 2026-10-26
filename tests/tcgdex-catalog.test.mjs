@@ -7,7 +7,7 @@ import { createTcgDexCatalog } from '../lib/tcgdexCatalog.mjs';
 import { resolveMarketIdentity } from '../lib/reconcileMarketIdentity.mjs';
 import { crossCheckCatalog, identitySearchGate } from '../lib/catalogIdentity.mjs';
 import { runPipeline } from './helpers/phase1Pipeline.mjs';
-import { isValuationTrusted, safeStoredReport } from '../lib/valuationProtection.mjs';
+import { isMarketAnalysisAvailable, safeStoredReport } from '../lib/valuationProtection.mjs';
 
 // Documented V2 response shapes, with facts checked in the public upstream
 // 30th Celebration and 149.ts records. Live delivery is policy-blocked.
@@ -70,7 +70,7 @@ test('actual prediction pipeline searches only the corrected identity and retain
   assert.ok(result.payload.marketData.rawComparableItems.every(item => item.title.includes('30th Celebration')));
   assert.equal(result.payload.marketData.excludedItems.length, 3);
   assert.equal(result.report.rawValue, 40);
-  assert.equal(isValuationTrusted(result.report), true);
+  assert.equal(isMarketAnalysisAvailable(result.report), true);
   assert.ok(result.payload.identityDiagnostics.catalog.diagnostics.some(item => item.endpoint?.includes('/cards/30th-149')));
 });
 
@@ -286,7 +286,7 @@ test('documented SIR rarity aliases match the corrected artwork without acceptin
     assert.equal(result.payload.variantVerification.status, 'verified');
     assert.equal(result.payload.marketData.rawComparableItems.length, 3);
     assert.equal(result.payload.marketData.excludedItems.length, 3);
-    assert.equal(isValuationTrusted(result.report), true);
+    assert.equal(isMarketAnalysisAvailable(result.report), true);
   }
 });
 
@@ -318,7 +318,7 @@ test('default English lookup scope does not silently certify a physical card lan
   const chosen = { ...proposal, brandSet: '30th Celebration', year: '2026', language: 'English' };
   const completed = await runPipeline({ proposal, textOnly: true, fields: { cardType: 'pokemon', cardName: proposal.subject, confirmedCardIdentity: chosen, originalIdentityProposal: proposal, confirmedIdentity: { brandSet: chosen.brandSet, year: chosen.year }, confirmedVariant: { parallel: 'Special Art', autoOrRelic: 'none' } }, neutral: listings('2026 Pokemon 30th Celebration Pikachu ex 149/128 Special Art'), market: listings('2026 Pokemon 30th Celebration Pikachu ex 149/128 Special Art'), catalogOptions: transport() });
   assert.equal(completed.payload.canonicalCard.language, 'en');
-  assert.equal(isValuationTrusted(completed.report), true);
+  assert.equal(isMarketAnalysisAvailable(completed.report), true);
 });
 
 test('live English Pikachu SIR gains a catalog-supported holo finish after Stellar Crown correction', async () => {
@@ -330,7 +330,7 @@ test('live English Pikachu SIR gains a catalog-supported holo finish after Stell
   assert.equal(result.payload.identityVerification.catalog.candidate.parallel, 'Special Art');
   assert.equal(result.payload.variantVerification.status, 'corrected');
   assert.equal(result.payload.valuationIdentityGate.allowed, true, JSON.stringify(result.payload.valuationIdentityGate));
-  assert.equal(isValuationTrusted(result.report), true);
+  assert.equal(isMarketAnalysisAvailable(result.report), true);
 });
 
 test('catalog artwork equivalence requires positively supported and internally consistent finishes', async () => {
@@ -361,7 +361,7 @@ test('live corrected identity does not turn sparse variant evidence or unrelated
   for (const count of [0, 1, 2, 3]) {
     const result = await runPipeline({ proposal: { ...proposal, brandSet: 'Stellar Crown' }, neutral: listings(title).slice(0, count), market, catalogOptions: transport() });
     assert.equal(result.payload.canonicalCard.brandSet, '30th Celebration');
-    assert.equal(isValuationTrusted(result.report), count === 3);
+    assert.equal(isMarketAnalysisAvailable(result.report), count === 3);
     if (count < 3) assert.equal(result.report.rawValue, null);
     else {
       assert.equal(result.payload.marketData.rawComparableItems.length, 3);

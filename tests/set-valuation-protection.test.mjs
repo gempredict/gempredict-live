@@ -3,7 +3,7 @@ import { mockCatalog } from './helpers/catalogFixtures.mjs';
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { scoreListing } from '../lib/ebayIdentityMatch.mjs';
-import { protectValuation, isValuationTrusted, safeStoredReport, withheldSummary, requestVariantRevaluation } from '../lib/valuationProtection.mjs';
+import { protectValuation, isMarketAnalysisAvailable, safeStoredReport, withheldSummary, requestVariantRevaluation } from '../lib/valuationProtection.mjs';
 import { runPipeline } from './helpers/phase1Pipeline.mjs';
 import { scenarios } from './helpers/phase1Scenarios.mjs';
 
@@ -76,17 +76,17 @@ test('unresolved year/set conflicts withhold every financial recommendation desp
 });
 
 test('missing listing wording does not become a conflict; missing canonical set is unresolved; explicit choices remain protected', () => {
-  assert.equal(protectValuation({ ...payload, identityVerification: { ...payload.identityVerification, set: field('insufficient_evidence', 'Paldea Evolved') } }).valuationVerification.status, 'trusted');
+  assert.equal(protectValuation({ ...payload, identityVerification: { ...payload.identityVerification, set: field('insufficient_evidence', 'Paldea Evolved') } }).valuationVerification.status, 'provisional');
   for (const value of [null, '', 'unknown', 'N/A']) assert.equal(protectValuation({ ...payload, identityVerification: { ...payload.identityVerification, set: field('insufficient_evidence', value) } }).valuationVerification.status, 'untrusted');
   for (const status of ['verified', 'corrected', 'user_protected']) {
-    assert.equal(protectValuation({ ...payload, identityVerification: { ...payload.identityVerification, set: field(status, 'Paldea Evolved', 3) } }).valuationVerification.status, 'trusted');
+    assert.equal(protectValuation({ ...payload, identityVerification: { ...payload.identityVerification, set: field(status, 'Paldea Evolved', 3) } }).valuationVerification.status, 'provisional');
   }
   assert.equal(protectValuation({ ...payload, identityVerification: { ...payload.identityVerification, year: { ...field('user_protected', '2023'), userValues: ['2023', '2024'] } } }).valuationVerification.reason, 'identity_unresolved');
 });
 
 test('previously trusted saved mixed-set reports are demoted before display/copy/share', () => {
   const report = { ...payload.prediction, variantVerification: payload.variantVerification, marketData: { marketSummary: { ...payload.marketData.marketSummary, valuationTrusted: true } }, identityVerification: { ...payload.identityVerification, set: field('unresolved_conflict', 'Paldea Evolved', 3) }, valuationVerification: { status: 'trusted', reason: null, explanation: 'Old prices matched.' } };
-  assert.equal(isValuationTrusted(report), false);
+  assert.equal(isMarketAnalysisAvailable(report), false);
   const saved = safeStoredReport(report);
   assert.equal(saved.valuationVerification.reason, 'identity_unresolved');
   assert.equal(saved.rawValue, null);
@@ -135,7 +135,7 @@ test('manual year/set selection uses fresh matching, honors protected identity a
       return { ok: true, status: 200, headers: new Headers({ 'content-type': 'application/json' }), json: async () => fresh.payload };
     });
     assert.equal(calls, 1);
-    assert.equal(isValuationTrusted(confirmed), true);
+    assert.equal(isMarketAnalysisAvailable(confirmed), true);
     assert.equal(confirmed.rawValue, price);
     assert.notEqual(confirmed.rawValue, 55);
     assert.equal(confirmed.originalCanonicalCard.brandSet, 'Paldea Evolved');
@@ -175,7 +175,7 @@ test('material year conflicts remain untrusted; manually selected year triggers 
     assert.equal(fresh.payload.marketData.marketSummary.rawUsedCount, 3);
     return { ok: true, status: 200, headers: new Headers({ 'content-type': 'application/json' }), json: async () => fresh.payload };
   });
-  assert.equal(isValuationTrusted(confirmed), true);
+  assert.equal(isMarketAnalysisAvailable(confirmed), true);
   assert.equal(confirmed.rawValue, 100);
   assert.equal(confirmed.originalCanonicalCard.year, '2017');
 });
@@ -203,7 +203,7 @@ test('resolved canonical metadata cannot bless an older mixed-set comparable poo
   const canonicalCard = { subject: 'Dragalge', cardNumber: '89/197', year: '2023', brandSet: 'Paldea Evolved', parallel: 'Common non-holo' };
   const marketData = { ...payload.marketData, rawComparableItems: [{ title }, { title: title.replace('Paldea Evolved', 'Obsidian Flames') }], marketSummary: { ...payload.marketData.marketSummary, rawMedian: 55, valuationTrusted: true } };
   const report = { ...payload.prediction, canonicalCard, variantVerification: payload.variantVerification, marketData, identityVerification: { ...payload.identityVerification, set: field('verified', 'Paldea Evolved') }, valuationVerification: { status: 'trusted' } };
-  assert.equal(isValuationTrusted(report), false);
+  assert.equal(isMarketAnalysisAvailable(report), false);
   assert.equal(safeStoredReport(report).rawValue, null);
   assert.equal(safeStoredReport(report).valuationVerification.reason, 'identity_unresolved');
   assert.doesNotMatch(withheldSummary(report), /\$|Grade it/);

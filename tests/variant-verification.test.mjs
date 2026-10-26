@@ -3,7 +3,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import { collectIdentityEvidence, buildNeutralIdentityQuery } from '../lib/marketIdentityEvidence.mjs';
 import { reconcileVariant, describeVariant, matchesVariantValuation, parseVariantConfirmation } from '../lib/variantVerification.mjs';
-import { protectValuation, safeStoredReport, withheldSummary, requestVariantRevaluation, isValuationTrusted } from '../lib/valuationProtection.mjs';
+import { protectValuation, safeStoredReport, withheldSummary, requestVariantRevaluation, isMarketAnalysisAvailable } from '../lib/valuationProtection.mjs';
 import { buildEbaySearchParams } from '../lib/ebayIdentityMatch.mjs';
 import ebayHandler from '../pages/api/ebay-search.js';
 
@@ -112,12 +112,12 @@ test('unresolved pricing is suppressed in API, atlas, stored reports and copied 
   assert.doesNotMatch(withheldSummary(stored), /\$|Grade It|2000/);
 });
 
-test('verified ordinary cards retain normal amounts; no comparable prices never grants trust', () => {
+test('verified ordinary cards retain provisional amounts; no comparable prices never grants analysis', () => {
   const variantVerification = reconcileVariant(pikachu, pikachu, evidence(pikachu, repeat('Pikachu 28/73 Regular Non-Holo'))).variantVerification;
   const normal = protectValuation({ ...verifiedIdentity(pikachu), prediction, marketData: prices, variantVerification });
   assert.equal(normal.prediction.rawValue, 20);
-  assert.equal(normal.marketData.marketSummary.valuationTrusted, true);
-  assert.equal(isValuationTrusted(normal), true);
+  assert.equal(normal.marketData.marketSummary.valuationTrusted, false);
+  assert.equal(isMarketAnalysisAvailable(normal), true);
   const missing = protectValuation({ ...verifiedIdentity(pikachu), prediction, marketData: { marketSummary: { rawUsedCount: 0, rawMedian: null } }, variantVerification });
   assert.equal(missing.valuationVerification.status, 'untrusted');
   assert.equal(missing.valuationVerification.reason, 'no_comparable_listings');
@@ -143,7 +143,7 @@ test('user confirmation requests a new valuation and never submits or unlocks ca
   assert.equal(fresh.imageAnalysis.corners, 'good');
   assert.equal(report.rawValue, 999);
   const noPrices = await requestVariantRevaluation(report, { parallel: 'Alternate Art' }, async () => ({ ok: true, status: 200, headers: new Headers({ 'content-type': 'application/json' }), json: async () => protectValuation({ prediction, variantVerification: verifiedVariant(kid, 'user_confirmed'), marketData: null }) }));
-  assert.equal(isValuationTrusted(noPrices), false);
+  assert.equal(isMarketAnalysisAvailable(noPrices), false);
   assert.equal(noPrices.rawValue, null);
   assert.equal(parseVariantConfirmation({ parallel: 'Special / Alternate Art' }), null);
 });
@@ -208,7 +208,7 @@ test('stored untrusted reports cannot promote stale prices even if their version
   assert.equal(stored.rawValue, null);
   assert.equal(stored.marketData.marketSummary.rawMedian, null);
   assert.equal(stored.marketData.marketSummary.valuationTrusted, false);
-  assert.equal(isValuationTrusted(stored), false);
+  assert.equal(isMarketAnalysisAvailable(stored), false);
 });
 
 

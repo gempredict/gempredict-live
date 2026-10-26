@@ -4,13 +4,13 @@ import { readFileSync } from 'node:fs';
 import vm from 'node:vm';
 import { liveReportScenario, catalog, listings, title } from './helpers/liveReportFixture.mjs';
 import { runPipeline } from './helpers/phase1Pipeline.mjs';
-import { isValuationTrusted, safeStoredReport, requestVariantRevaluation, visualConditionAnalysis } from '../lib/valuationProtection.mjs';
+import { isMarketAnalysisAvailable, safeStoredReport, requestVariantRevaluation, visualConditionAnalysis } from '../lib/valuationProtection.mjs';
 import { loggingFailure, supabaseConfigStatus } from '../lib/supabaseDiagnostics.mjs';
 import { listingDiagnostics, safeListingDiagnostics, predictionPricingReceipt } from '../lib/pricingDiagnostics.mjs';
 import ebayHandler from '../pages/api/ebay-search.js';
 const options = liveReportScenario();
 function assertBlocked(report) {
-  assert.equal(isValuationTrusted(report), false); assert.equal(report.rawValue, null); assert.equal(report.atlas, null);
+  assert.equal(isMarketAnalysisAvailable(report), false); assert.equal(report.rawValue, null); assert.equal(report.atlas, null);
   for (const field of ['estimatedGrade', 'gradeCeiling', 'mostLikelyGradeRange', 'psa10Upside', 'overallScore', 'confidenceLevel']) assert.equal(report.imageAnalysis[field], null, field);
   assert.match(report.imageAnalysis.imageSummary, /Catalog-supported identity: 2026.*30th Celebration.*Visible corner whitening/);
   assert.doesNotMatch(report.imageAnalysis.imageSummary, /Paldea Evolved|Obsidian Flames|PSA 8/);
@@ -46,7 +46,7 @@ test('confirmation fetches fresh prices and reports a fresh withheld outcome; le
       const next = await runPipeline({ ...options, textOnly: true, fields, market, catalogOptions: catalog() });
       return Response.json(next.payload);
     });
-    assert.equal(isValuationTrusted(fresh), market.length > 0);
+    assert.equal(isMarketAnalysisAvailable(fresh), market.length > 0);
     assert.notEqual(fresh.pricingDiagnostics.requestId, initial.report.pricingDiagnostics.requestId);
     assert.equal(fresh.canonicalCard.brandSet, '30th Celebration');
     if (!market.length) assertBlocked(fresh); else assert.equal(fresh.rawValue, 40);
@@ -63,7 +63,7 @@ test('wrong year/set/number/finish results are retrieved but excluded, not misla
 });
 test('trusted report prose and stale display names use canonical identity while legitimate pricing survives', async () => {
   const result = await runPipeline({ ...options, market: listings(), predictionReply: { cardTitle: 'Paldea Evolved Pikachu', analysis: 'Paldea Evolved is valuable. Review condition.', action: '2023 card should grade. Review condition.' }, catalogOptions: catalog() });
-  assert.equal(isValuationTrusted(result.report), true);
+  assert.equal(isMarketAnalysisAvailable(result.report), true);
   assert.doesNotMatch(result.report.analysis || '', /Paldea/); assert.doesNotMatch(result.report.action || '', /2023/);
   const restored = safeStoredReport({ ...result.report, canonicalCard: { ...result.report.canonicalCard, displayName: 'Paldea Evolved 2023' }, cardTitle: 'Paldea Evolved 2023' });
   assert.match(restored.cardTitle, /2026.*30th Celebration/); assert.equal(restored.rawValue, 40);
@@ -123,10 +123,10 @@ test('logging client is isolated from session persistence without forcing author
 
 test('a saved Atlas narrative derived from superseded visual prose is withheld without invalidating legitimate prices', async () => {
   const result = await runPipeline({ ...liveReportScenario(), market: listings() });
-  assert.ok(result.report.atlas);
-  assert.ok(safeStoredReport(result.report).atlas);
+  assert.equal(result.report.atlas, null);
+  assert.equal(safeStoredReport(result.report).atlas, null);
   const stale = safeStoredReport({ ...result.report, imageAnalysis: { ...result.report.imageAnalysis, cornersNote: 'Paldea Evolved looks sharp. Corner whitening is visible.' } });
-  assert.equal(stale.atlas, null); assert.equal(stale.rawValue, 40); assert.equal(isValuationTrusted(stale), true);
+  assert.equal(stale.atlas, null); assert.equal(stale.rawValue, 40); assert.equal(isMarketAnalysisAvailable(stale), true);
   assert.equal(stale.imageAnalysis.cornersNote, 'Visible corner whitening.');
 });
 

@@ -3,7 +3,7 @@ import assert from 'node:assert/strict';
 import { writeFileSync } from 'node:fs';
 import { runPipeline } from './helpers/phase1Pipeline.mjs';
 import { scenarios } from './helpers/phase1Scenarios.mjs';
-import { isValuationTrusted, safeStoredReport, requestVariantRevaluation } from '../lib/valuationProtection.mjs';
+import { isMarketAnalysisAvailable, safeStoredReport, requestVariantRevaluation } from '../lib/valuationProtection.mjs';
 
 // B1–B5 desired behavior now runs as ordinary assertions.
 const blockers = {
@@ -14,14 +14,14 @@ for (const scenario of scenarios) {
   results.push(result);
   test(`Stage A ${scenario.id}`, blockers[scenario.id] ? { todo: blockers[scenario.id] } : {}, () => {
     assert.equal(result.httpStatus, 200, JSON.stringify(result.errors));
-    assert.equal(isValuationTrusted(result.report), scenario.expectedTrusted);
+    assert.equal(isMarketAnalysisAvailable(result.report), scenario.expectedTrusted);
     if (scenario.expectedTrusted) {
       assert.equal(result.observed.usedCount, 3);
       assert.equal(result.observed.marketConfidence, 55);
       assert.equal(result.report.rawValue, result.observed.marketMedian);
       assert.equal(result.report.expectedNetValue, result.report.expectedGradedValue - result.observed.marketMedian - result.report.psaFee);
       assert.equal(result.report.gradingUpside, result.report.psa10Value - result.observed.marketMedian - result.report.psaFee);
-      assert.ok(result.copied.includes(`Raw: $${result.observed.marketMedian}`));
+      assert.ok(result.copied.includes(`Raw baseline: $${result.observed.marketMedian}`));
     } else {
       assert.equal(result.report.rawValue, null);
       assert.equal(result.report.gradingUpside, null);
@@ -127,18 +127,18 @@ test('B1 subject-only manual completion invokes the actual handler with fresh id
     return { ok: true, status: 200, headers: new Headers({ 'content-type': 'application/json' }), json: async () => fresh.payload };
   });
   assert.equal(freshRequests, 1);
-  assert.equal(isValuationTrusted(completed), true);
+  assert.equal(isMarketAnalysisAvailable(completed), true);
   assert.equal(completed.canonicalCard.cardNumber, '28/73');
   assert.equal(completed.marketData.marketSummary.rawMedian, 12);
   assert.equal(completed.rawValue, 12);
   assert.equal(completed.variantVerification.status, 'user_confirmed');
 });
 
-test('Stage A Atlas panel receives selected market evidence', () => {
+test('asking-only Stage A reports preserve market diagnostics but withhold Atlas', () => {
   const result = results.find(item => item.id === 'pikachu-non-holo');
-  assert.equal(result.payload.atlas.marketEvidence.comparableCount, result.observed.usedCount);
-  assert.equal(result.payload.atlas.marketEvidence.confidence, result.observed.marketConfidence);
-  assert.equal(result.payload.atlas.decision.label, 'Consider It');
+  assert.equal(result.payload.atlas, null);
+  assert.equal(result.payload.financialDecision.status, 'provisional');
+  assert.equal(result.payload.marketData.marketSummary.rawUsedCount, result.observed.usedCount);
 });
 
 // Only synthetic fixture data is written, never credentials or real user images.

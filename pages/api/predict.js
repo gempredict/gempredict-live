@@ -1,3 +1,4 @@
+import { fetchCompletedSales } from "../../lib/completedSales.mjs";
 import { loggingFailure } from "../../lib/supabaseDiagnostics.mjs";
 import { predictionPricingReceipt } from "../../lib/pricingDiagnostics.mjs";
 import { validateAnalysisImage } from "../../lib/uploadValidation.mjs";
@@ -8,7 +9,7 @@ import { calculateGradingEconomics } from '../../lib/gradingEconomics.mjs';
 import { selectMarketQuery } from "../../lib/marketQuerySelection.mjs";
 import { buildCanonicalCardFromText, missingTextIdentityFields } from "../../lib/textCardIdentity.mjs";
 import { reconcileVariant, parseVariantConfirmation } from "../../lib/variantVerification.mjs";
-import { protectValuation } from "../../lib/valuationProtection.mjs";
+import { isVariantVerificationTrusted, protectValuation } from "../../lib/valuationProtection.mjs";
 import { getUserIdentityProtection } from "../../lib/userIdentityProtection.mjs";
 import { resolveMarketIdentity } from "../../lib/reconcileMarketIdentity.mjs";
 // pages/api/predict.js
@@ -214,8 +215,8 @@ function extractJSON(text) {
 function normaliseCard(raw, marketMedian = null) {
   if (!raw || typeof raw !== "object" || Array.isArray(raw)) return null;
   const financials = calculateGradingEconomics(raw, marketMedian ?? raw.rawValue);
-  const psa9Pop = raw.psa9Pop != null ? Math.max(0, safeInt(raw.psa9Pop)) : null;
-  const psa10Pop = raw.psa10Pop != null ? Math.max(0, safeInt(raw.psa10Pop)) : null;
+  const psa9Pop = null; // Population counts require an authorized population source.
+  const psa10Pop = null;
   return {
     cardTitle: (typeof raw.cardTitle === "string" && raw.cardTitle.trim() ? raw.cardTitle.trim() : "Unknown Card").slice(0, 120),
     cardMeta: (typeof raw.cardMeta === "string" && raw.cardMeta.trim() ? raw.cardMeta.trim() : "Details unavailable").slice(0, 200),
@@ -430,13 +431,11 @@ marketContext +
     "gradingUpside - psa10Value minus rawValue minus 80 (number, cents allowed)\n" +
     "analysis - 2 sentences max: direct, practical, no filler (string)\n" +
     "action - one sentence starting with a verb, specific to this card and condition (string)\n" +
-    "psa9Pop - estimated PSA 9 population count based on collector market knowledge (integer)\n" +
-    "psa10Pop - estimated PSA 10 population count based on collector market knowledge (integer)\n" +
-    "populationInsight - one concise sentence interpreting the population for collectors (string)\n\n" +
+    "psa9Pop - null; never estimate observed population counts\n" +
+    "psa10Pop - null; never estimate observed population counts\n" +
+    "populationInsight - state that independently sourced population data is unavailable (string)\n\n" +
     "Population rules:\n" +
-    "- psa9Pop and psa10Pop are whole integers — realistic estimates based on known collector market data\n" +
-    "- A low psa10Pop relative to psa9Pop suggests scarcity and stronger grading premium\n" +
-    "- A high psa10Pop relative to psa9Pop suggests common gem rate and weaker scarcity premium\n" +
+    "- Population counts are unavailable without an independent population provider; return null\n" +
     "- populationInsight should be short, direct, and collector-focused (one sentence only)\n\n" +
     "Verdict rules: grade=clear positive ROI with realistic grade potential; " +
     "skip=fee risk outweighs realistic upside given condition; " +
@@ -918,8 +917,14 @@ const atlasIdentityConfidence = imageAnalysis
 });
 
    
+    const completedSales = valuationIdentityGate.allowed && isVariantVerificationTrusted(variantVerification, canonicalCard)
+      ? await fetchCompletedSales(canonicalCard)
+      : { status: 'unavailable', reason: 'identity_or_variant_unresolved', records: [] };
     const result = protectValuation({
   success: true,
+  completedSales,
+  populationRecord: null,
+  probabilityEvidence: null,
   prediction,
   marketData,
   authenticityWarnings: Array.isArray(fields.authenticityWarnings) ? fields.authenticityWarnings : [],

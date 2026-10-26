@@ -3,7 +3,7 @@ import assert from 'node:assert/strict';
 import { unofficialReasons } from '../lib/cardAuthenticity.mjs';
 import { scoreListing, getListingType } from '../lib/ebayIdentityMatch.mjs';
 import { matchIdentityEvidence } from '../lib/marketIdentityEvidence.mjs';
-import { requestVariantRevaluation, safeStoredReport, isValuationTrusted, withheldSummary } from '../lib/valuationProtection.mjs';
+import { requestVariantRevaluation, safeStoredReport, isMarketAnalysisAvailable, withheldSummary } from '../lib/valuationProtection.mjs';
 import { runPipeline } from './helpers/phase1Pipeline.mjs';
 import { scenarios } from './helpers/phase1Scenarios.mjs';
 const pika = scenarios.find(s => s.id === 'pikachu-non-holo');
@@ -64,7 +64,7 @@ test('original image warning blocks even clean matching listings and survives fr
   assert.ok(fresh.metrics.valuationBrowse > 0);
   assert.equal(fresh.payload.variantVerification.status, 'user_confirmed');
   assert.equal(fresh.payload.valuationVerification.reason, 'authenticity_unresolved');
-  assert.equal(isValuationTrusted(confirmed), false);
+  assert.equal(isMarketAnalysisAvailable(confirmed), false);
   assert.equal(confirmed.rawValue, null);
   const reopened = safeStoredReport({ ...confirmed, rawValue: 999, valuationVerification: { status: 'trusted' }, marketData: { ...confirmed.marketData, marketSummary: { ...confirmed.marketData.marketSummary, valuationTrusted: true } } });
   assert.equal(reopened.rawValue, null);

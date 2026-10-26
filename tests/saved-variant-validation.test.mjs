@@ -3,14 +3,14 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import { runPipeline } from './helpers/phase1Pipeline.mjs';
 import { scenarios } from './helpers/phase1Scenarios.mjs';
-import { isValuationTrusted, isVariantVerificationTrusted, safeStoredReport, protectValuation, withheldSummary, reportFromPrediction } from '../lib/valuationProtection.mjs';
+import { isMarketAnalysisAvailable, isVariantVerificationTrusted, safeStoredReport, protectValuation, withheldSummary, reportFromPrediction } from '../lib/valuationProtection.mjs';
 const original = (await runPipeline(scenarios.find(s => s.id === 'pikachu-non-holo'))).report;
 const clone = () => structuredClone(original);
 const financial = ['rawValue', 'psa9Value', 'psa10Value', 'gradingUpside', 'expectedGradedValue', 'expectedNetValue', 'gemPredictScore', 'decisionConfidence', 'verdict', 'action', 'analysis', 'recommendation', 'financialBasis'];
 function assertWithheld(variantVerification) {
   const report = { ...clone(), variantVerification };
   assert.equal(isVariantVerificationTrusted(variantVerification, report.canonicalCard), false);
-  assert.equal(isValuationTrusted(report), false);
+  assert.equal(isMarketAnalysisAvailable(report), false);
   const safe = safeStoredReport(report);
   assert.equal(safe.valuationVerification.status, 'untrusted');
   assert.equal(safe.valuationVerification.reason, 'variant_unresolved');
@@ -26,7 +26,7 @@ function assertWithheld(variantVerification) {
   // Reapplying stored flags, amounts and economics cannot bypass missing or
   // downgraded variant evidence; trust must be checked again on every load.
   const forged = { ...clone(), ...safe, ...Object.fromEntries(financial.map(field => [field, original[field]])), valuationVerification: original.valuationVerification, marketData: original.marketData, atlas: original.atlas };
-  assert.equal(isValuationTrusted(forged), false);
+  assert.equal(isMarketAnalysisAvailable(forged), false);
   assert.equal(safeStoredReport(forged).rawValue, null);
 }
 
@@ -59,14 +59,14 @@ test('malformed variant verification objects and contradictory descriptor values
   ]) assertWithheld(verification);
 });
 
-test('valid independently supported verification states retain legitimate financial outputs', () => {
-  assert.equal(isValuationTrusted(original), true);
+test('valid independently supported verification states retain provisional financial scenarios', () => {
+  assert.equal(isMarketAnalysisAvailable(original), true);
   for (const status of ['verified', 'corrected', 'user_confirmed']) {
     const report = { ...clone(), variantVerification: { ...original.variantVerification, status } };
     const restored = safeStoredReport(report);
-    assert.equal(isValuationTrusted(restored), true);
+    assert.equal(isMarketAnalysisAvailable(restored), true);
     assert.equal(restored.rawValue, original.rawValue);
-    assert.ok(restored.atlas);
+    assert.equal(restored.atlas, null);
     assert.equal(restored.action, original.action);
   }
 });
@@ -74,8 +74,8 @@ test('valid independently supported verification states retain legitimate financ
 test('applicable base/non-variant and numbered sports reports use the same eligibility rules without claiming a sports provider', async () => {
   for (const id of ['ian-happ-correction', 'shane-smith-99', 'manual-variant-confirmation', 'text-complete']) {
     const result = await runPipeline(scenarios.find(s => s.id === id));
-    assert.equal(isValuationTrusted(result.report), true, id);
-    assert.equal(isValuationTrusted(safeStoredReport(result.report)), true, id);
+    assert.equal(isMarketAnalysisAvailable(result.report), true, id);
+    assert.equal(isMarketAnalysisAvailable(safeStoredReport(result.report)), true, id);
     assert.equal(safeStoredReport({ ...result.report, variantVerification: null }).rawValue, null, id);
   }
   // Base cards need their actual verification receipt, without inventing a
