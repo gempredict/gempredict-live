@@ -132,7 +132,7 @@ test('manual year/set selection uses fresh matching, honors protected identity a
       assert.equal(fresh.metrics.valuationBrowse, 6);
       assert.equal(fresh.payload.marketData.marketSummary.rawUsedCount, 3);
       assert.equal(fresh.payload.marketData.marketSummary.rawMedian, price);
-      return { ok: true, json: async () => fresh.payload };
+      return { ok: true, status: 200, headers: new Headers({ 'content-type': 'application/json' }), json: async () => fresh.payload };
     });
     assert.equal(calls, 1);
     assert.equal(isValuationTrusted(confirmed), true);
@@ -173,7 +173,7 @@ test('material year conflicts remain untrusted; manually selected year triggers 
     assert.equal(fresh.metrics.neutralBrowse, 1);
     assert.equal(fresh.metrics.valuationBrowse, 6);
     assert.equal(fresh.payload.marketData.marketSummary.rawUsedCount, 3);
-    return { ok: true, json: async () => fresh.payload };
+    return { ok: true, status: 200, headers: new Headers({ 'content-type': 'application/json' }), json: async () => fresh.payload };
   });
   assert.equal(isValuationTrusted(confirmed), true);
   assert.equal(confirmed.rawValue, 100);

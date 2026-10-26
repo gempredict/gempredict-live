@@ -1,3 +1,5 @@
+import { loggingFailure } from "../../lib/supabaseDiagnostics.mjs";
+import { predictionPricingReceipt } from "../../lib/pricingDiagnostics.mjs";
 import { validateAnalysisImage } from "../../lib/uploadValidation.mjs";
 import { MAX_IMAGE_BYTES } from "../../lib/mobileImages.mjs";
 import { isVercelPreview, verifyPreviewIntegration } from '../../lib/previewIntegration.mjs';
@@ -114,9 +116,9 @@ async function logRequest({ ip, cardName, cardType, cardSet, status, errorMessag
       status:        status || "unknown",
       error_message: errorMessage ? String(errorMessage).slice(0, 500) : null,
     });
-    if (error) console.error("[GemPredict] Log insert error:", error.code, error.message);
+    if (error) console.error("[GemPredict] Log insert diagnostic:", loggingFailure(error));
   } catch (err) {
-    console.error("[GemPredict] Log unexpected error:", err.message);
+    console.error("[GemPredict] Log insert diagnostic:", loggingFailure(err));
   }
 }
 
@@ -630,6 +632,7 @@ const backMime = backImageMimeType &&
 
 // ─── Main handler ─────────────────────────────────────────────────────────────
 export default async function handler(req, res) {
+  const startedAt = Date.now();
   const preview = isVercelPreview(process.env);
   if (preview && req.method === 'GET' && req.query?.preflight === '1' && process.env.GEMPREDICT_PREVIEW_PREFLIGHT_ENABLED === 'true') {
     const result = await verifyPreviewIntegration({ env: process.env, requestHeaders: req.headers, fetchImpl: fetch });
@@ -841,24 +844,6 @@ let effectiveCardName =
   cardSet
 ) || confirmedCardIdentity || (!imageBuffer ? buildCanonicalCardFromText({ ...fields, cardName, cardSet }) : null);
 
-console.log("[Atlas Identity Debug]", {
-  imageAnalysisIdentity: imageAnalysis
-    ? {
-        year: imageAnalysis.identifiedYear,
-        franchise: imageAnalysis.identifiedFranchise,
-        manufacturer: imageAnalysis.identifiedManufacturer,
-        set: imageAnalysis.identifiedBrandSet,
-        subject: imageAnalysis.identifiedSubject,
-        number: imageAnalysis.identifiedCardNumber,
-        parallel: imageAnalysis.identifiedParallel,
-        language: imageAnalysis.identifiedLanguage,
-        confidence: imageAnalysis.identityConfidence,
-        notes: imageAnalysis.identityNotes,
-      }
-    : null,
-  canonicalCard: originalCanonicalCard,
-});
-
 // This measures visible image identifiers only. Text/confirmation identities
 // still use market verification, but have no image confidence to calculate.
 const atlasIdentityConfidence = imageAnalysis
@@ -961,6 +946,10 @@ const atlasIdentityConfidence = imageAnalysis
     result.atlas = result.valuationVerification.status === "trusted"
       ? atlasOrchestrator({ ...result, gpScore: { score: result.prediction.gemPredictScore } })
       : null;
+    if (preview || process.env.NODE_ENV === 'development') {
+      result.pricingDiagnostics = predictionPricingReceipt(result, { startedAt, mode: confirmedVariant ? 'revaluation' : imageBuffer ? 'scan' : 'text' });
+      console.log('[GemPredict] Pricing diagnostic', result.pricingDiagnostics);
+    }
     return res.status(200).json(result);
 
   } catch (err) {

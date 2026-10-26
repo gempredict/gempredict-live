@@ -1,7 +1,7 @@
 import { normalizeMobileImage, assertUploadBudget, UploadError } from "../lib/mobileImages.mjs";
 import { requestPrediction } from "../lib/predictionTransport.mjs";
 import { identitySearchGate } from '../lib/catalogIdentity.mjs';
-import { isValuationTrusted, safeStoredReport, withheldSummary, reportFromPrediction, requestVariantRevaluation } from "../lib/valuationProtection.mjs";
+import { replaceRevaluedReport, canonicalDisplayName, isValuationTrusted, safeStoredReport, withheldSummary, reportFromPrediction, requestVariantRevaluation } from "../lib/valuationProtection.mjs";
 // src/App.jsx — GemPredict main component
 import { useState, useRef, useEffect } from "react";
 import { track } from "@vercel/analytics/react";
@@ -61,7 +61,7 @@ function lsGet(key) {
   try { return JSON.parse(localStorage.getItem(key) || "null"); } catch { return null; }
 }
 function lsSet(key, val) {
-  try { localStorage.setItem(key, JSON.stringify(val)); } catch {}
+  try { localStorage.setItem(key, JSON.stringify(val)); return true; } catch { return false; }
 }
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
@@ -203,7 +203,7 @@ function ImageAnalysisCard({ data, report }) {
         </div>
         <div style={{ display: "flex", alignItems: "center", gap: "0.6rem" }}>
           <span style={{ fontSize: "0.72rem", color: "rgba(255,255,255,0.4)" }}>Est. Grade:</span>
-          <span style={{ fontSize: "0.82rem", fontWeight: 700, color: C.gold }}>{data.estimatedGrade || "—"}</span>
+          <span style={{ fontSize: "0.82rem", fontWeight: 700, color: C.gold }}>{trusted ? data.estimatedGrade || "—" : "Projection withheld"}</span>
         </div>
       </div>
 
@@ -221,7 +221,7 @@ function ImageAnalysisCard({ data, report }) {
         data.identifiedYear ||
         data.identifiedParallel ||
         data.identifiedCardNumber) && (
-        <div
+        <div data-testid="photo-initial-identity"
           style={{
             margin: "1rem 1.25rem 0",
             background: C.cream,
@@ -346,13 +346,13 @@ function ImageAnalysisCard({ data, report }) {
     Grade Ceiling
   </div>
   <div style={{ fontSize: "0.9rem", fontWeight: 700, color: C.ink }}>
-    {data.gradeCeiling || data.estimatedGrade || "Unknown"}
+    {trusted ? data.gradeCeiling || data.estimatedGrade || "Unknown" : "Withheld"}
   </div>
 </div>
 
 <div style={{ background: "#fff7ed", border: "1px solid #fed7aa", borderRadius: 10, padding: "0.8rem 1rem", marginBottom: "1rem" }}>
   <div style={{ fontSize: "0.65rem", fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.08em", color: "#c2410c", marginBottom: "0.35rem" }}>
-    Primary Grade Limiter
+    {trusted ? "Primary Grade Limiter" : "Visible condition limiter"}
   </div>
   <div style={{ fontSize: "0.84rem", color: C.inkMid, lineHeight: 1.6 }}>
     {data.primaryLimiter || "No major limiter identified from the uploaded image."}
@@ -364,12 +364,12 @@ function ImageAnalysisCard({ data, report }) {
     Confidence Level
   </div>
   <div style={{ fontSize: "0.9rem", fontWeight: 700, color: C.ink }}>
-    {data.confidenceLevel || "Moderate"}
+    {trusted ? data.confidenceLevel || "Moderate" : "Grade confidence withheld"}
   </div>
 </div>
         <div style={{ background: "#fefce8", border: "1px solid #fde68a", borderRadius: 10, padding: "0.8rem 1rem", marginBottom: "1rem" }}>
   <div style={{ fontSize: "0.65rem", fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.08em", color: "#a16207", marginBottom: "0.35rem" }}>
-    Major Grade Cap
+    {trusted ? "Major Grade Cap" : "Visible condition limits"}
   </div>
   <div style={{ fontSize: "0.84rem", color: C.inkMid, lineHeight: 1.6 }}>
     {data.majorGradeCap || data.primaryLimiter || "No major grade cap identified."}
@@ -381,11 +381,11 @@ function ImageAnalysisCard({ data, report }) {
   </div>
 
   <div style={{ fontSize: "0.9rem", fontWeight: 700, color: C.ink, marginBottom: "0.35rem" }}>
-    {data.mostLikelyGradeRange || "Uncertain"}
+    {trusted ? data.mostLikelyGradeRange || "Uncertain" : "Grade projection withheld"}
   </div>
 
   <div style={{ fontSize: "0.84rem", color: C.inkMid, lineHeight: 1.6 }}>
-    {data.psa10Upside}
+    {trusted ? data.psa10Upside : null}
   </div>
 </div>
 
@@ -418,9 +418,9 @@ function ImageAnalysisCard({ data, report }) {
         {/* Overall score bar */}
         <div style={{ background: C.cream, borderRadius: 10, padding: "0.85rem 1rem", marginBottom: "1rem" }}>
           <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "0.45rem" }}>
-            <span style={{ fontSize: "0.72rem", fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.05em", color: C.inkSoft }}>Estimated PSA Grade</span>
+            <span style={{ fontSize: "0.72rem", fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.05em", color: C.inkSoft }}>{trusted ? "Estimated PSA Grade" : "Visual observations only"}</span>
             <span style={{ fontFamily: "'Playfair Display', serif", fontSize: "1.3rem", fontWeight: 700, color: overallR.color }}>
-              {data.overallScore != null ? data.overallScore + " / 10" : "—"}
+              {trusted && data.overallScore != null ? data.overallScore + " / 10" : "Withheld"}
             </span>
           </div>
           {data.overallScore != null && (
@@ -499,13 +499,17 @@ function WithheldResultCard({ data, onSave, isSaved, onVerifyVariant, onRescan }
   const [message, setMessage] = useState("");
   async function verify() {
     setBusy(true); setMessage("");
-    try { await onVerifyVariant(data, { parallel: version, autoOrRelic: features, identity }); setEditing(false); }
+    try {
+      const fresh = await onVerifyVariant(data, { parallel: version, autoOrRelic: features, identity });
+      setMessage(fresh && !isValuationTrusted(fresh) ? `Fresh check completed. Valuation remains withheld: ${fresh.valuationVerification?.explanation || "matching evidence is still unavailable."}` : "Fresh check completed.");
+      setEditing(false);
+    }
     catch (error) { setMessage(error.message); }
     finally { setBusy(false); }
   }
   const reason = data.valuationVerification?.explanation || "This version needs a fresh valuation.";
   return <div style={{ background: C.white, border: "1px solid " + C.border, borderRadius: 18, padding: "1.25rem" }}>
-    <h3 style={{ marginTop: 0 }}>{data.canonicalCard?.displayName || data.cardTitle}</h3>
+    <h3 style={{ marginTop: 0 }}>{canonicalDisplayName(data.canonicalCard) || data.cardTitle}</h3>
     <strong>Valuation and grading ROI withheld</strong>
     <p>{reason}</p>
     <p style={{ fontSize: "0.82rem", color: C.inkSoft }}>Condition analysis remains available below. No grading or resale recommendation is made until pricing is reliable.</p>
@@ -538,7 +542,7 @@ function TrustedResultCard({ data, index, onSave, isSaved }) {
   ? data.marketData.marketSummary
   : null;
   const displayTitle =
-  data.canonicalCard?.displayName || data.cardTitle;
+  canonicalDisplayName(data.canonicalCard) || data.cardTitle;
 
 const displayMeta =
   data.canonicalCard
@@ -1116,6 +1120,8 @@ export default function App() {
   const [waitlistEmail,   setWaitlistEmail]   = useState("");
   const [loading,         setLoading]         = useState(false);
   const [results,         setResults]         = useState([]);
+  const resultsRef = useRef(results);
+  useEffect(() => { resultsRef.current = results; }, [results]);
   const [imageAnalysis,   setImageAnalysis]   = useState(null);   // latest image analysis result
   const [error,           setError]           = useState("");
   const [rateLimitMsg,    setRateLimitMsg]    = useState("");
@@ -1278,12 +1284,24 @@ if (data.imageAnalysis) setImageAnalysis(data.imageAnalysis);
 
   async function handleVerifyVariant(report, confirmation) {
     const fresh = await requestVariantRevaluation(report, confirmation);
-    setResults(previous => previous.map(item => item === report ? fresh : item));
+    try {
+      const next = replaceRevaluedReport(resultsRef.current, report, fresh);
+      resultsRef.current = next;
+      setResults(next);
+      console.info('[GemPredict] Revaluation state', { outcome: 'updated', trusted: isValuationTrusted(fresh) });
+    } catch (error) {
+      console.info('[GemPredict] Revaluation state', { outcome: 'state_update_failed' });
+      throw error;
+    }
     setSavedReports(previous => {
       const next = previous.map(item => item.cardTitle === report.cardTitle ? { ...fresh, savedAt: item.savedAt } : item);
-      lsSet(LS_SAVED, next);
+      if (previous.some(item => item.cardTitle === report.cardTitle)) {
+        const stored = lsSet(LS_SAVED, next);
+        console.info('[GemPredict] Revaluation persistence', { outcome: stored ? 'saved' : 'storage_failed' });
+      }
       return next;
     });
+    return fresh;
   }
   function rescanVariant() {
     clearImage();

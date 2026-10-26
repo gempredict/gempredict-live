@@ -124,7 +124,7 @@ test('B1 subject-only manual completion invokes the actual handler with fresh id
     assert.equal(fresh.metrics.neutralBrowse, 1);
     assert.equal(fresh.metrics.valuationBrowse, 6);
     assert.equal(fresh.payload.imageAnalysis, null);
-    return { ok: true, json: async () => fresh.payload };
+    return { ok: true, status: 200, headers: new Headers({ 'content-type': 'application/json' }), json: async () => fresh.payload };
   });
   assert.equal(freshRequests, 1);
   assert.equal(isValuationTrusted(completed), true);

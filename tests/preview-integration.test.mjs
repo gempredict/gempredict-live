@@ -38,7 +38,7 @@ test('Preview forwards only the runtime OIDC token to the exact validated market
     calls++;
     assert.equal(new URL(url).origin, origin); assert.equal(new URL(url).pathname, '/api/ebay-search');
     assert.deepEqual(options.headers, { [TRUSTED_OIDC_HEADER]: token });
-    assert.equal(options.redirect, 'error');
+    assert.equal(options.redirect, 'manual');
     assert.ok(!url.includes(token));
     return { ok: true, json: async () => ({ success: true, marketSummary: { rawUsedCount: 3, rawMedian: 10, marketConfidence: 55 } }) };
   } });
@@ -154,7 +154,7 @@ test('marketplace protection failures cannot trigger cookie fallback or trusted 
     const result = await selectMarketQuery(card, { routingEnv: env, requestHeaders, fetchImpl: async (url, options) => {
       assert.equal(new URL(url).origin, origin);
       assert.deepEqual(options.headers, { [TRUSTED_OIDC_HEADER]: token });
-      assert.equal(options.redirect, 'error');
+      assert.equal(options.redirect, 'manual');
       return { ok: false, status };
     } });
     assert.equal(result.success, false);

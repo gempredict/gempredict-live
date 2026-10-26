@@ -136,13 +136,13 @@ test('user confirmation requests a new valuation and never submits or unlocks ca
     assert.equal(resolved.variantVerification.status, 'user_confirmed');
     assert.equal(resolved.canonicalCard.variant.art, 'alternate art');
     const payload = protectValuation({ ...verifiedIdentity(resolved.canonicalCard), prediction: { ...prediction, rawValue: 80 }, canonicalCard: resolved.canonicalCard, variantVerification: resolved.variantVerification, marketData: { marketSummary: { rawUsedCount: 1, rawMedian: 80 } } });
-    return { ok: true, json: async () => payload };
+    return { ok: true, status: 200, headers: new Headers({ 'content-type': 'application/json' }), json: async () => payload };
   });
   assert.equal(fresh.rawValue, 80);
   assert.equal(fresh.marketData.marketSummary.rawMedian, 80);
   assert.equal(fresh.imageAnalysis.corners, 'good');
   assert.equal(report.rawValue, 999);
-  const noPrices = await requestVariantRevaluation(report, { parallel: 'Alternate Art' }, async () => ({ ok: true, json: async () => protectValuation({ prediction, variantVerification: verifiedVariant(kid, 'user_confirmed'), marketData: null }) }));
+  const noPrices = await requestVariantRevaluation(report, { parallel: 'Alternate Art' }, async () => ({ ok: true, status: 200, headers: new Headers({ 'content-type': 'application/json' }), json: async () => protectValuation({ prediction, variantVerification: verifiedVariant(kid, 'user_confirmed'), marketData: null }) }));
   assert.equal(isValuationTrusted(noPrices), false);
   assert.equal(noPrices.rawValue, null);
   assert.equal(parseVariantConfirmation({ parallel: 'Special / Alternate Art' }), null);
@@ -159,7 +159,7 @@ test('eBay valuation uses confirmed art and print runs with fresh listings, not 
     { title: '2026 One Piece Eustass Captain Kid OP14-014 Standard Art', price: { value: '1', currency: 'USD' } },
     { title: '2026 One Piece Eustass Captain Kid OP14-014 Special Art', price: { value: '200', currency: 'USD' } },
   ];
-  globalThis.fetch = async url => String(url).includes('/oauth2/token') ? { ok: true, json: async () => ({ access_token: 'mock' }) } : { ok: true, json: async () => ({ itemSummaries: listings }) };
+  globalThis.fetch = async url => String(url).includes('/oauth2/token') ? { ok: true, status: 200, headers: new Headers({ 'content-type': 'application/json' }), json: async () => ({ access_token: 'mock' }) } : { ok: true, status: 200, headers: new Headers({ 'content-type': 'application/json' }), json: async () => ({ itemSummaries: listings }) };
   try {
     let result;
     await ebayHandler({ query: Object.fromEntries(buildEbaySearchParams('Eustass Captain Kid OP14-014', confirmed.canonicalCard)) }, { status(code) { assert.equal(code, 200); return this; }, json(value) { result = value; } });
@@ -219,7 +219,7 @@ test('variant revaluation preserves reconciled year/set and retains the original
     assert.equal(body.confirmedCardIdentity.year, '2026');
     assert.equal(body.confirmedIdentity.brandSet, 'One Piece');
     assert.equal(body.originalIdentityProposal.year, '2025');
-    return { ok: true, json: async () => protectValuation({ prediction, canonicalCard: body.confirmedCardIdentity, originalCanonicalCard: body.originalIdentityProposal, variantVerification: verifiedVariant(kid, 'user_confirmed'), marketData: null }) };
+    return { ok: true, status: 200, headers: new Headers({ 'content-type': 'application/json' }), json: async () => protectValuation({ prediction, canonicalCard: body.confirmedCardIdentity, originalCanonicalCard: body.originalIdentityProposal, variantVerification: verifiedVariant(kid, 'user_confirmed'), marketData: null }) };
   });
   assert.equal(result.originalCanonicalCard.year, '2025');
   assert.equal(result.canonicalCard.year, '2026');

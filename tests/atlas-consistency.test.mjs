@@ -84,7 +84,7 @@ test('text/manual requests have no visual confidence; image and independent conf
   let fresh;
   const report = await requestVariantRevaluation(initial.report, { identity: pika.proposal, parallel: 'Common non-holo', autoOrRelic: 'none' }, async (url, options) => {
     fresh = await runPipeline({ ...pika, textOnly: true, fields: JSON.parse(options.body) });
-    return { ok: true, json: async () => fresh.payload };
+    return { ok: true, status: 200, headers: new Headers({ 'content-type': 'application/json' }), json: async () => fresh.payload };
   });
   assertAtlas(fresh);
   assert.equal(fresh.payload.atlas.identityConfidence, null);

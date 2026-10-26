@@ -1,3 +1,4 @@
+import { predictionPricingReceipt } from "../../lib/pricingDiagnostics.mjs";
 import { isVercelPreview, verifyPreviewIntegration } from '../../lib/previewIntegration.mjs';
 import { MAX_IMAGE_BYTES } from '../../lib/mobileImages.mjs';
 import { identitySearchGate } from '../../lib/catalogIdentity.mjs';
@@ -49,7 +50,7 @@ export async function runPipeline(scenario) {
   const errors = [];
   const model = { cardTitle: scenario.proposal?.subject || scenario.fields?.cardName || 'Unrecognized card', cardMeta: 'Mock model proposal', psa9Value: 120, psa10Value: 200, psa10Probability: 60, ...scenario.model };
   const context = {
-    isVercelPreview, verifyPreviewIntegration: options => verifyPreviewIntegration({ ...options, ...(scenario.assetCheck ? { verifyAssets: scenario.assetCheck } : {}) }),
+    predictionPricingReceipt, isVercelPreview, verifyPreviewIntegration: options => verifyPreviewIntegration({ ...options, ...(scenario.assetCheck ? { verifyAssets: scenario.assetCheck } : {}) }),
     MAX_IMAGE_BYTES, Buffer, console: { log() {}, error(...args) { errors.push(args.map(value => String(value)).join(" ")); } }, supabase: null,
     process: { env: { NEXT_PUBLIC_SITE_URL: 'http://stage-a.local', ...scenario.routingEnv } },
     logRequest: async () => { metrics.logCalls++; },

@@ -59,7 +59,7 @@ test('original image warning blocks even clean matching listings and survives fr
     assert.ok(fields.authenticityWarnings.length);
     assert.equal(fields.marketData, undefined);
     fresh = await runPipeline({ ...pika, textOnly: true, fields });
-    return { ok: true, json: async () => fresh.payload };
+    return { ok: true, status: 200, headers: new Headers({ 'content-type': 'application/json' }), json: async () => fresh.payload };
   });
   assert.ok(fresh.metrics.valuationBrowse > 0);
   assert.equal(fresh.payload.variantVerification.status, 'user_confirmed');

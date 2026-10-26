@@ -1,3 +1,4 @@
+import { listingDiagnostics } from "../../lib/pricingDiagnostics.mjs";
 import { calculateMarketConfidence } from "../../lib/marketConfidence.mjs";
 import { matchesVariantValuation, expandVariantAliases } from "../../lib/variantVerification.mjs";
 import { getListingType, scoreListing, readMarketIdentity, buildStructuredQuery } from "../../lib/ebayIdentityMatch.mjs";
@@ -19,6 +20,7 @@ function roundMoney(value) {
 }
 
 export default async function handler(req, res) {
+  let stage = 'configuration';
   try {
     const identity = readMarketIdentity(req.query);
     let variant = null;
@@ -43,12 +45,13 @@ export default async function handler(req, res) {
     if (!clientId || !clientSecret) {
       return res.status(500).json({
         success: false,
-        error: "Missing eBay production credentials",
+        error: "Missing eBay production credentials", errorCode: "configuration",
       });
     }
 
     const basicAuth = Buffer.from(`${clientId}:${clientSecret}`).toString("base64");
 
+    stage = 'oauth';
     const tokenRes = await fetch("https://api.ebay.com/identity/v1/oauth2/token", {
       method: "POST",
       headers: {
@@ -67,9 +70,11 @@ export default async function handler(req, res) {
       return res.status(tokenRes.status).json({
         success: false,
         error: "eBay token request failed",
-        details: tokenData,
+        errorCode: "provider_authentication",
       });
     }
+
+    if (!tokenData || typeof tokenData.access_token !== "string" || !tokenData.access_token.trim()) throw new SyntaxError("Invalid token response");
 
     const searchUrl =
       "https://api.ebay.com/buy/browse/v1/item_summary/search?" +
@@ -78,6 +83,7 @@ export default async function handler(req, res) {
         limit: "20",
       }).toString();
 
+    stage = 'browse';
     const searchRes = await fetch(searchUrl, {
       method: "GET",
       headers: {
@@ -92,10 +98,14 @@ export default async function handler(req, res) {
       return res.status(searchRes.status).json({
         success: false,
         error: "eBay search request failed",
-        details: searchData,
+        errorCode: "provider_search",
       });
     }
 
+    if (!searchData || typeof searchData !== "object" || Array.isArray(searchData)) throw new SyntaxError("Invalid Browse response");
+    if (searchData.itemSummaries != null && !Array.isArray(searchData.itemSummaries)) throw new SyntaxError('Invalid Browse response');
+    if (!Array.isArray(searchData.itemSummaries) && searchData.total !== 0) throw new SyntaxError('Missing Browse results');
+    stage = 'filter';
     const items = (searchData.itemSummaries || [])
       .map(function(item) {
         const priceValue = item.price && item.price.value
@@ -204,6 +214,7 @@ const avgMatchScore =
     return res.status(200).json({
   success: true,
   environment: "production",
+  marketDiagnostics: listingDiagnostics(items, rawComparableItems, filteredRawPrices.length, searchData.total),
   query: q,
   identity,
       total: searchData.total || 0,
@@ -234,7 +245,8 @@ averageMatchScore: Math.round(avgMatchScore),
     return res.status(500).json({
       success: false,
       error: "eBay search failed",
-      message: err.message,
+      errorCode: err instanceof SyntaxError ? "upstream_malformed" : "network",
+      stage,
     });
   }
 }

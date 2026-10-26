@@ -36,7 +36,7 @@ test('manual completion sends exact identity for fresh valuation without cached 
     assert.equal(body.confirmedIdentity.year, '2017');
     assert.equal(body.rawValue, undefined);
     assert.equal(body.textOnlyIdentity, true);
-    return { ok: true, json: async () => protectValuation({ ...verifiedIdentity(identity), prediction: { rawValue: 2, psa9Value: 10, psa10Value: 20, psa10Probability: 50 }, canonicalCard: identity, variantVerification: verifiedVariant(identity, 'user_confirmed'), marketData: { marketSummary: { rawMedian: 2, rawUsedCount: 3 } } }) };
+    return { ok: true, status: 200, headers: new Headers({ 'content-type': 'application/json' }), json: async () => protectValuation({ ...verifiedIdentity(identity), prediction: { rawValue: 2, psa9Value: 10, psa10Value: 20, psa10Probability: 50 }, canonicalCard: identity, variantVerification: verifiedVariant(identity, 'user_confirmed'), marketData: { marketSummary: { rawMedian: 2, rawUsedCount: 3 } } }) };
   });
   assert.equal(calls, 1);
   assert.equal(result.rawValue, 2);

@@ -44,7 +44,7 @@ test('localhost, loopback and explicitly configured preview origins retain ordin
       assert.equal(new URL(url).origin, origin);
       assert.equal(new URL(url).pathname, '/api/ebay-search');
       assert.equal(new URL(url).searchParams.get('cardNumber'), '28/73');
-      assert.equal(options.redirect, 'error');
+      assert.equal(options.redirect, 'manual');
       return { ok: true, json: async () => ({ success: true, marketSummary: { rawUsedCount: 3, rawMedian: 10, marketConfidence: 55 } }) };
     } });
     assert.ok(calls > 1 && calls <= 6);

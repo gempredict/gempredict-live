@@ -1,3 +1,4 @@
+import { predictionPricingReceipt } from "../lib/pricingDiagnostics.mjs";
 import { isVercelPreview, verifyPreviewIntegration } from '../lib/previewIntegration.mjs';
 import { mockCatalog } from './helpers/catalogFixtures.mjs';
 import { identitySearchGate } from '../lib/catalogIdentity.mjs';
@@ -22,7 +23,7 @@ const identity = { subject: 'Eustass Captain Kid', year: '2026', brandSet: 'One 
 const listing = (id, art, price) => ({ itemId: String(id), title: `2026 One Piece Eustass Captain Kid OP14-014 ${art}`, price: { value: String(price), currency: 'USD' }, condition: 'Ungraded' });
 const marketListings = [listing(1, 'Base', 1), listing(2, 'AA', 80), listing(3, 'Special Art', 200)];
 const neutralListings = [listing(10, 'Standard Art', 1), listing(11, 'Standard Art', 1), listing(12, 'AA', 80), listing(13, 'AA', 80)];
-const browse = async url => String(url).includes('/oauth2/token') ? { ok: true, json: async () => ({ access_token: 'mock' }) } : { ok: true, json: async () => ({ itemSummaries: marketListings }) };
+const browse = async url => String(url).includes('/oauth2/token') ? { ok: true, status: 200, headers: new Headers({ 'content-type': 'application/json' }), json: async () => ({ access_token: 'mock' }) } : { ok: true, status: 200, headers: new Headers({ 'content-type': 'application/json' }), json: async () => ({ itemSummaries: marketListings }) };
 
 async function predict(fields, imageAnalysis = null, evidence = neutralListings) {
   const captured = [];
@@ -30,7 +31,7 @@ async function predict(fields, imageAnalysis = null, evidence = neutralListings)
   const marketUrls = [];
   const neutralQueries = [];
   const context = {
-    isVercelPreview, verifyPreviewIntegration,
+    predictionPricingReceipt, isVercelPreview, verifyPreviewIntegration,
     console: { log() {}, error() {} }, Buffer,
     CARD_NAME_MIN: 2, CARD_NAME_MAX: 80, CARD_SET_MAX: 60, IMAGE_MAX_BYTES: 10485760,
     RATE_LIMIT_MAX: 5, VALID_CARD_TYPES: new Set(['onepiece', 'pokemon']), supabase: null,
@@ -41,7 +42,7 @@ async function predict(fields, imageAnalysis = null, evidence = neutralListings)
     calculateIdentityConfidence: () => ({ score: 90 }),
     identitySearchGate, selectMarketQuery, parseVariantConfirmation, reconcileVariant, protectValuation, getUserIdentityProtection, buildCanonicalCardFromText, missingTextIdentityFields,
     buildCanonicalCardFromImageAnalysis, buildMarketQueryFromCanonicalCard, buildSearchCandidates, buildEbaySearchParams,
-    resolveMarketIdentity: (proposal, options) => resolve(proposal, { ...options, ...mockCatalog(), clientId: 'mock', clientSecret: 'mock', fetchImpl: async url => { if (String(url).includes('/oauth2/token')) return { ok: true, json: async () => ({ access_token: 'mock' }) }; neutralQueries.push(new URL(url).searchParams.get('q')); return { ok: true, json: async () => ({ itemSummaries: evidence }) }; } }),
+    resolveMarketIdentity: (proposal, options) => resolve(proposal, { ...options, ...mockCatalog(), clientId: 'mock', clientSecret: 'mock', fetchImpl: async url => { if (String(url).includes('/oauth2/token')) return { ok: true, status: 200, headers: new Headers({ 'content-type': 'application/json' }), json: async () => ({ access_token: 'mock' }) }; neutralQueries.push(new URL(url).searchParams.get('q')); return { ok: true, status: 200, headers: new Headers({ 'content-type': 'application/json' }), json: async () => ({ itemSummaries: evidence }) }; } }),
     fetchPrediction: async (name, type, set, condition, card, market) => {
       captured.push(card);
       capturedMarkets.push(market);
@@ -88,7 +89,7 @@ test('real prediction handler revalues selected art and withholds ROI if ambigui
       assert.equal(input.prediction, undefined);
       const fresh = await predict(input);
       assert.equal(fresh.captured[0].parallel, 'Alternate Art');
-      return { ok: true, json: async () => fresh.payload };
+      return { ok: true, status: 200, headers: new Headers({ 'content-type': 'application/json' }), json: async () => fresh.payload };
     });
     assert.equal(freshCalls, 1);
     assert.equal(completed.valuationVerification.status, 'trusted');
@@ -113,8 +114,8 @@ test('real prediction handler revalues selected art and withholds ROI if ambigui
     const zamazentaImage = { identifiedSubject: 'Zamazenta', identifiedYear: '2020', identifiedBrandSet: 'Sword & Shield', identifiedCardNumber: '021/025', identifiedParallel: 'Holo', identifiedAutoOrRelic: 'none' };
     const zamazentaListings = Array.from({ length: 3 }, (_, i) => ({ itemId: 'z' + i, title: '2021 Celebrations Zamazenta 021/025 Holo', price: { value: '20', currency: 'USD' }, condition: 'Ungraded' }));
     globalThis.fetch = async url => String(url).includes('/oauth2/token')
-      ? { ok: true, json: async () => ({ access_token: 'mock' }) }
-      : { ok: true, json: async () => ({ itemSummaries: new URL(url).searchParams.get('q').includes('#') ? zamazentaListings.slice(0, 1) : zamazentaListings }) };
+      ? { ok: true, status: 200, headers: new Headers({ 'content-type': 'application/json' }), json: async () => ({ access_token: 'mock' }) }
+      : { ok: true, status: 200, headers: new Headers({ 'content-type': 'application/json' }), json: async () => ({ itemSummaries: new URL(url).searchParams.get('q').includes('#') ? zamazentaListings.slice(0, 1) : zamazentaListings }) };
     const corrected = await predict({ cardName: 'Unknown card from image', cardType: 'pokemon' }, zamazentaImage, zamazentaListings);
     assert.equal(corrected.payload.canonicalCard.year, '2021');
     assert.equal(corrected.payload.canonicalCard.brandSet, 'Celebrations');
