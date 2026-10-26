@@ -1,3 +1,4 @@
+import { isVercelPreview, verifyPreviewIntegration } from '../../lib/previewIntegration.mjs';
 import { identitySearchGate } from '../../lib/catalogIdentity.mjs';
 import { calculateGradingEconomics, formatMoney } from '../../lib/gradingEconomics.mjs';
 // Stage A: real route control flow, Claude parsing/normalization, identity/variant
@@ -43,17 +44,18 @@ export async function runPipeline(scenario) {
   const originalFetch = globalThis.fetch;
   const originalId = process.env.EBAY_PROD_CLIENT_ID;
   const originalSecret = process.env.EBAY_PROD_CLIENT_SECRET;
-  const metrics = { neutralOAuth: 0, neutralBrowse: 0, valuationOAuth: 0, valuationBrowse: 0, valuationQueries: [], claudeVision: 0, claudePrediction: 0 };
+  const metrics = { preflightRequests: 0, logCalls: 0, parseCalls: 0, responseHeaders: {}, neutralOAuth: 0, neutralBrowse: 0, valuationOAuth: 0, valuationBrowse: 0, valuationQueries: [], claudeVision: 0, claudePrediction: 0 };
   const errors = [];
   const model = { cardTitle: scenario.proposal?.subject || scenario.fields?.cardName || 'Unrecognized card', cardMeta: 'Mock model proposal', psa9Value: 120, psa10Value: 200, psa10Probability: 60, ...scenario.model };
   const context = {
+    isVercelPreview, verifyPreviewIntegration: options => verifyPreviewIntegration({ ...options, ...(scenario.assetCheck ? { verifyAssets: scenario.assetCheck } : {}) }),
     Buffer, console: { log() {}, error(...args) { errors.push(args.map(value => String(value)).join(" ")); } }, supabase: null,
     process: { env: { NEXT_PUBLIC_SITE_URL: 'http://stage-a.local', ...scenario.routingEnv } },
-    logRequest: async () => {},
+    logRequest: async () => { metrics.logCalls++; },
     buildCanonicalCardFromImageAnalysis, buildCanonicalCardFromText, missingTextIdentityFields,
     identitySearchGate, calculateGradingEconomics, getUserIdentityProtection, reconcileVariant, parseVariantConfirmation, protectValuation, selectMarketQuery,
     atlasOrchestrator, calculateIdentityConfidence,
-    parseRequest: async () => ({ fields: scenario.fields || { cardName: 'Unknown card from image', cardType: scenario.type || 'pokemon' }, imageBuffer: scenario.textOnly ? null : Buffer.from('mock card image'), imageMimeType: 'image/png' }),
+    parseRequest: async () => { metrics.parseCalls++; return { fields: scenario.fields || { cardName: 'Unknown card from image', cardType: scenario.type || 'pokemon' }, imageBuffer: scenario.textOnly ? null : Buffer.from('mock card image'), imageMimeType: 'image/png' }; },
     resolveMarketIdentity: (card, options) => resolveMarketIdentity(card, { ...options, catalogSource: 'mock-unconfigured', ...scenario.catalogOptions, clientId: 'mock', clientSecret: 'mock', fetchImpl: async url => {
       if (String(url).includes('/oauth2/token')) { metrics.neutralOAuth++; return { ok: true, json: async () => ({ access_token: 'mock' }) }; }
       metrics.neutralBrowse++;
@@ -61,6 +63,13 @@ export async function runPipeline(scenario) {
       return { ok: true, json: async () => ({ itemSummaries: scenario.neutral || [] }) };
     } }),
     fetch: async (url, options) => {
+      if (new URL(url).pathname === '/api/predict') {
+        metrics.preflightRequests++;
+        const authenticated = options.headers?.['x-vercel-trusted-oidc-idp-token'] === scenario.requestHeaders?.['x-vercel-oidc-token'];
+        if (scenario.previewProtection === 'unavailable') throw new Error('Mock protection unavailable');
+        const reached = scenario.previewProtection === 'public' || authenticated && scenario.previewProtection !== 'denied';
+        return { status: reached ? 405 : 401, json: async () => ({ error: 'Method not allowed.' }) };
+      }
       metrics.valuationQueries.push(new URL(url).searchParams.get('q'));
       assert.ok(options.signal instanceof AbortSignal);
       let code, payload;
@@ -97,9 +106,10 @@ export async function runPipeline(scenario) {
     };
     const handler = vm.runInNewContext(`${config}\n${helpers}\n${claudeFunctions}\n${handlerSource}\nhandler;`, context);
     let code, payload;
-    await handler({ method: 'POST', headers: {}, socket: { remoteAddress: 'stage-a' } }, { status(value) { code = value; return this; }, json(value) { payload = value; } });
+    await handler({ method: scenario.method || 'POST', query: scenario.query || {}, headers: scenario.requestHeaders || {}, socket: { remoteAddress: 'stage-a' } }, { status(value) { code = value; return this; }, setHeader(key, value) { metrics.responseHeaders[key] = value; }, json(value) { payload = value; } });
     if (code !== 200) return { id: scenario.id, expectedTrusted: scenario.expectedTrusted, httpStatus: code, payload, metrics, errors,
       observed: { original: scenario.proposal || scenario.fields?.originalIdentityProposal || scenario.fields?.confirmedCardIdentity || buildCanonicalCardFromText(scenario.fields), reconciled: null, yearStatus: null, setStatus: null, variantStatus: null, comparableCount: null, usedCount: null, marketConfidence: null, valuationStatus: 'no_result', marketMedian: null, modelRaw: null, expectedNet: null, upside: null } };
+    if (scenario.method === 'GET') return { httpStatus: code, payload, metrics, errors };
     const report = reportFromPrediction(payload);
     const copied = copySummary(report);
     const summary = payload.marketData.marketSummary;

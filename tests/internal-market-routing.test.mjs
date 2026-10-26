@@ -35,11 +35,11 @@ test('localhost, loopback and explicitly configured preview origins retain ordin
     ['http://127.0.0.1:3000', { NODE_ENV: 'development' }],
     ['http://localhost:3000/', { NODE_ENV: 'production' }],
     ['http://[::1]:3000', { NODE_ENV: 'production' }],
-    ['https://gempredict-live-git-test.vercel.app/', { VERCEL: '1', VERCEL_ENV: 'preview', NODE_ENV: 'production' }],
+    ['https://gempredict-live-immutable123.vercel.app/', { VERCEL: '1', VERCEL_ENV: 'preview', VERCEL_URL: 'gempredict-live-immutable123.vercel.app', NODE_ENV: 'production' }],
   ]) {
     let calls = 0;
     const origin = new URL(baseUrl).origin;
-    const result = await selectMarketQuery(card, { baseUrl, routingEnv, fetchImpl: async (url, options) => {
+    const result = await selectMarketQuery(card, { baseUrl, routingEnv, requestHeaders: { 'x-vercel-oidc-token': 'mock.preview.signature' }, fetchImpl: async (url, options) => {
       calls++;
       assert.equal(new URL(url).origin, origin);
       assert.equal(new URL(url).pathname, '/api/ebay-search');
@@ -104,6 +104,14 @@ test('actual prediction handler cannot fall back or call production from a local
     [{ ...authorized, NEXT_PUBLIC_SITE_URL: prod, VERCEL_ENV: 'preview', NODE_ENV: 'production' }, 'production_host_blocked'],
   ]) {
     const result = await runPipeline({ ...template, routingEnv });
+    if (routingEnv.VERCEL_ENV === 'preview') {
+      assert.equal(result.httpStatus, 503);
+      assert.equal(result.metrics.claudeVision, 0);
+      assert.equal(result.metrics.claudePrediction, 0);
+      assert.equal(result.metrics.neutralBrowse, 0);
+      assert.equal(result.metrics.valuationBrowse, 0);
+      continue;
+    }
     assert.equal(result.httpStatus, 200);
     assert.equal(result.metrics.valuationBrowse, 0);
     assert.equal(result.metrics.valuationOAuth, 0);

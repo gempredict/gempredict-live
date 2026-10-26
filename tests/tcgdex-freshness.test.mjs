@@ -179,3 +179,18 @@ test('standard-size metadata cannot disguise arbitrary fields or contradictory p
     { wPromo: 'false' }, { unknownPrinting: false }, { holo: true }, { reverse: true }, { normal: false },
   ]) assert.equal(apply({ ...hosted, variants: { ...hosted.variants, ...patch } }).record, record);
 });
+
+
+test('the exact trusted Pikachu fixture is preserved through protected same-deployment Preview routing', async () => {
+  const result = await runPipeline({ proposal, neutral: listings(), market: listings(), catalogOptions: transport(),
+    routingEnv: { VERCEL: '1', VERCEL_ENV: 'preview', NODE_ENV: 'production', VERCEL_URL: 'gempredict-live-immutable123.vercel.app', NEXT_PUBLIC_SITE_URL: undefined },
+    requestHeaders: { 'x-vercel-oidc-token': 'mock.preview.signature' },
+  });
+  assert.equal(result.httpStatus, 200, JSON.stringify(result.errors));
+  assert.equal(result.metrics.preflightRequests, 2);
+  assert.equal(result.payload.canonicalCard.brandSet, '30th Celebration');
+  assert.equal(result.payload.canonicalCard.parallel, 'Holo Special Art');
+  assert.equal(result.payload.valuationIdentityGate.allowed, true);
+  assert.equal(isValuationTrusted(result.report), true);
+  assert.equal(result.report.rawValue, 40);
+});

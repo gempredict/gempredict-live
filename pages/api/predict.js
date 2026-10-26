@@ -1,3 +1,4 @@
+import { isVercelPreview, verifyPreviewIntegration } from '../../lib/previewIntegration.mjs';
 import { identitySearchGate } from '../../lib/catalogIdentity.mjs';
 import { calculateGradingEconomics } from '../../lib/gradingEconomics.mjs';
 import { selectMarketQuery } from "../../lib/marketQuerySelection.mjs";
@@ -654,7 +655,20 @@ const backMime = backImageMimeType &&
 
 // ─── Main handler ─────────────────────────────────────────────────────────────
 export default async function handler(req, res) {
+  const preview = isVercelPreview(process.env);
+  if (preview && req.method === 'GET' && req.query?.preflight === '1' && process.env.GEMPREDICT_PREVIEW_PREFLIGHT_ENABLED === 'true') {
+    const result = await verifyPreviewIntegration({ env: process.env, requestHeaders: req.headers, fetchImpl: fetch });
+    res.setHeader('Cache-Control', 'private, no-store');
+    // This endpoint is opt-in and remains behind Vercel Authentication. If
+    // protection verification fails, expose only a generic unavailable result.
+    if (!result.checks.protection) return res.status(503).json({ integrationReady: false });
+    return res.status(result.integrationReady ? 200 : 503).json(result);
+  }
   if (req.method !== "POST") return res.status(405).json({ error: "Method not allowed." });
+  if (preview) {
+    const result = await verifyPreviewIntegration({ env: process.env, requestHeaders: req.headers, fetchImpl: fetch });
+    if (!result.integrationReady) return res.status(503).json({ error: 'Preview integration preflight is incomplete.' });
+  }
 
   const ip = (req.headers["x-forwarded-for"] || "").split(",")[0].trim() || req.socket?.remoteAddress || "unknown";
 
@@ -913,6 +927,7 @@ const atlasIdentityConfidence = imageAnalysis
       : await selectMarketQuery(canonicalCard, {
       baseUrl: process.env.NEXT_PUBLIC_SITE_URL,
       routingEnv: process.env,
+      requestHeaders: req.headers,
       fetchImpl: fetch,
     });
 

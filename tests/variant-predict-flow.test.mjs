@@ -1,3 +1,4 @@
+import { isVercelPreview, verifyPreviewIntegration } from '../lib/previewIntegration.mjs';
 import { mockCatalog } from './helpers/catalogFixtures.mjs';
 import { identitySearchGate } from '../lib/catalogIdentity.mjs';
 import { selectMarketQuery } from '../lib/marketQuerySelection.mjs';
@@ -29,6 +30,7 @@ async function predict(fields, imageAnalysis = null, evidence = neutralListings)
   const marketUrls = [];
   const neutralQueries = [];
   const context = {
+    isVercelPreview, verifyPreviewIntegration,
     console: { log() {}, error() {} }, Buffer,
     CARD_NAME_MIN: 2, CARD_NAME_MAX: 80, CARD_SET_MAX: 60, IMAGE_MAX_BYTES: 10485760,
     RATE_LIMIT_MAX: 5, VALID_CARD_TYPES: new Set(['onepiece', 'pokemon']), supabase: null,

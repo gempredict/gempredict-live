@@ -1,6 +1,8 @@
 # Internal market routing
 
-`NEXT_PUBLIC_SITE_URL` must explicitly name the origin serving this checkout's `/api/ebay-search`. There is no hosted fallback. For the current local workflow use `http://127.0.0.1:3000` and run Next.js on port 3000. `http://localhost:3000` and explicitly configured preview origins also work. Restart the server after configuration changes; rebuild before reusing a local production build with a different public URL.
+**Current Preview behavior is specified in [PRIVATE_PREVIEW_INTEGRATION.md](PRIVATE_PREVIEW_INTEGRATION.md): immutable deployment-origin validation, OIDC self-access and runtime preflight supersede the older Preview assumptions below.**
+
+For local development and Production, `NEXT_PUBLIC_SITE_URL` must explicitly name the origin serving this checkout's `/api/ebay-search`. There is no hosted fallback. For the current local workflow use `http://127.0.0.1:3000` and run Next.js on port 3000. `http://localhost:3000` also works. Vercel Preview now requires its immutable platform origin and protected self-access. Restart the server after configuration changes; rebuild before reusing a local production build with a different public URL.
 
 Missing/invalid origins, credentials embedded in URLs, paths beyond `/`, queries and fragments are rejected before any internal market request. An unavailable market result includes `routingError`, zero usable prices and no trusted valuation. Other analysis may still run; this guard is for internal valuation routing, not a global outbound-network switch.
 
