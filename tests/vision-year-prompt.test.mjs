@@ -64,3 +64,10 @@ test('complete larger JSON is parsed; empty and incomplete responses remain non-
     assert.equal(await run(harness(response).analyze), null);
   }
 });
+
+test('unsupported front/back image MIME cannot be relabeled as JPEG or reach the paid vision client', async () => {
+  const { analyze, requests } = harness({ content: [{ type: 'text', text: '{}' }] });
+  await assert.rejects(analyze(Buffer.from('raw-heic'), 'image/heic', null, null, 'Pikachu', 'pokemon'), /Unsupported analysis image format/);
+  await assert.rejects(analyze(Buffer.from('front'), 'image/jpeg', Buffer.from('raw-heif'), 'image/heif', 'Pikachu', 'pokemon'), /Unsupported analysis image format/);
+  assert.equal(requests.length, 0);
+});

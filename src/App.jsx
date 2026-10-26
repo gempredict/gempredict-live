@@ -1,3 +1,5 @@
+import { normalizeMobileImage, assertUploadBudget, UploadError } from "../lib/mobileImages.mjs";
+import { requestPrediction } from "../lib/predictionTransport.mjs";
 import { identitySearchGate } from '../lib/catalogIdentity.mjs';
 import { isValuationTrusted, safeStoredReport, withheldSummary, reportFromPrediction, requestVariantRevaluation } from "../lib/valuationProtection.mjs";
 // src/App.jsx — GemPredict main component
@@ -1148,39 +1150,32 @@ const emailRef    = useRef(null);
     };
   }, [imagePreview]);
 
-  function handleImageSelect(file) {
+  const [processingImages, setProcessingImages] = useState(0);
+  const [photoErrors, setPhotoErrors] = useState({ front: false, back: false });
+  const selectionVersions = useRef({ front: 0, back: 0 });
+  async function selectPhoto(file, side) {
     if (!file) return;
-    // Only allow images
-    if (!file.type.startsWith("image/")) { setError("Please select an image file (JPEG, PNG, WebP, etc.)"); return; }
-    // 5 MB client-side guard
-    if (file.size > 5 * 1024 * 1024) { setError("Image must be under 5 MB."); return; }
-    if (imagePreview) URL.revokeObjectURL(imagePreview);
-    setImageFile(file);
-    setImagePreview(URL.createObjectURL(file));
-    setError("");
+    const version = ++selectionVersions.current[side];
+    const setFile = side === 'front' ? setImageFile : setBackImageFile;
+    const setPreview = side === 'front' ? setImagePreview : setBackImagePreview;
+    setFile(null);
+    setPreview(previous => { if (previous) URL.revokeObjectURL(previous); return null; });
+    setPhotoErrors(previous => ({ ...previous, [side]: false }));
+    setProcessingImages(n => n + 1); setError("");
+    try {
+      const normalized = await normalizeMobileImage(file);
+      if (selectionVersions.current[side] !== version) return;
+      setFile(normalized); setPreview(URL.createObjectURL(normalized));
+    } catch (error) {
+      if (selectionVersions.current[side] === version) {
+        setPhotoErrors(previous => ({ ...previous, [side]: true }));
+        setError(error.message || "Photo processing failed.");
+      }
+    } finally { setProcessingImages(n => n - 1); }
   }
-
-  function handleBackImageSelect(file) {
-  if (!file) return;
-
-  // Only allow images
-  if (!file.type.startsWith("image/")) {
-    setError("Please select an image file (JPEG, PNG, WebP, etc.)");
-    return;
-  }
-
-  // 5 MB client-side guard
-  if (file.size > 5 * 1024 * 1024) {
-    setError("Back image must be under 5 MB.");
-    return;
-  }
-
-  if (backImagePreview) URL.revokeObjectURL(backImagePreview);
-
-  setBackImageFile(file);
-  setBackImagePreview(URL.createObjectURL(file));
-  setError("");
-}
+  function handleImageSelect(file) { return selectPhoto(file, 'front'); }
+  function handleBackImageSelect(file) { return selectPhoto(file, 'back'); }
+  useEffect(() => () => { if (backImagePreview) URL.revokeObjectURL(backImagePreview); }, [backImagePreview]);
 
   function handleImageDrop(e) {
     e.preventDefault();
@@ -1189,6 +1184,8 @@ const emailRef    = useRef(null);
   }
 
   function clearImage() {
+    selectionVersions.current.front++;
+    setPhotoErrors(previous => ({ ...previous, front: false }));
     if (imagePreview) URL.revokeObjectURL(imagePreview);
     setImageFile(null);
     setImagePreview(null);
@@ -1225,12 +1222,12 @@ const emailRef    = useRef(null);
   }
 
   async function handleSubmit() {
-    if (!cardName.trim() && !imageFile) return;
+    if (processingImages || photoErrors.front || photoErrors.back || (!cardName.trim() && !imageFile)) return;
     if (email && !isValidEmail(email)) { setError("Please enter a valid email address."); return; }
     setLoading(true); setError(""); setRateLimitMsg(""); setEmailConfirm(false); setImageAnalysis(null);
 
     try {
-      let res;
+      let result;
       if (imageFile) {
         // Multipart/form-data when image is present
         const formData = new FormData();
@@ -1243,17 +1240,17 @@ const emailRef    = useRef(null);
         if (backImageFile) {
   formData.append("backImage", backImageFile);
 }
-        res = await fetch("/api/predict", { method: "POST", body: formData });
+        await assertUploadBudget(formData);
+        result = await requestPrediction({ method: "POST", body: formData });
       } else {
         // JSON when no image
-        res = await fetch("/api/predict", {
+        result = await requestPrediction({
           method: "POST", headers: { "Content-Type": "application/json" },
           body: JSON.stringify({ cardName: cardName.trim(), cardType, cardSet: cardSet.trim(), condition, email: email.trim() || undefined }),
         });
       }
 
-      const data = await res.json();
-      console.log("PREDICT RESPONSE:", data);
+      const { response: res, data } = result;
       if (res.status === 429) { setRateLimitMsg(data.message || "Rate limit exceeded. Please try again later."); setLoading(false); return; }
       if (!res.ok) { setError(data.error || "Something went wrong. Please try again."); setLoading(false); return; }
 
@@ -1275,7 +1272,7 @@ if (data.imageAnalysis) setImageAnalysis(data.imageAnalysis);
 });
     
 
-    } catch { setError("Network error — check your connection and try again."); }
+    } catch (error) { setError(error instanceof UploadError ? error.message : "Could not display the prediction. Please try again."); }
     finally   { setLoading(false); }
   }
 
@@ -1291,6 +1288,8 @@ if (data.imageAnalysis) setImageAnalysis(data.imageAnalysis);
   function rescanVariant() {
     clearImage();
     if (backImagePreview) URL.revokeObjectURL(backImagePreview);
+    selectionVersions.current.back++;
+    setPhotoErrors(previous => ({ ...previous, back: false }));
     setBackImageFile(null); setBackImagePreview(null);
     setCardName(""); setCardSet(""); setError("");
     fileInputRef.current?.click();
@@ -1526,8 +1525,8 @@ if (data.imageAnalysis) setImageAnalysis(data.imageAnalysis);
                 <label style={labelSt}>Card Name</label>
                 <input ref={cardNameRef} value={cardName} onChange={function(e) { setCardName(e.target.value); }} onKeyDown={function(e) { if (e.key === "Enter") handleSubmit(); }} placeholder="e.g. Charizard Holo, LeBron Rookie, Black Lotus" style={inputSt} />
               </div>
-              <button onClick={handleSubmit} disabled={loading || (!cardName.trim() && !imageFile)} style={{ padding: "0.85rem 1.75rem", background: loading || (!cardName.trim() && !imageFile) ? "#94a3b8" : C.ink, color: "#fff", border: "none", borderRadius: 12, fontSize: "1rem", fontWeight: 700, cursor: loading || (!cardName.trim() && !imageFile) ? "not-allowed" : "pointer", whiteSpace: "nowrap", minWidth: 155, display: "flex", alignItems: "center", justifyContent: "center", gap: "0.5rem" }}>
-                {loading ? (<><span style={{ width: 18, height: 18, border: "2px solid rgba(255,255,255,0.4)", borderTopColor: "#fff", borderRadius: "50%", animation: "spin 0.7s linear infinite", flexShrink: 0 }} />Analyzing...</>) : "Analyze My Card"}
+              <button onClick={handleSubmit} disabled={loading || processingImages > 0 || photoErrors.front || photoErrors.back || (!cardName.trim() && !imageFile)} style={{ padding: "0.85rem 1.75rem", background: loading || (!cardName.trim() && !imageFile) ? "#94a3b8" : C.ink, color: "#fff", border: "none", borderRadius: 12, fontSize: "1rem", fontWeight: 700, cursor: loading || (!cardName.trim() && !imageFile) ? "not-allowed" : "pointer", whiteSpace: "nowrap", minWidth: 155, display: "flex", alignItems: "center", justifyContent: "center", gap: "0.5rem" }}>
+                {processingImages ? "Preparing photo…" : loading ? (<><span style={{ width: 18, height: 18, border: "2px solid rgba(255,255,255,0.4)", borderTopColor: "#fff", borderRadius: "50%", animation: "spin 0.7s linear infinite", flexShrink: 0 }} />Analyzing...</>) : "Analyze My Card"}
               </button>
             </div>
             {/* Condition */}
@@ -1573,27 +1572,31 @@ if (data.imageAnalysis) setImageAnalysis(data.imageAnalysis);
                 >
                   <div style={{ fontSize: "1.5rem", marginBottom: "0.4rem" }}>📷</div>
                   <div style={{ fontSize: "0.85rem", fontWeight: 600, color: C.inkMid, marginBottom: "0.2rem" }}>Upload card photo for AI photo grading</div>
-                  <div style={{ fontSize: "0.75rem", color: C.inkSoft }}>Click to browse or drag and drop · JPEG, PNG, WebP · Max 5 MB</div>
+                  <div style={{ fontSize: "0.75rem", color: C.inkSoft }}>Click to browse or drag and drop · Camera or saved photo · JPEG, PNG, WebP, HEIF/HEIC · Up to 25 MB; optimized locally</div>
                 </div>
               )}
               <input
                 ref={fileInputRef}
                 type="file"
-                accept="image/*"
+                accept="image/*,.heic,.heif"
                 style={{ display: "none" }}
-                onChange={function(e) { handleImageSelect(e.target.files && e.target.files[0]); }}
+                onChange={function(e) { const file = e.target.files?.[0]; e.target.value = ""; handleImageSelect(file); }}
               />
               <input
   ref={backFileInputRef}
   type="file"
-  accept="image/*"
+  accept="image/*,.heic,.heif"
   style={{ display: "none" }}
   onChange={function(e) {
-    handleBackImageSelect(e.target.files && e.target.files[0]);
+    const file = e.target.files?.[0]; e.target.value = ""; handleBackImageSelect(file);
   }}
 />
             </div>
             <div style={{ marginTop: "0.75rem" }}>
+  {['front', 'back'].map(side => <label key={side} style={{ display: 'inline-block', cursor: 'pointer', marginRight: 12, fontSize: '0.78rem' }}>
+    Take {side} photo
+    <input aria-label={`Take ${side} photo`} type="file" accept="image/*" capture="environment" style={{ display: 'none' }} onChange={e => { const file = e.target.files?.[0]; e.target.value = ''; selectPhoto(file, side); }} />
+  </label>)}
   <button
     type="button"
     onClick={function() {
