@@ -64,7 +64,9 @@ A correction requires all of:
 3. Hosted `updated` is a valid date/time at or after the initial source revision
    and strictly before the explicit-printing correction revision.
 4. Hosted flags are exactly normal-only for the relevant finish fields, and
-   detailed metadata is exactly the one generated normal default. Explicit,
+   detailed metadata is the one generated normal default, optionally including
+   `size: "standard"`. Unknown metadata, nonstandard sizes, or positive edition/promo
+   flags cannot be overridden. Explicit,
    extra, ambiguous or missing detailed printing evidence is not overridden.
 
 Agreeing hosted flags remain unchanged. Newer, undated, mismatched or otherwise
@@ -124,3 +126,11 @@ locations. This verifies the local production trace and its actual input files,
 not a deployed function artifact. No deployment has been created, downloaded or
 inspected. Any custom packager must honor the NFT dependencies; copying only
 compiled JavaScript would omit the runtime data and license.
+
+
+The live-response regression uses the supplied exact hosted timestamp
+`2026-09-17T00:45:22+02:00`, all five hosted variant flags and
+`{type: "normal", size: "standard", variantId: "generated"}`. Its UTC timestamp
+is exactly the initial source commit time, which is eligible under the inclusive
+lower timestamp bound. Tests cover this full shape through the prediction handler
+and final `Holo Special Art` identity gate; no live provider request is needed.

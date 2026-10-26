@@ -19,7 +19,7 @@ const digest = data => createHash('sha256').update(JSON.stringify(data)).digest(
 const blob = content => createHash('sha1').update(`blob ${Buffer.byteLength(content)}\0`).update(content).digest('hex');
 const proposal = { subject: 'Pikachu ex', cardNumber: '149/128', year: '2024', brandSet: 'Stellar Crown', parallel: 'Special Art', language: 'English', autoOrRelic: 'none' };
 const set = { id: '30th', name: '30th Celebration', releaseDate: '2026-09-16', cardCount: { official: 128 }, tcgOnline: '30C' };
-const hosted = { id: '30th-149', localId: '149', name: 'Pikachu ex', rarity: 'Special illustration rare', set, updated: '2026-09-17T00:00:00Z', variants: { normal: true, holo: false, reverse: false }, variants_detailed: [{ type: 'normal', variantId: 'generated' }] };
+const hosted = { id: '30th-149', localId: '149', name: 'Pikachu ex', rarity: 'Special illustration rare', set, updated: '2026-09-17T00:45:22+02:00', variants: { firstEdition: false, holo: false, normal: true, reverse: false, wPromo: false }, variants_detailed: [{ type: 'normal', size: 'standard', variantId: 'generated' }] };
 const record = { id: hosted.id, provider: 'tcgdex', localId: '149', subject: hosted.name, cardNumber: '149/128', setId: '30th', brandSet: set.name, officialCount: 128, releaseDate: set.releaseDate, year: '2026', language: 'en', rarity: hosted.rarity, parallel: 'Special Art', variants: hosted.variants };
 const apply = (h = hosted, r = record) => { const diagnostics = []; return { record: reconcileHostedPrinting(r, h, diagnostics), diagnostics }; };
 const transport = (data = hosted) => {
@@ -64,7 +64,9 @@ test('older generated hosted default is corrected with immutable source provenan
   assert.equal(result.record.printingProvenance.revision, snapshot.revisions.snapshot.sha);
   assert.equal(result.record.printingProvenance.correctionRevision, snapshot.revisions.correction.sha);
   assert.deepEqual(result.record.printingProvenance.stamp, ['30th-anniversary']);
-  assert.deepEqual(hosted.variants, { normal: true, holo: false, reverse: false });
+  assert.equal(result.record.printingProvenance.hostedUpdated, '2026-09-17T00:45:22+02:00');
+  assert.deepEqual(result.record.printingProvenance.hostedDetailed, [{ type: 'normal', size: 'standard', variantId: 'generated' }]);
+  assert.deepEqual(hosted.variants, { firstEdition: false, holo: false, normal: true, reverse: false, wPromo: false });
   assert.ok(result.diagnostics.some(d => d.accepted));
   result.record.printingProvenance.stamp.length = 0;
   assert.deepEqual(apply().record.printingProvenance.stamp, ['30th-anniversary']);
@@ -151,4 +153,29 @@ test('fallback cannot bypass sparse variants, protected identity choices or genu
   persist('blocked', result.report);
   assert.equal(result.metrics.valuationBrowse, 0);
   assert.equal(result.report.rawValue, null);
+});
+
+
+test('generated-default compatibility accepts only absent or standard size', () => {
+  const legacy = { ...hosted, variants_detailed: [{ type: 'normal', variantId: 'generated' }] };
+  assert.equal(apply(legacy).record.variants.holo, true);
+  for (const size of ['jumbo', 'oversized', 'Standard', '', null, 1, {}, undefined]) {
+    const result = apply({ ...hosted, variants_detailed: [{ ...hosted.variants_detailed[0], size }] });
+    assert.equal(result.record, record);
+    assert.equal(result.diagnostics[0].reason, 'hosted_not_generated_default');
+  }
+});
+
+test('standard-size metadata cannot disguise arbitrary fields or contradictory printing claims', () => {
+  for (const printing of [
+    null, [], { ...hosted.variants_detailed[0], stamp: ['promo'] },
+    { ...hosted.variants_detailed[0], extra: false },
+    { ...hosted.variants_detailed[0], type: 'holo' },
+    { ...hosted.variants_detailed[0], type: 'reverse' },
+    { ...hosted.variants_detailed[0], variantId: 'explicit' },
+  ]) assert.equal(apply({ ...hosted, variants_detailed: [printing] }).record, record);
+  for (const patch of [
+    { firstEdition: true }, { wPromo: true }, { firstEdition: null },
+    { wPromo: 'false' }, { unknownPrinting: false }, { holo: true }, { reverse: true }, { normal: false },
+  ]) assert.equal(apply({ ...hosted, variants: { ...hosted.variants, ...patch } }).record, record);
 });
