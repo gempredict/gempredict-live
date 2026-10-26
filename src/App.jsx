@@ -509,16 +509,17 @@ function WithheldResultCard({ data, onSave, isSaved, onVerifyVariant, onRescan }
     finally { setBusy(false); }
   }
   const reason = data.valuationVerification?.explanation || "This version needs a fresh valuation.";
-  return <div style={{ background: C.white, border: "1px solid " + C.border, borderRadius: 18, padding: "1.25rem" }}>
+  return <div data-testid="financial-report" style={{ background: C.white, border: "1px solid " + C.border, borderRadius: 18, padding: "1.25rem" }}>
     <h3 style={{ marginTop: 0 }}>{canonicalDisplayName(data.canonicalCard) || data.cardTitle}</h3>
+    <p>{identitySearchGate(data.identityVerification, data.canonicalCard).allowed ? 'Independently verified identity' : 'Identity unverified'} · Language: {data.canonicalCard?.language === 'en' ? 'English' : data.canonicalCard?.language || 'unverified'}</p>
     <strong>{isValuationTrusted(data) ? (data.verdict === 'grade' ? 'Grade It — evidence-supported conditional analysis' : 'Skip It — evidence-supported conditional analysis') : isMarketAnalysisAvailable(data) ? 'Provisional market analysis — recommendation withheld' : 'Valuation and grading ROI withheld'}</strong>
     {isMarketAnalysisAvailable(data) && <div data-testid="market-evidence-analysis">
-      <p><strong>{data.financialDecision.rawSource === 'completed_sales' ? 'Observed raw sold median' : 'Observed active asking median'}: ${formatMoney(data.rawValue)}</strong> — {data.financialDecision.observedRaw?.count || data.financialDecision.observedAsking?.count || 0} observations. {data.financialDecision.rawSource !== 'completed_sales' && 'Not verified fair market value.'}</p>
+      <p><strong>{data.financialDecision.rawSource === 'completed_sales' ? 'Observed raw sold median' : 'Observed active asking median'}: ${formatMoney(data.rawValue)}</strong> — {data.financialDecision.observedRaw?.count || data.financialDecision.observedAsking?.count || 0} observations. {data.marketData?.marketSummary?.fairMarketValue == null && 'Not verified fair market value.'}</p>
       <p>Active eBay asking signal: {data.financialDecision.observedAsking ? `$${formatMoney(data.financialDecision.observedAsking.median)} from ${data.financialDecision.observedAsking.count} listings; ${data.financialDecision.observedAsking.confidence}% asking-price confidence.` : 'Unavailable.'}</p>
       <p>PSA 9: ${formatMoney(data.psa9Value)} ({data.financialDecision.graded['PSA 9'].source === 'completed_sales' ? `${data.financialDecision.graded['PSA 9'].evidence.count} observed completed sales` : 'modeled estimate, not verified sales'}). PSA 10: ${formatMoney(data.psa10Value)} ({data.financialDecision.graded['PSA 10'].source === 'completed_sales' ? `${data.financialDecision.graded['PSA 10'].evidence.count} observed completed sales` : 'modeled estimate, not verified sales'}).</p>
-      <p>Individual PSA 10 probability: {data.psa10Probability}% ({data.financialDecision.probability.qualified ? 'calibrated model' : 'uncalibrated modeled estimate'}); not a historical population gem rate. Population: {data.financialDecision.population?.status === 'available' ? `${data.financialDecision.population.psa10Population} PSA 10 out of ${data.financialDecision.population.totalPSAPopulation} PSA submissions` : 'unavailable; no estimated counts shown'}.</p>
+      <p>Individual PSA 10 probability: {data.psa10Probability}% ({data.financialDecision.probability.qualified ? 'calibrated model' : 'uncalibrated modeled estimate'}); not a historical population gem rate. Historical gem rate: {data.financialDecision.population?.status === 'available' && data.financialDecision.population.historicalGemRate != null ? `${(data.financialDecision.population.historicalGemRate * 100).toFixed(1)}% of recorded submissions, not an individual prediction` : 'unavailable'}. Population: {data.financialDecision.population?.status === 'available' ? `${data.financialDecision.population.psa10Population} PSA 10 out of ${data.financialDecision.population.totalPSAPopulation} PSA submissions` : 'unavailable; no estimated counts shown'}.</p>
       <p>Conditional grading scenario: expected net ${formatMoney(data.expectedNetValue)}, upside ${formatMoney(data.gradingUpside)}. Includes the $80 grading fee; excludes other costs and outcomes below PSA 9. These are projections, not realized returns.</p>
-      {Object.entries(data.financialDecision.sales?.groups || {}).map(([grade, group]) => <p key={grade}>{grade} sold sample: {group.count} transactions, ${formatMoney(group.low)}–${formatMoney(group.high)}, newest {group.newest.slice(0, 10)} ({group.daysSinceNewest} days ago). {group.qualified ? 'Meets the configured sample/recency policy.' : 'Insufficient recent evidence.'}</p>)}
+      {Object.entries(data.financialDecision.sales?.groups || {}).map(([grade, group]) => <p key={grade}>{grade} sold sample: {group.count} transactions, ${formatMoney(group.low)}–${formatMoney(group.high)}, newest {group.newest.slice(0, 10)} ({group.daysSinceNewest} days ago). {data.financialDecision.sales.truncated ? 'Incomplete response; this sample cannot authorize financial trust.' : group.qualified ? 'Meets the configured sample/recency policy.' : 'Insufficient recent evidence.'}</p>)}
       <p>Sold-data status: {data.financialDecision.sales?.status || 'unavailable'}. {data.financialDecision.reasons.join(', ')}.</p>
     </div>}
     <p>{reason}</p>
@@ -1505,9 +1506,9 @@ if (data.imageAnalysis) setImageAnalysis(data.imageAnalysis);
       <div style={{ background: C.cream, borderBottom: "1px solid " + C.border, padding: "2.5rem 1.5rem" }}>
         <div style={{ maxWidth: 860, margin: "0 auto", display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(220px, 1fr))", gap: "1rem" }}>
           {[
-            { icon: "✅", title: "Clear Verdict", body: "Grade, Skip, or Maybe — one unambiguous answer per card." },
-            { icon: "📊", title: "Realistic Values", body: "Raw vs PSA 9 vs PSA 10 — actual market range estimates, not hype." },
-            { icon: "🎯", title: "Risk Analysis", body: "Know your true PSA 10 odds before you spend on submission fees." },
+            { icon: "✅", title: "Clear Verdict", body: "An evidence-supported recommendation, or provisional analysis when evidence is insufficient." },
+            { icon: "📊", title: "Realistic Values", body: "Observed asking or sold prices, with PSA estimates labeled by source." },
+            { icon: "🎯", title: "Risk Analysis", body: "See which PSA 10 inputs are modeled and where evidence is missing." },
           ].map(function(item) {
             return (
               <div key={item.title} style={{ background: C.white, border: "1px solid " + C.border, borderRadius: 14, padding: "1.25rem 1.1rem", display: "flex", gap: "0.75rem", alignItems: "flex-start" }}>
@@ -1527,7 +1528,7 @@ if (data.imageAnalysis) setImageAnalysis(data.imageAnalysis);
         <div style={{ maxWidth: 980, margin: "0 auto" }}>
           <h2 style={{ fontFamily: "'Playfair Display', serif", fontSize: "2rem", fontWeight: 900, letterSpacing: "-0.02em", marginBottom: "0.35rem" }}>Analyze My Card</h2>
           <p style={{ fontSize: "0.9rem", color: C.inkSoft, fontWeight: 300, marginBottom: "0.5rem" }}>
-            Enter any card below. Get a Grade / Skip verdict with raw, PSA 9, PSA 10 values, and real grading upside.
+            Enter any card below. Compare market evidence with conditional PSA 9 and PSA 10 scenarios. Recommendations require qualified evidence.
           </p>
           <p style={{ fontSize: "0.78rem", color: C.inkSoft, fontStyle: "italic", marginBottom: "1.75rem", maxWidth: 720 }}>
             Most raw cards don't gem. This helps you find the ones that do.
@@ -1753,7 +1754,7 @@ if (data.imageAnalysis) setImageAnalysis(data.imageAnalysis);
   </ul>
 </div>
             {/* Examples */}
-            <p style={{ fontSize: "0.72rem", color: C.inkSoft, marginBottom: "0.75rem" }}>AI estimates raw value, PSA 9, PSA 10, grading upside, and recommendation.</p>
+            <p style={{ fontSize: "0.72rem", color: C.inkSoft, marginBottom: "0.75rem" }}>AI supplies modeled grading scenarios. Independent identity and market evidence determine whether recommendations are supported.</p>
             <div style={{ display: "flex", gap: "0.5rem", flexWrap: "wrap", alignItems: "center" }}>
               <span style={{ fontSize: "0.72rem", color: C.inkSoft, fontWeight: 600 }}>Try:</span>
               {EXAMPLES.map(function(ex, i) {
@@ -1882,7 +1883,7 @@ if (data.imageAnalysis) setImageAnalysis(data.imageAnalysis);
           )}
 
           {/* What To Grade Next */}
-{savedReports.length > 0 && (
+{savedReports.some(r => isValuationTrusted(r) && r.verdict === "grade") && (
   <div style={{ marginTop: "1.75rem" }}>
     <div
       style={{
@@ -1906,7 +1907,7 @@ if (data.imageAnalysis) setImageAnalysis(data.imageAnalysis);
       }}
     >
       {savedReports
-        .filter(isValuationTrusted)
+        .filter(r => isValuationTrusted(r) && r.verdict === "grade")
         .slice()
         .sort(function(a, b) {
           const scoreA =
@@ -1992,7 +1993,7 @@ if (data.imageAnalysis) setImageAnalysis(data.imageAnalysis);
 
           {/* Saved Reports */}
           {savedReports.length > 0 && (
-            <div style={{ marginTop: "1.75rem" }}>
+            <div data-testid="saved-reports" style={{ marginTop: "1.75rem" }}>
               <div style={{ fontSize: "0.72rem", fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.08em", color: C.inkSoft, marginBottom: "0.75rem" }}>Saved Reports</div>
               <div style={{ display: "flex", flexDirection: "column", gap: "0.5rem" }}>
                 {savedReports.map(function(r) {
@@ -2003,9 +2004,9 @@ if (data.imageAnalysis) setImageAnalysis(data.imageAnalysis);
                       <div style={{ flex: 1, minWidth: 0 }}>
                         <div style={{ fontSize: "0.875rem", fontWeight: 700, color: C.ink, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{r.cardTitle}</div>
                         <div style={{ display: "flex", gap: "0.75rem", marginTop: "0.2rem", flexWrap: "wrap" }}>
-                          {!isValuationTrusted(r) && <span style={{ fontSize: "0.72rem", color: C.amber }}>Valuation withheld — {r.valuationVerification?.reason || "recheck required"}</span>}
+                          {!isValuationTrusted(r) && <span style={{ fontSize: "0.72rem", color: C.amber }}>{isMarketAnalysisAvailable(r) ? "Provisional analysis — recommendation withheld" : "Valuation withheld — " + (r.valuationVerification?.reason || "recheck required")}</span>}
                           {v && <span style={{ fontSize: "0.68rem", fontWeight: 700, background: v.bg, color: v.color, padding: "0.1rem 0.5rem", borderRadius: 100 }}>{v.label}</span>}
-                          {r.psa10Probability != null && <span style={{ fontSize: "0.72rem", color: C.inkSoft }}>~{r.psa10Probability}% PSA 10</span>}
+                          {r.psa10Probability != null && <span style={{ fontSize: "0.72rem", color: C.inkSoft }}>{r.psa10Probability}% PSA 10 ({r.financialDecision?.probability?.qualified ? "calibrated model" : "modeled estimate"})</span>}
                           {r.gemPredictScore != null && (
   <span
     style={{
@@ -2017,12 +2018,12 @@ if (data.imageAnalysis) setImageAnalysis(data.imageAnalysis);
     Score {r.gemPredictScore}/99
   </span>
 )}
-{r.marketData?.marketSummary?.rawMedian != null && (
+{isMarketAnalysisAvailable(r) && r.rawValue != null && (
   <span style={{ fontSize: "0.72rem", color: C.green, fontWeight: 700 }}>
-    FMV ${safeMoney(r.marketData.marketSummary.rawMedian)}
+    {r.marketData.marketSummary.fairMarketValue != null ? `Sold-backed FMV $${safeMoney(r.marketData.marketSummary.fairMarketValue)}` : `${r.financialDecision?.rawSource === 'completed_sales' ? 'Sold sample' : 'Asking'} $${safeMoney(r.rawValue)}`}
   </span>
 )}
-                          {r.gradingUpside != null && <span style={{ fontSize: "0.72rem", color: r.gradingUpside >= 0 ? C.green : C.red, fontWeight: 600 }}>{r.gradingUpside >= 0 ? "+$" : "-$"}{safeMoney(Math.abs(r.gradingUpside))}</span>}
+                          {r.gradingUpside != null && <span style={{ fontSize: "0.72rem", color: r.gradingUpside >= 0 ? C.green : C.red, fontWeight: 600 }}>Conditional upside {r.gradingUpside >= 0 ? "+$" : "-$"}{safeMoney(Math.abs(r.gradingUpside))}</span>}
                         </div>
                       </div>
                       <button onClick={function() { setResults(previous => [safeStoredReport(r), ...previous].slice(0, 5)); }} style={{ fontSize: "0.72rem", color: C.gold, fontWeight: 600, background: "none", border: "none", cursor: "pointer", flexShrink: 0 }}>Load</button>
@@ -2197,8 +2198,8 @@ if (data.imageAnalysis) setImageAnalysis(data.imageAnalysis);
         <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(220px, 1fr))", gap: "2rem" }}>
           {[
             { n: "01", title: "Search Your Card",    body: "Enter card name, type, set, and condition estimate. Optionally upload a photo for AI image analysis." },
-            { n: "02", title: "See the Full Picture", body: "Compare raw, PSA 9, and PSA 10 prices with net profit after fees — no spreadsheet needed." },
-            { n: "03", title: "Get Your Verdict",     body: "Grade It, Skip It, or Consider It — with a breakdown of why and a clear recommended action." },
+            { n: "02", title: "See the Full Picture", body: "Compare observed prices and modeled PSA scenarios, with conditional net after the stated grading fee." },
+            { n: "03", title: "Get Your Verdict",     body: "See an evidence-supported recommendation, or provisional analysis when evidence is insufficient." },
           ].map(function(s) {
             return (
               <div key={s.n} style={{ borderTop: "3px solid " + C.border, paddingTop: "1.5rem" }}>
@@ -2281,8 +2282,8 @@ if (data.imageAnalysis) setImageAnalysis(data.imageAnalysis);
           <FAQItem q="Does GemPredict guarantee a PSA grade?" a="No. GemPredict is a decision-support tool, not a grading company. Final grades always depend on PSA's physical inspection of the actual card submitted." />
           <FAQItem q="Can I use this for sports cards too?" a="Yes. GemPredict supports Pokemon, sports cards, Magic: The Gathering, Yu-Gi-Oh!, Dragon Ball, One Piece, and other major TCG categories." />
           <FAQItem q="Why does PSA 10 probability matter?" a="The biggest grading profits usually come from PSA 10s. A card with weak gem-rate odds can quickly become a bad submission — even if the PSA 10 value looks attractive." />
-          <FAQItem q="What does the condition estimate do?" a="The condition estimate (Risky, Strong Copy, or Gem Candidate) helps GemPredict calibrate PSA 10 probability and grading upside more realistically. A played card and a gem candidate of the same card have very different submission economics." />
-          <FAQItem q="How does photo analysis work?" a="If you upload a card photo, GemPredict sends it to Claude Vision which inspects centering, corners, edges, and surface quality against PSA grading criteria. It returns an estimated grade range and a worth-grading verdict based on what's visible in the image. Image quality and lighting affect accuracy." />
+          <FAQItem q="What does the condition estimate do?" a="The condition estimate supplies a conditional model input. It is not a calibrated individual grade probability or a historical gem rate; financial recommendations still require qualified evidence." />
+          <FAQItem q="How does photo analysis work?" a="The photo contributes visual condition observations and an explicitly unverified AI interpretation. Independent catalog evidence governs trusted identity, and grading recommendations require qualified evidence. Photos cannot establish a PSA grade." />
           <FAQItem q="Will photo grading be added as a full feature?" a="Yes. AI Photo Grading is planned for a future release — estimating PSA 10 potential from front and back card images, covering centering, corners, edges, and surface quality." />
         </div>
       </div>

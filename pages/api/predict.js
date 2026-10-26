@@ -955,7 +955,7 @@ const atlasIdentityConfidence = imageAnalysis
       ? atlasOrchestrator({ ...result, gpScore: { score: result.prediction.gemPredictScore } })
       : null;
     if (preview || process.env.NODE_ENV === 'development') {
-      result.pricingDiagnostics = predictionPricingReceipt(result, { startedAt, mode: confirmedVariant ? 'revaluation' : imageBuffer ? 'scan' : 'text' });
+      result.pricingDiagnostics = predictionPricingReceipt(result, { startedAt, privatePreview: preview, mode: confirmedVariant ? 'revaluation' : imageBuffer ? 'scan' : 'text' });
       console.log('[GemPredict] Pricing diagnostic', JSON.stringify({ ...result.pricingDiagnostics, searches: undefined }));
       result.pricingDiagnostics.searches.forEach((search, index) => console.log('[GemPredict] Pricing search', JSON.stringify({ requestId: result.pricingDiagnostics.requestId, attempt: index + 1, ...search })));
     }
