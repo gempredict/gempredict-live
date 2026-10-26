@@ -4,7 +4,8 @@
   "private": true,
   "scripts": {
     "dev": "next dev",
-    "build": "next build",
+    "build": "next build && npm run check:catalog-packaging",
+    "check:catalog-packaging": "node scripts/check-tcgdex-packaging.mjs",
     "start": "next start",
     "lint": "next lint"
   },
