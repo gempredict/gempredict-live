@@ -92,7 +92,8 @@ test('text/manual requests have no visual confidence; image and independent conf
   assert.ok(report.atlas);
   const weakImage = await runPipeline({ ...pika, vision: { worthGrading: false, worthGradingReason: 'Visible condition risk.' } });
   assert.equal(weakImage.payload.atlas.decision.label, 'Consider It');
-  assert.ok(weakImage.payload.atlas.decision.blockers.includes('Visible condition risk.'));
+  assert.ok(weakImage.payload.atlas.decision.blockers.includes(weakImage.payload.imageAnalysis.worthGradingReason));
+  assert.equal(weakImage.payload.imageAnalysis.worthGrading, false);
 });
 
 test('untrusted variants, conflicts, unofficial images and zero comparables never produce Atlas endorsements', async () => {

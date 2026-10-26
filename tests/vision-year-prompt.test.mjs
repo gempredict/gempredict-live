@@ -71,3 +71,14 @@ test('unsupported front/back image MIME cannot be relabeled as JPEG or reach the
   await assert.rejects(analyze(Buffer.from('front'), 'image/jpeg', Buffer.from('raw-heif'), 'image/heif', 'Pikachu', 'pokemon'), /Unsupported analysis image format/);
   assert.equal(requests.length, 0);
 });
+
+test('vision asks for structured observations separately from unverified identity and does not request numeric grade forecasts', async () => {
+  const { analyze, requests } = harness({ content: [{ type: 'text', text: '{}' }] });
+  const result = await run(analyze);
+  const prompt = requests[0].messages[0].content.find(block => block.type === 'text').text;
+  assert.match(prompt, /visualObservations - array of \{attribute, code\}/);
+  assert.match(prompt, /Separate visual evidence from identity speculation/);
+  assert.match(prompt, /estimatedGrade - null/); assert.match(prompt, /gradeCeiling - null/);
+  assert.doesNotMatch(prompt, /should generally project as PSA 9 or better/);
+  assert.equal(result.centering, null); assert.equal(result.corners, null);
+});

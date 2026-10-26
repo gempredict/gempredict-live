@@ -12,8 +12,9 @@ const options = liveReportScenario();
 function assertBlocked(report) {
   assert.equal(isValuationTrusted(report), false); assert.equal(report.rawValue, null); assert.equal(report.atlas, null);
   for (const field of ['estimatedGrade', 'gradeCeiling', 'mostLikelyGradeRange', 'psa10Upside', 'overallScore', 'confidenceLevel']) assert.equal(report.imageAnalysis[field], null, field);
-  assert.equal(report.imageAnalysis.imageSummary, 'Corner whitening is visible.');
-  assert.equal(report.imageAnalysis.primaryLimiter, 'Slight edge whitening.');
+  assert.match(report.imageAnalysis.imageSummary, /Catalog-supported identity: 2026.*30th Celebration.*Visible corner whitening/);
+  assert.doesNotMatch(report.imageAnalysis.imageSummary, /Paldea Evolved|Obsidian Flames|PSA 8/);
+  assert.equal(report.imageAnalysis.primaryLimiter, 'Visible corner whitening.');
 }
 test('live Paldea 92% proposal is corrected; no-market result withholds grade projections and stale prose on save/reopen', async () => {
   const result = await runPipeline(options);
@@ -31,7 +32,8 @@ test('numeric years, decorated set names, incomplete catalog states and stale st
   const card = { ...options.proposal, year: '2026', brandSet: '30th Celebration' };
   for (const status of ['corrected', 'conflict', 'unavailable', undefined]) {
     const safe = visualConditionAnalysis({ ...options.vision, identifiedYear: 2023, imageSummary: '2023 card. Paldea Evolved card. Corners show whitening.' }, false, card, { catalog: { status, corrections: {} } });
-    assert.equal(safe.imageSummary, 'Corners show whitening.'); assert.equal(safe.estimatedGrade, null);
+    assert.match(safe.imageSummary, /Card identity is unverified/);
+    assert.doesNotMatch(safe.imageSummary, /Paldea Evolved|2023/); assert.equal(safe.estimatedGrade, null);
   }
 });
 test('confirmation fetches fresh prices and reports a fresh withheld outcome; legitimate new comparables can restore trust', async () => {
@@ -125,7 +127,7 @@ test('a saved Atlas narrative derived from superseded visual prose is withheld w
   assert.ok(safeStoredReport(result.report).atlas);
   const stale = safeStoredReport({ ...result.report, imageAnalysis: { ...result.report.imageAnalysis, cornersNote: 'Paldea Evolved looks sharp. Corner whitening is visible.' } });
   assert.equal(stale.atlas, null); assert.equal(stale.rawValue, 40); assert.equal(isValuationTrusted(stale), true);
-  assert.equal(stale.imageAnalysis.cornersNote, 'Corner whitening is visible.');
+  assert.equal(stale.imageAnalysis.cornersNote, 'Visible corner whitening.');
 });
 
 test('internal protection redirects, provider auth failures and network failures remain distinct without following redirects', async () => {

@@ -319,7 +319,7 @@ function ImageAnalysisCard({ data, report }) {
           </span>
           <div>
             <div style={{ fontSize: "0.7rem", fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.07em", color: worthColor, marginBottom: "0.2rem" }}>
-              {trusted ? `${worthLabel} — based on visible grading risk` : "Grading recommendation withheld"}
+              {trusted ? "Visual condition observations" : "Grading recommendation withheld"}
             </div>
             <div style={{ fontSize: "0.84rem", color: C.inkMid }}>{data.worthGradingReason}</div>
           </div>
@@ -328,13 +328,13 @@ function ImageAnalysisCard({ data, report }) {
         {/* 4 attribute ratings */}
         <div className="gp-vision-grid" style={{ marginBottom: "1rem" }}>
           {attributes.map(function(attr) {
-            const rating = data[attr.key] || "fair";
+            const rating = data[attr.key] || "unassessed";
             const rc = RATING_COLORS[rating] || RATING_COLORS.fair;
             return (
               <div key={attr.key} style={{ background: C.cream, border: "1px solid " + C.border, borderRadius: 12, padding: "0.85rem 0.9rem" }}>
                 <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "0.35rem" }}>
                   <span style={{ fontSize: "0.7rem", fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.06em", color: C.inkSoft }}>{attr.label}</span>
-                  <RatingPill rating={rating} />
+                  <RatingPill rating={rating} label={rating === "unassessed" ? "Not assessed" : undefined} />
                 </div>
                 <p style={{ fontSize: "0.78rem", color: C.inkMid, lineHeight: 1.55, margin: 0 }}>{attr.note || "—"}</p>
               </div>
@@ -364,7 +364,7 @@ function ImageAnalysisCard({ data, report }) {
     Confidence Level
   </div>
   <div style={{ fontSize: "0.9rem", fontWeight: 700, color: C.ink }}>
-    {trusted ? data.confidenceLevel || "Moderate" : "Grade confidence withheld"}
+    {trusted ? data.confidenceLevel || "Grade confidence not established" : "Grade confidence withheld"}
   </div>
 </div>
         <div style={{ background: "#fefce8", border: "1px solid #fde68a", borderRadius: 10, padding: "0.8rem 1rem", marginBottom: "1rem" }}>
@@ -418,7 +418,7 @@ function ImageAnalysisCard({ data, report }) {
         {/* Overall score bar */}
         <div style={{ background: C.cream, borderRadius: 10, padding: "0.85rem 1rem", marginBottom: "1rem" }}>
           <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "0.45rem" }}>
-            <span style={{ fontSize: "0.72rem", fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.05em", color: C.inkSoft }}>{trusted ? "Estimated PSA Grade" : "Visual observations only"}</span>
+            <span style={{ fontSize: "0.72rem", fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.05em", color: C.inkSoft }}>{"Visual observations only"}</span>
             <span style={{ fontFamily: "'Playfair Display', serif", fontSize: "1.3rem", fontWeight: 700, color: overallR.color }}>
               {trusted && data.overallScore != null ? data.overallScore + " / 10" : "Withheld"}
             </span>

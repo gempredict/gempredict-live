@@ -46,12 +46,12 @@ export async function runPipeline(scenario) {
   const originalFetch = globalThis.fetch;
   const originalId = process.env.EBAY_PROD_CLIENT_ID;
   const originalSecret = process.env.EBAY_PROD_CLIENT_SECRET;
-  const metrics = { preflightRequests: 0, logCalls: 0, parseCalls: 0, responseHeaders: {}, neutralOAuth: 0, neutralBrowse: 0, valuationOAuth: 0, valuationBrowse: 0, valuationQueries: [], claudeVision: 0, claudePrediction: 0 };
+  const metrics = { pricingLogs: [], preflightRequests: 0, logCalls: 0, parseCalls: 0, responseHeaders: {}, neutralOAuth: 0, neutralBrowse: 0, valuationOAuth: 0, valuationBrowse: 0, valuationQueries: [], claudeVision: 0, claudePrediction: 0 };
   const errors = [];
   const model = { cardTitle: scenario.proposal?.subject || scenario.fields?.cardName || 'Unrecognized card', cardMeta: 'Mock model proposal', psa9Value: 120, psa10Value: 200, psa10Probability: 60, ...scenario.model };
   const context = {
     predictionPricingReceipt, isVercelPreview, verifyPreviewIntegration: options => verifyPreviewIntegration({ ...options, ...(scenario.assetCheck ? { verifyAssets: scenario.assetCheck } : {}) }),
-    MAX_IMAGE_BYTES, Buffer, console: { log() {}, error(...args) { errors.push(args.map(value => String(value)).join(" ")); } }, supabase: null,
+    MAX_IMAGE_BYTES, Buffer, console: { log(label, data) { if (String(label).startsWith('[GemPredict] Pricing')) metrics.pricingLogs.push(JSON.parse(data)); }, error(...args) { errors.push(args.map(value => String(value)).join(" ")); } }, supabase: null,
     process: { env: { NEXT_PUBLIC_SITE_URL: 'http://stage-a.local', ...scenario.routingEnv } },
     logRequest: async () => { metrics.logCalls++; },
     buildCanonicalCardFromImageAnalysis, buildCanonicalCardFromText, missingTextIdentityFields,
@@ -103,8 +103,8 @@ export async function runPipeline(scenario) {
       if (String(url).includes('/oauth2/token')) { metrics.valuationOAuth++; return { ok: true, json: async () => ({ access_token: 'mock' }) }; }
       metrics.valuationBrowse++;
       const query = new URL(url).searchParams.get('q');
-      const items = typeof scenario.market === 'function' ? scenario.market(query, metrics) : scenario.market || [];
-      return { ok: true, json: async () => ({ itemSummaries: items, total: items.length }) };
+      const items = typeof scenario.market === 'function' ? scenario.market(query, metrics, { limit: Number(new URL(url).searchParams.get('limit')), offset: Number(new URL(url).searchParams.get('offset') || 0) }) : scenario.market || [];
+      return { ok: true, json: async () => ({ itemSummaries: items, total: scenario.marketTotal ?? items.length }) };
     };
     const handler = vm.runInNewContext(`${config}\n${helpers}\n${claudeFunctions}\n${handlerSource}\nhandler;`, context);
     let code, payload;

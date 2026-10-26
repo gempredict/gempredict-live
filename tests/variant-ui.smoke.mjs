@@ -28,7 +28,7 @@ try {
     marketData: { marketSummary: { rawUsedCount: 1, rawMedian: 987654 } },
     variantVerification: { status: 'needs_confirmation', materialAmbiguity: true, explanation: 'Standard and alternate artwork evidence conflict.' },
     valuationVerification: { status: 'untrusted', reason: 'variant_unresolved', explanation: 'Standard and alternate artwork evidence conflict.' },
-    imageAnalysis: { centering: 'good', corners: 'good', edges: 'good', surface: 'fair', overallScore: 7, imageSummary: 'Visible corner whitening remains available.' },
+    imageAnalysis: { centering: 'good', corners: 'good', edges: 'good', surface: 'fair', visualObservations: [{ attribute: 'corners', code: 'whitening' }], overallScore: 7, imageSummary: 'Visible corner whitening remains available.' },
   };
   const textOnly = process.env.TEXT_ONLY_SMOKE === '1';
   if (textOnly) {
@@ -72,7 +72,7 @@ try {
   assert.ok((await page.locator('body').innerText()).includes('Valuation and grading ROI withheld'));
   assert.ok(!(await page.locator('body').innerText()).includes('987,654'));
   assert.ok(!(await page.locator('body').innerText()).includes('987654'));
-  if (!textOnly) assert.ok((await page.locator('body').innerText()).includes('Visible corner whitening remains available.'));
+  if (!textOnly) assert.ok((await page.locator('body').innerText()).includes('Visible corner whitening.'));
   const nameInput = page.getByPlaceholder('e.g. Charizard Holo, LeBron Rookie, Black Lotus');
   const setInput = page.getByPlaceholder('e.g. 1999 Base Set, 2003 Topps Chrome');
   await nameInput.fill('Different card'); await setInput.fill('1999 Wrong Set');
@@ -127,7 +127,7 @@ try {
   assert.match(photoText, /Stellar Crown/);
   assert.doesNotMatch(photoText, /High Confidence|High market value|resale profit|Sell for a premium/);
   assert.match(photoText, /Visible corner whitening/);
-  assert.match(photoText, /Minor whitening at the top corner/);
+  assert.match(photoText, /Visible corner whitening/);
   assert.match(photoText, /Grading recommendation withheld/i);
   await photoPage.close();
   // A previously trusted browser report must lose pricing/Atlas when its

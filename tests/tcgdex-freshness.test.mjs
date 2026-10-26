@@ -122,16 +122,18 @@ test('actual handler corrects stale catalog printing before valuation and retain
   assert.equal(result.report.rawValue, 40);
   assert.ok(result.payload.identityDiagnostics.catalog.diagnostics.some(d => d.source === 'tcgdex_upstream_snapshot' && d.accepted));
   assert.equal(result.report.imageAnalysis.identifiedBrandSet, 'Stellar Crown'); // explicitly labelled initial interpretation
-  assert.equal(result.report.imageAnalysis.imageSummary, 'Corner whitening is visible.');
-  assert.equal(result.report.imageAnalysis.psa10Upside, 'Light surface marks may limit the grade.');
-  assert.deepEqual([...result.report.imageAnalysis.gemRiskFactors], ['Minor edge whitening.']);
+  assert.match(result.report.imageAnalysis.imageSummary, /30th Celebration.*Visible corner whitening/);
+  assert.doesNotMatch(result.report.imageAnalysis.imageSummary, /Stellar Crown/);
+  assert.equal(result.report.imageAnalysis.psa10Upside, null);
+  assert.deepEqual([...result.report.imageAnalysis.gemRiskFactors], ['Visible corner whitening.']);
   for (const finish of ['Reverse-Holo Special Art', 'Non-Holo Special Art', 'Base', 'Holo Alternate Art']) {
     assert.equal(identitySearchGate(result.report.identityVerification, { ...result.report.canonicalCard, parallel: finish }).allowed, false);
   }
   persist('corrected', result.report);
   const restored = safeStoredReport({ ...result.report, imageAnalysis: { ...result.report.imageAnalysis, imageSummary: 'Stellar Crown has sharp edges. Surface scratches visible.' } });
   assert.equal(isValuationTrusted(restored), true);
-  assert.equal(restored.imageAnalysis.imageSummary, 'Surface scratches visible.');
+  assert.doesNotMatch(restored.imageAnalysis.imageSummary, /Stellar Crown/);
+  assert.match(restored.imageAnalysis.imageSummary, /Visible corner whitening/);
   for (const field of ['subject', 'cardNumber', 'year', 'brandSet']) {
     const invalid = safeStoredReport({ ...result.report, canonicalCard: { ...result.report.canonicalCard, [field]: null } });
     assert.equal(invalid.rawValue, null); assert.equal(invalid.atlas, null);

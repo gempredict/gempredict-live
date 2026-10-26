@@ -238,7 +238,7 @@ function normaliseImageAnalysis(raw) {
   }
   function safeRating(val) {
     const valid = ["excellent", "good", "fair", "poor"];
-    return typeof val === "string" && valid.includes(val.toLowerCase()) ? val.toLowerCase() : "fair";
+    return typeof val === "string" && valid.includes(val.toLowerCase()) ? val.toLowerCase() : null;
   }
 const combinedNotes = [
   raw.centeringNote,
@@ -299,6 +299,9 @@ else if (hasObviousStructuralDamage && !saysNoStructuralDamage) {
     identityNotes: safeStr(raw.identityNotes, "Card identity could not be confidently determined."),
     authenticityWarning: typeof raw.authenticityWarning === "string" ? raw.authenticityWarning.slice(0, 1000) : null,
     isUnofficial: raw.isUnofficial === true,
+    visualSafetyFlags: { structuralDamage: hasCatastrophicDamage || (hasObviousStructuralDamage && !saysNoStructuralDamage), imageQualityLimited: hasImageQualityIssues },
+    visualObservations: raw.visualObservations,
+    imageLimitations: raw.imageLimitations,
     // Per-attribute ratings
     centering:      safeRating(raw.centering),
     corners:        safeRating(raw.corners),
@@ -413,7 +416,10 @@ marketContext +
     "- Analysis (be direct and practical, not generic)\n" +
     "- Action (give a specific actionable recommendation)\n\n" +
     "Respond with ONLY a single raw JSON object. No markdown. No backticks. No extra text before or after.\n\n" +
-    "Required fields:\n" +
+    "Separate visual evidence from identity speculation. Condition findings must describe observable defects only, never set/year, value, grading suitability or PSA predictions.\n" +
+  "visualObservations - array of {attribute, code}, only: centering [off_center,miscut]; corners [whitening,softening,bend,crease]; edges [whitening,chipping,wear,peeling]; surface [scratches,print_lines,dent,crease,bend,staining]. Include only actually observed defects; uncertain or unseen defects must not be asserted.\n" +
+  "imageLimitations - array containing only glare, blur, sleeve, back_not_visible, limited_resolution when applicable.\n" +
+  "Required fields:\n" +
     "cardTitle - full proper card name (string)\n" +
     "cardMeta - set name, year, variant details (string)\n" +
     "rawValue - realistic ungraded USD market estimate (number, cents allowed)\n" +
@@ -484,11 +490,11 @@ const backMime = backImageMimeType &&
   : null;
 
   const imagePrompt =
-  "You are an expert card pre-grader helping a collector decide whether this card is worth submitting to PSA.\n\n" +
+  "Inspect observable card features and propose an identity for independent catalog verification. Identity proposals and photo observations are separate evidence, not verified facts.\n\n" +
   "Card name: " + (cardName || "unknown") + "\n" +
   "Card type: " + typeLabel + "\n\n" +
 
-  "Your job is NOT to guarantee a PSA grade. Your job is to identify visible grade limiters and estimate the card's realistic grading ceiling from the image.\n\n" +
+  "Report observable defects and inspection limitations. Do not blend guessed set/year claims into condition findings or generate PSA forecasts. The application generates explanations after independent identity reconciliation.\n\n" +
 
   "Assess ONLY what is visible in the uploaded image. If the back of the card is not visible, say that this limits confidence. If glare, sleeve reflection, angle, blur, or low resolution limits surface inspection, say so.\n\n" +
 
@@ -511,7 +517,7 @@ const backMime = backImageMimeType &&
     "- If visible surface scratches, print lines, chrome lines, dents, dimples, roller marks, or holo scratches are present, surface cannot be rated excellent.\n" +
 "- If surface scratches or print lines are clearly visible, they must appear in primaryLimiter, majorGradeCap, or minorConcerns depending on severity.\n" +
 "- For Pokemon holo, foil, chrome, and glossy cards, visible surface scratches should materially reduce PSA 10 confidence.\n" +
-  "- Do not give a PSA 10 candidate label unless all visible categories look exceptionally clean and image quality is good enough to justify it.\n\n" +
+  "- Never give a PSA candidate label or turn photo observations into a grade guarantee.\n\n" +
 
   "Use card-type awareness:\n" +
   "- Pokemon/TCG: pay close attention to holo scratches, whitening, silvering, edge chipping, print lines, and surface dents.\n" +
@@ -519,7 +525,7 @@ const backMime = backImageMimeType &&
   "- Vintage cards: be stricter about corner softness, edge wear, print registration, staining, and overall eye appeal.\n\n" +
 
   "Important consistency rule:\n" +
-  "The final overallScore and estimatedGrade MUST logically follow the category ratings and notes. If centering, corners, edges, and surface are all good or excellent with no meaningful defect, the card should generally project as PSA 9 or better unless image confidence is low. If you assign a lower score, explicitly explain the grade-capping issue.\n\n" +
+  "Category ratings must follow visible defects and limitations. Missing or uninspectable attributes must be null. Do not translate ratings into numeric grades or optimistic candidate labels.\n\n" +
 
 "Card identification task:\n" +
 "- Identify the card as specifically as possible from the image and provided card name.\n" +
@@ -533,6 +539,9 @@ const backMime = backImageMimeType &&
 
   "Respond with ONLY a single raw JSON object. No markdown. No backticks. No extra text.\n\n" +
 
+  "Separate visual evidence from identity speculation. Condition findings must describe observable defects only, never set/year, value, grading suitability or PSA predictions.\n" +
+  "visualObservations - array of {attribute, code}, only: centering [off_center,miscut]; corners [whitening,softening,bend,crease]; edges [whitening,chipping,wear,peeling]; surface [scratches,print_lines,dent,crease,bend,staining]. Include only actually observed defects; uncertain or unseen defects must not be asserted.\n" +
+  "imageLimitations - array containing only glare, blur, sleeve, back_not_visible, limited_resolution when applicable.\n" +
   "Required fields:\n" +
   "identifiedYear - cautious proposed year actually visible on the card or strongly supported by visible product identifiers; a best-evidence visible copyright year is allowed with its basis explained in identityNotes; never override a visible year with remembered release-year knowledge; return null for conflicting or genuinely uncertain year evidence (string or null)\n" +
 "identifiedFranchise - broad card universe such as Pokemon, Baseball, Basketball, Football, Hockey, Soccer, Disney Lorcana, Star Wars, One Piece, Magic, Yu-Gi-Oh, Marvel, Garbage Pail Kids, or unknown (string)\n" +
@@ -545,27 +554,27 @@ const backMime = backImageMimeType &&
 "identifiedAutoOrRelic - one of: auto, relic, auto relic, none, unknown (string)\n" +
 "identityConfidence - 0-100 confidence in the card identity. Be conservative when set, number, language, or parallel are uncertain (integer)\n" +
 "identityNotes - one short sentence explaining which identity facts are strongly supported and which are uncertain (string)\n" +
-  "centering - one of: excellent, good, fair, poor (string)\n" +
+  "centering - one of: excellent, good, fair, poor, or null if unassessed\n" +
   "centeringNote - specific visible centering assessment, mention left/right and top/bottom if visible (string)\n" +
-  "corners - one of: excellent, good, fair, poor (string)\n" +
+  "corners - one of: excellent, good, fair, poor, or null if unassessed\n" +
   "cornersNote - specific visible corner assessment, mention any whitening, softness, fraying, bends, or unclear areas (string)\n" +
-  "edges - one of: excellent, good, fair, poor (string)\n" +
+  "edges - one of: excellent, good, fair, poor, or null if unassessed\n" +
   "edgesNote - specific visible edge assessment, mention whitening, chipping, rough cuts, or unclear areas (string)\n" +
-  "surface - one of: excellent, good, fair, poor (string)\n" +
+  "surface - one of: excellent, good, fair, poor, or null if unassessed\n" +
   "surfaceNote - specific visible surface assessment, mention scratches, print lines, dimples, glare limitations, haze, staining, or uncertainty (string)\n" +
-  "overallScore - realistic estimated grade ceiling from visible evidence, 1-10 integer (integer)\n" +
-    "gradeCeiling - realistic PSA ceiling based on visible condition like 'PSA 8 ceiling', 'PSA 9 candidate', or 'PSA 10 upside with risk' (string)\n" +
+  "overallScore - null; photo observations are not a numeric PSA grade\n" +
+    "gradeCeiling - null; do not forecast a PSA ceiling\n" +
 "primaryLimiter - the single biggest visible issue or uncertainty likely limiting the grade ceiling (string)\n" +
     "majorGradeCap - the biggest visible issue most likely preventing a higher grade, written collector-style (string)\n" +
 "minorConcerns - short collector-style list of smaller visible risks or uncertainties separated by commas (string)\n" +
 "confidenceLevel - one of: high, moderate, low (string)\n" +
-  "gradingRisk - 1-2 sentences explaining the main grade cap or uncertainty. This must directly justify the overallScore (string)\n" +
-  "estimatedGrade - short collector-friendly label like 'PSA 8 ceiling', 'PSA 9 candidate', 'PSA 9 with PSA 10 upside', or 'PSA 10 candidate but confidence limited' (string)\n" +
-  "mostLikelyGradeRange - short realistic range like 'PSA 8-9 likely' or 'PSA 9 with outside PSA 10 upside' (string)\n" +
-  "psa10Upside - one sentence explaining whether PSA 10 is realistically achievable from the visible image (string)\n" +
+  "gradingRisk - diagnostic description of observable damage or inspection limits only; no identity, price or numeric grade (string)\n" +
+  "estimatedGrade - null; do not generate candidate labels\n" +
+  "mostLikelyGradeRange - null; no grade projection\n" +
+  "psa10Upside - null; no grade projection\n" +
   "gemRiskFactors - array of 2-4 short PSA 10 risk factors focused on collector submission concerns (array of strings)\n" +
-  "worthGrading - based only on visible condition, whether the card appears worth grading before considering market value (boolean)\n" +
-  "worthGradingReason - 1 sentence explaining the grading recommendation from visible condition only (string)\n" +
+  "worthGrading - false if visible damage warrants withholding a submission recommendation; otherwise null. Never true from a photo alone\n" +
+  "worthGradingReason - diagnostic description of visible condition caution only, not financial or positive submission advice (string)\n" +
   "imageSummary - 1-2 sentences summarizing the card's visible condition and confidence level (string)\n\n" +
 
   "Rating scale:\n" +
@@ -573,12 +582,6 @@ const backMime = backImageMimeType &&
   "good = minor visible flaw or slight uncertainty\n" +
   "fair = moderate visible flaw that may cap grade\n" +
   "poor = significant visible flaw likely to strongly cap grade\n\n" +
-
-  "Scoring guidance:\n" +
-  "10 = only if all visible categories are excellent and image quality is strong\n" +
-  "9 = strong card with only minor visible concerns or limited image uncertainty\n" +
-  "8 = clean-looking card with one meaningful limiter or moderate uncertainty\n" +
-  "7 or below = visible moderate-to-major flaw, multiple issues, or poor image confidence\n\n" +
 
     "Confidence guidance:\n" +
 "high = strong image quality with clearly visible surfaces, corners, and edges\n" +
@@ -948,7 +951,8 @@ const atlasIdentityConfidence = imageAnalysis
       : null;
     if (preview || process.env.NODE_ENV === 'development') {
       result.pricingDiagnostics = predictionPricingReceipt(result, { startedAt, mode: confirmedVariant ? 'revaluation' : imageBuffer ? 'scan' : 'text' });
-      console.log('[GemPredict] Pricing diagnostic', result.pricingDiagnostics);
+      console.log('[GemPredict] Pricing diagnostic', JSON.stringify({ ...result.pricingDiagnostics, searches: undefined }));
+      result.pricingDiagnostics.searches.forEach((search, index) => console.log('[GemPredict] Pricing search', JSON.stringify({ requestId: result.pricingDiagnostics.requestId, attempt: index + 1, ...search })));
     }
     return res.status(200).json(result);
 

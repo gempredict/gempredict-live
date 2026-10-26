@@ -377,8 +377,8 @@ test('withheld live photo reports remove unsupported financial prose and retain 
   for (const analysis of [result.payload.imageAnalysis, result.report.imageAnalysis, safeStoredReport({ ...result.report, imageAnalysis: { ...result.report.imageAnalysis, worthGrading: true, worthGradingReason: 'High resale price makes grading worthwhile.' } }).imageAnalysis]) {
     assert.equal(analysis.worthGrading, null);
     assert.doesNotMatch(analysis.worthGradingReason, /high market value|resale price|worthwhile/i);
-    assert.equal(analysis.imageSummary, 'Corners show whitening.');
-    assert.equal(analysis.surfaceNote, 'Light scratches visible.');
+    assert.match(analysis.imageSummary, /30th Celebration.*Visible corner whitening/);
+    assert.equal(analysis.surfaceNote, 'Visible surface scratches.');
     assert.equal(analysis.cornersNote, 'Visible corner whitening.');
     assert.equal(analysis.estimatedGrade, result.payload.imageAnalysis.estimatedGrade);
   }

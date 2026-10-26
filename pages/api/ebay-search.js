@@ -80,7 +80,7 @@ export default async function handler(req, res) {
       "https://api.ebay.com/buy/browse/v1/item_summary/search?" +
       new URLSearchParams({
         q,
-        limit: "20",
+        limit: "100",
       }).toString();
 
     stage = 'browse';
@@ -107,6 +107,7 @@ export default async function handler(req, res) {
     if (!Array.isArray(searchData.itemSummaries) && searchData.total !== 0) throw new SyntaxError('Missing Browse results');
     stage = 'filter';
     const items = (searchData.itemSummaries || [])
+      .slice(0, 100) // Enforce the retrieval bound even on an oversized provider response.
       .map(function(item) {
         const priceValue = item.price && item.price.value
           ? Number(item.price.value)

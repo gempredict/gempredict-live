@@ -31,8 +31,9 @@ try {
     assert.match(body, /Stellar Crown/); // initial interpretation is retained as provenance
     if (name === 'corrected') {
       assert.match(body, /\$40/);
-      assert.match(body, /Corner whitening is visible/);
-      assert.match(body, /Light surface marks may limit the grade/);
+      assert.match(body, /Visible corner whitening/);
+      assert.doesNotMatch(body, /Light surface marks may limit the grade/);
+      assert.match(body, /do not establish a PSA grade/);
       assert.doesNotMatch(body, /This Stellar Crown card has strong eye appeal|Stellar Crown is difficult to grade/);
       assert.equal(report.identityVerification.catalog.candidate.printingProvenance.revision, 'a211f11f3ba57d56c65c5ac33be35b77d3280757');
     } else {
