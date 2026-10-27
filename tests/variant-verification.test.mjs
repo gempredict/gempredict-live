@@ -105,7 +105,7 @@ test('unresolved pricing is suppressed in API, atlas, stored reports and copied 
   assert.equal(guarded.prediction.verdict, null);
   assert.equal(guarded.marketData.marketSummary.rawMedian, null);
   assert.equal(guarded.atlas, null);
-  assert.equal(guarded.imageAnalysis.centering, 'good');
+  assert.equal(guarded.imageAnalysis.centering, null);
   const stored = safeStoredReport({ ...prediction, marketData: prices });
   assert.equal(stored.rawValue, null);
   assert.equal(stored.gradingUpside, null);
@@ -140,7 +140,7 @@ test('user confirmation requests a new valuation and never submits or unlocks ca
   });
   assert.equal(fresh.rawValue, 80);
   assert.equal(fresh.marketData.marketSummary.rawMedian, 80);
-  assert.equal(fresh.imageAnalysis.corners, 'good');
+  assert.equal(fresh.imageAnalysis.corners, null);
   assert.equal(report.rawValue, 999);
   const noPrices = await requestVariantRevaluation(report, { parallel: 'Alternate Art' }, async () => ({ ok: true, status: 200, headers: new Headers({ 'content-type': 'application/json' }), json: async () => protectValuation({ prediction, variantVerification: verifiedVariant(kid, 'user_confirmed'), marketData: null }) }));
   assert.equal(isMarketAnalysisAvailable(noPrices), false);

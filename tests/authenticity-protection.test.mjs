@@ -76,6 +76,6 @@ test('explicit vision authenticity flags survive normalization without changing 
     const result = await runPipeline({ ...pika, vision });
     assert.equal(result.payload.valuationVerification.reason, 'authenticity_unresolved');
     assert.equal(result.payload.atlas, null);
-    assert.ok(result.payload.imageAnalysis.centering);
+    assert.equal(result.payload.imageAnalysis.centering, null);
   }
 });

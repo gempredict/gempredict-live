@@ -49,7 +49,8 @@ try {
     assert.equal(initial.report.imageAnalysis.identityConfidence, identityFirst ? 90 : 92);
     const visibleFacts = await page.locator('body').evaluate(body => { const copy = body.cloneNode(true); copy.querySelectorAll('[data-testid="photo-initial-identity"]').forEach(node => node.remove()); return copy.textContent; });
     assert.doesNotMatch(visibleFacts, /Paldea Evolved|Obsidian Flames|PSA 8[–-]9|PSA 10 candidate|92%|90%/);
-    assert.match(visibleFacts, /Visible corner whitening/);
+    assert.match(visibleFacts, identityFirst ? /Unassessable corners/ : /Visible corner whitening/);
+    if (identityFirst) assert.doesNotMatch(visibleFacts, /Visible corner whitening/);
     await page.getByRole('button', { name: 'Verify Variant', exact: true }).click();
     await page.getByRole('button', { name: 'Confirm and revalue', exact: true }).click();
     await page.getByRole('alert').filter({ hasText: 'Preview authentication' }).waitFor();

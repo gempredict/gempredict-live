@@ -18,8 +18,9 @@ test('all trusted condition strings are generated from canonical identity and va
     const output = visualConditionAnalysis(raw, trusted, card, verification);
     const { unverifiedInterpretation, identifiedYear, identifiedBrandSet, identifiedSubject, identityConfidence, ...condition } = output;
     assert.doesNotMatch(JSON.stringify(condition), /Obsidian Flames|guaranteed|PSA 10 candidate|profit/);
-    assert.match(output.imageSummary, /2026.*30th Celebration.*149\/128.*Visible corner whitening.*Visible surface scratches/);
-    assert.equal(output.cornersNote, 'Visible corner whitening.'); assert.equal(output.estimatedGrade, null); assert.equal(output.overallScore, null);
+    assert.match(output.imageSummary, /2026.*30th Celebration.*149\/128.*Unassessable corners.*Unassessable surface/);
+    assert.match(output.cornersNote, /Unassessable corners/);
+    assert.equal(output.corners, null); assert.equal(output.surface, null); assert.equal(output.estimatedGrade, null); assert.equal(output.overallScore, null);
     assert.equal(unverifiedInterpretation.imageSummary, raw.imageSummary); assert.equal(identifiedBrandSet, 'Obsidian Flames'); assert.equal(identityConfidence, 90);
     assert.deepEqual(visualConditionAnalysis(output, trusted, card, verification), output, 'rehydration is idempotent');
   }
@@ -31,12 +32,12 @@ test('unknown identity and missing visual ratings remain explicitly unverified/u
 });
 test('observation codes are bounded and allowlisted; unsupported identity/grade fields cannot become observations', () => {
   const evidence = readVisualEvidence({ visualObservations: [null, { attribute: '__proto__', code: 'toString' }, { attribute: 'corners', code: 'constructor' }, { attribute: 'identity', code: 'Obsidian Flames' }, { attribute: 'surface', code: 'PSA 10' }, { attribute: 'corners', code: 'whitening', note: 'Obsidian Flames guaranteed grade' }, { attribute: 'corners', code: 'whitening' }], imageLimitations: ['glare', 'glare', 'certain grade'] });
-  assert.deepEqual(evidence, { findings: [{ attribute: 'corners', code: 'whitening' }], limitations: ['glare'] });
+  assert.deepEqual(evidence, { findings: [{ attribute: 'corners', code: 'whitening', certainty: 'unassessable' }], limitations: ['glare'] });
 });
-test('legacy visual extraction retains explicit defects without copying prose or reversing negation', () => {
+test('legacy free prose never becomes categorical visible damage', () => {
   for (const note of ['No scratches visible.', 'Surface scratches are not visible.', 'Possible scratches.', 'Scratches may be hidden.']) assert.deepEqual(readVisualEvidence({ surfaceNote: note }).findings, []);
   const output = conditionPresentation({ surfaceNote: 'Obsidian Flames has visible surface scratches.', cornersNote: 'No whitening.' }, { card, identityVerified: true, trusted: true });
-  assert.equal(output.surfaceNote, 'Visible surface scratches.'); assert.doesNotMatch(output.imageSummary, /Obsidian Flames/);
+  assert.equal(output.surfaceNote, 'Not assessed from the photo.'); assert.doesNotMatch(output.imageSummary, /Obsidian Flames/);
 });
 test('existing structural damage safety cannot be overridden by clean or missing structured observations', () => {
   const output = conditionPresentation({ worthGrading: true, visualSafetyFlags: { structuralDamage: true }, visualObservations: [] }, { card, identityVerified: true, trusted: true });

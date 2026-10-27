@@ -199,7 +199,7 @@ function ImageAnalysisCard({ data, report }) {
         <div style={{ display: "flex", alignItems: "center", gap: "0.5rem" }}>
           <span style={{ fontSize: "1rem" }}>📷</span>
           <span style={{ fontSize: "0.72rem", fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.09em", color: C.gold }}>
-            AI Photo Grading Analysis
+            Photo condition observations
           </span>
           <span style={{ fontSize: "0.6rem", fontWeight: 700, background: C.gold, color: C.ink, padding: "0.1rem 0.4rem", borderRadius: 4, letterSpacing: "0.06em" }}>BETA</span>
         </div>
@@ -212,7 +212,7 @@ function ImageAnalysisCard({ data, report }) {
       {canonical && (
         <div data-testid="photo-final-identity" style={{ padding: "1rem 1.25rem", background: C.cream }}>
           <div style={labelSt}>{catalogBacked ? "Catalog-supported identity" : "Current identity — verification pending"}</div>
-          <strong>{[canonical.year, canonical.brandSet, canonical.subject, canonical.parallel, canonical.cardNumber && `#${canonical.cardNumber}`, canonical.language].filter(Boolean).join(" · ")}</strong>
+          <strong>{catalogBacked ? [canonical.year, canonical.brandSet, canonical.subject, canonical.parallel, canonical.cardNumber && `#${canonical.cardNumber}`, canonical.language].filter(Boolean).join(" · ") : "Card identity is unverified. Confirm the printed identifiers."}</strong>
           {corrected && <p>The independent catalog corrected the initial AI interpretation below.</p>}
           <p style={{ fontSize: "0.78rem" }}>{trusted ? "Identity and version checks passed with matching market evidence." : isMarketAnalysisAvailable(report) ? "Identity and version verified. Pricing is provisional; grading recommendations are withheld." : "Pricing and grading recommendations remain withheld until all verification checks pass."}</p>
         </div>
@@ -309,6 +309,8 @@ function ImageAnalysisCard({ data, report }) {
       )}
 
       <div style={{ padding: "1.1rem 1.25rem" }}>
+        <p>AI photo observations are not physical inspection. Suspected defects are unconfirmed; an unassessable area is not evidence of mint condition.</p>
+        {data.visualObservations?.length > 0 && <details data-testid="observation-support"><summary>Observation locations and support</summary><ul>{data.visualObservations.map((finding,index)=><li key={index}>{finding.attribute}: {finding.code.replace(/_/g,' ')} — {finding.certainty || 'unconfirmed'}; {finding.evidence ? `${finding.evidence.side}, region ${finding.evidence.region.join(', ')}, cue ${finding.evidence.cue}, model support ${finding.evidence.confidence}` : 'no qualified localized support'}</li>)}</ul></details>}
         {/* Image summary */}
         <p style={{ fontSize: "0.875rem", color: C.inkMid, lineHeight: 1.7, marginBottom: "1rem", fontStyle: "italic" }}>
           {data.imageSummary}
@@ -336,7 +338,7 @@ function ImageAnalysisCard({ data, report }) {
               <div key={attr.key} style={{ background: C.cream, border: "1px solid " + C.border, borderRadius: 12, padding: "0.85rem 0.9rem" }}>
                 <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "0.35rem" }}>
                   <span style={{ fontSize: "0.7rem", fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.06em", color: C.inkSoft }}>{attr.label}</span>
-                  <RatingPill rating={rating} label={rating === "unassessed" ? "Not assessed" : undefined} />
+                  <RatingPill rating={rating} label={data.conditionAssessments?.[attr.key]?.state === "suspected_defect" ? "Suspected — unconfirmed" : rating === "unassessed" ? "Unassessable" : undefined} />
                 </div>
                 <p style={{ fontSize: "0.78rem", color: C.inkMid, lineHeight: 1.55, margin: 0 }}>{attr.note || "—"}</p>
               </div>
@@ -488,12 +490,13 @@ function ResultCard(props) {
 
 function WithheldResultCard({ data, onSave, isSaved, onVerifyVariant, onRescan }) {
   const [editing, setEditing] = useState(false);
+  const proposedIdentity = data.identityVerification?.catalog?.requiresConfirmation && data.identityVerification.catalog.candidate || data.canonicalCard;
   const [identity, setIdentity] = useState({
-    subject: data.canonicalCard?.subject || data.inputContext?.cardName || "",
-    cardNumber: data.canonicalCard?.cardNumber || "",
-    year: data.canonicalCard?.year || "",
-    brandSet: data.canonicalCard?.brandSet || "",
-    language: data.canonicalCard?.language || "",
+    subject: proposedIdentity?.subject || data.inputContext?.cardName || "",
+    cardNumber: proposedIdentity?.cardNumber || "",
+    year: proposedIdentity?.year || "",
+    brandSet: proposedIdentity?.brandSet || "",
+    language: proposedIdentity?.language || "",
   });
   const [version, setVersion] = useState(data.canonicalCard?.parallel || "");
   const [features, setFeatures] = useState(data.canonicalCard?.autoOrRelic === "auto" ? "auto" : data.canonicalCard?.autoOrRelic === "relic" ? "relic" : data.canonicalCard?.autoOrRelic === "auto relic" ? "auto relic" : "none");
@@ -513,8 +516,10 @@ function WithheldResultCard({ data, onSave, isSaved, onVerifyVariant, onRescan }
   const sources = sourceItems.filter(item => item && typeof item === 'object' && Number.isFinite(item.priceValue) && item.priceValue > 0 && item.price?.currency === 'USD').map(item => ({ ...item, sourceUrl: safeEbayListingUrl(item) }));
   const reason = data.valuationVerification?.explanation || "This version needs a fresh valuation.";
   return <div data-testid="financial-report" style={{ background: C.white, border: "1px solid " + C.border, borderRadius: 18, padding: "1.25rem" }}>
-    <h3 style={{ marginTop: 0 }}>{canonicalDisplayName(data.canonicalCard) || data.cardTitle}</h3>
+    <h3 style={{ marginTop: 0 }}>{identitySearchGate(data.identityVerification,data.canonicalCard).allowed ? canonicalDisplayName(data.canonicalCard) : "Card identity needs verification"}</h3>
     <p>{identitySearchGate(data.identityVerification, data.canonicalCard).allowed ? 'Independently verified identity' : 'Identity unverified'} · Language: {data.canonicalCard?.language === 'en' ? 'English' : data.canonicalCard?.language || 'unverified'}</p>
+    {identitySearchGate(data.identityVerification,data.canonicalCard).allowed && <p data-testid="catalog-rarity">Catalog rarity: {data.identityVerification?.catalog?.candidate?.rarity || 'unavailable'} · Printing / artwork: {data.canonicalCard?.parallel || 'unverified'}. Physical rarity markings are not independently inspected.</p>}
+    {data.identityVerification?.catalog?.requiresConfirmation && data.identityVerification.catalog.candidate && <p data-testid="catalog-candidate">Catalog candidate: {canonicalDisplayName(data.identityVerification.catalog.candidate)}. Confirm the printed identity and full collector number; this candidate is not a verified scan identity.</p>}
     <strong>{isValuationTrusted(data) ? (data.verdict === 'grade' ? 'Grade It — evidence-supported conditional analysis' : 'Skip It — evidence-supported conditional analysis') : isMarketAnalysisAvailable(data) ? 'Provisional market analysis — recommendation withheld' : 'Valuation and grading ROI withheld'}</strong>
     {isMarketAnalysisAvailable(data) && <div data-testid="market-evidence-analysis">
       <p><strong>{data.financialDecision.rawSource === 'completed_sales' ? 'Observed raw sold median' : 'Observed active asking median'}: ${formatMoney(data.rawValue)}</strong> — {data.financialDecision.observedRaw?.count || data.financialDecision.observedAsking?.count || 0} observations. {data.marketData?.marketSummary?.fairMarketValue == null && 'Not verified fair market value.'}</p>
@@ -2011,7 +2016,7 @@ if (data.imageAnalysis) setImageAnalysis(data.imageAnalysis);
                   return (
                     <div key={r.cardTitle} style={{ display: "flex", alignItems: "center", gap: "0.75rem", background: C.white, border: "1px solid " + C.border, borderRadius: 12, padding: "0.75rem 1rem" }}>
                       <div style={{ flex: 1, minWidth: 0 }}>
-                        <div style={{ fontSize: "0.875rem", fontWeight: 700, color: C.ink, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{r.cardTitle}</div>
+                        <div style={{ fontSize: "0.875rem", fontWeight: 700, color: C.ink, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{identitySearchGate(r.identityVerification,r.canonicalCard).allowed ? r.cardTitle : "Unverified card — confirm printed identity"}</div>
                         <div style={{ display: "flex", gap: "0.75rem", marginTop: "0.2rem", flexWrap: "wrap" }}>
                           {!isValuationTrusted(r) && <span style={{ fontSize: "0.72rem", color: C.amber }}>{isMarketAnalysisAvailable(r) ? "Provisional analysis — recommendation withheld" : "Valuation withheld — " + (r.valuationVerification?.reason || "recheck required")}</span>}
                           {v && <span style={{ fontSize: "0.68rem", fontWeight: 700, background: v.bg, color: v.color, padding: "0.1rem 0.5rem", borderRadius: 100 }}>{v.label}</span>}

@@ -72,7 +72,10 @@ try {
   assert.ok((await page.locator('body').innerText()).includes('Valuation and grading ROI withheld'));
   assert.ok(!(await page.locator('body').innerText()).includes('987,654'));
   assert.ok(!(await page.locator('body').innerText()).includes('987654'));
-  if (!textOnly) assert.ok((await page.locator('body').innerText()).includes('Visible corner whitening.'));
+  if (!textOnly) {
+    assert.match(await page.locator('body').innerText(), /Unassessable corners/);
+    assert.doesNotMatch(await page.locator('body').innerText(), /Visible corner whitening/);
+  }
   const nameInput = page.getByPlaceholder('e.g. Charizard Holo, LeBron Rookie, Black Lotus');
   const setInput = page.getByPlaceholder('e.g. 1999 Base Set, 2003 Topps Chrome');
   await nameInput.fill('Different card'); await setInput.fill('1999 Wrong Set');
@@ -128,8 +131,8 @@ try {
   assert.match(photoText, /Initial AI confidence:/);
   assert.match(photoText, /Stellar Crown/);
   assert.doesNotMatch(photoText, /High Confidence|High market value|resale profit|Sell for a premium/);
-  assert.match(photoText, /Visible corner whitening/);
-  assert.match(photoText, /Visible corner whitening/);
+  assert.match(photoText, /Not assessed from the photo/);
+  assert.doesNotMatch(photoText, /Visible corner whitening/);
   assert.match(photoText, /Grading recommendation withheld/i);
   await photoPage.close();
   // A previously trusted browser report must lose pricing/Atlas when its

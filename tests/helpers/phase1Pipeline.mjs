@@ -1,3 +1,7 @@
+import { supportedObservation } from './visionEvidence.mjs';
+import { buildVisionPrompt } from '../../lib/visionPrompt.mjs';
+import { readVisualEvidence, conditionPresentation } from '../../lib/visualEvidence.mjs';
+import { readIdentityReadings } from '../../lib/visionIdentityEvidence.mjs';
 import { VISION_MODEL_CONFIGURATION, VALUATION_MODEL_CONFIGURATION } from '../../lib/modelConfiguration.mjs';
 import { createHash } from 'node:crypto';
 import { fetchCompletedSales } from "../../lib/completedSales.mjs";
@@ -54,7 +58,7 @@ export async function runPipeline(scenario) {
   const errors = [];
   const model = { cardTitle: scenario.proposal?.subject || scenario.fields?.cardName || 'Unrecognized card', cardMeta: 'Mock model proposal', psa9Value: 120, psa10Value: 200, psa10Probability: 60, ...scenario.model };
   const context = {
-    VISION_MODEL_CONFIGURATION, VALUATION_MODEL_CONFIGURATION, isVariantVerificationTrusted, fetchCompletedSales: card => fetchCompletedSales(card, { provider: scenario.soldProvider || null }), predictionPricingReceipt, isVercelPreview, verifyPreviewIntegration: options => verifyPreviewIntegration({ ...options, ...(scenario.assetCheck ? { verifyAssets: scenario.assetCheck } : {}) }),
+    buildVisionPrompt, conditionPresentation, readVisualEvidence, readIdentityReadings, VISION_MODEL_CONFIGURATION, VALUATION_MODEL_CONFIGURATION, isVariantVerificationTrusted, fetchCompletedSales: card => fetchCompletedSales(card, { provider: scenario.soldProvider || null }), predictionPricingReceipt, isVercelPreview, verifyPreviewIntegration: options => verifyPreviewIntegration({ ...options, ...(scenario.assetCheck ? { verifyAssets: scenario.assetCheck } : {}) }),
     MAX_IMAGE_BYTES, Buffer, console: { log(label, data) { if (String(label).startsWith('[GemPredict] Pricing')) metrics.pricingLogs.push(JSON.parse(data)); }, error(...args) { errors.push(args.map(value => String(value)).join(" ")); } }, supabase: null,
     process: { env: { NEXT_PUBLIC_SITE_URL: 'http://stage-a.local', ...scenario.routingEnv } },
     logRequest: async () => { metrics.logCalls++; },
@@ -92,7 +96,7 @@ export async function runPipeline(scenario) {
       if (vision) {
         metrics.claudeVision++;
         const card = scenario.proposal || {};
-        reply = { identifiedSubject: card.subject, identifiedLanguage: card.language || null, identifiedYear: card.year, identifiedBrandSet: card.brandSet, identifiedCardNumber: card.cardNumber, identifiedParallel: card.parallel, identifiedAutoOrRelic: card.autoOrRelic || 'none', identityConfidence: 90, identityNotes: scenario.notes || 'Mock visible identifiers; not independently verified.', centering: 'good', corners: 'good', edges: 'good', surface: 'good', overallScore: 8, cornersNote: 'Visible corner whitening.', imageSummary: 'Condition remains available.', worthGrading: true, worthGradingReason: 'Visible condition is suitable for grading consideration; economics unassessed.', ...scenario.vision };
+        reply = { identifiedSubject: card.subject, identifiedLanguage: card.language || null, identifiedYear: card.year, identifiedBrandSet: card.brandSet, identifiedCardNumber: card.cardNumber, identifiedParallel: card.parallel, identifiedAutoOrRelic: card.autoOrRelic || 'none', identityConfidence: 90, visualObservations: [supportedObservation()], identityNotes: scenario.notes || 'Mock visible identifiers; not independently verified.', centering: 'good', corners: 'good', edges: 'good', surface: 'good', overallScore: 8, cornersNote: 'Visible corner whitening.', imageSummary: 'Condition remains available.', worthGrading: true, worthGradingReason: 'Visible condition is suitable for grading consideration; economics unassessed.', ...scenario.vision };
       } else {
         metrics.claudePrediction++;
         metrics.predictionPrompt = request.messages[0].content;

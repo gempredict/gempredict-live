@@ -24,7 +24,8 @@ try {
     await page.goto('http://127.0.0.1:3100', { waitUntil: 'domcontentloaded' });
     await page.getByRole('button', { name: 'Load', exact: true }).click();
     const identity = page.getByTestId('photo-final-identity'); await identity.waitFor();
-    assert.match(await identity.innerText(), /2026.*30th Celebration.*Pikachu ex.*149\/128/);
+    if (name === 'corrected') assert.match(await identity.innerText(), /2026.*30th Celebration.*Pikachu ex.*149\/128/);
+    else assert.match(await identity.innerText(), /Card identity is unverified/);
     assert.doesNotMatch(await identity.innerText(), /Stellar Crown/);
     await page.getByTestId('photo-initial-identity').locator('summary').click();
     const body = await page.locator('body').innerText();

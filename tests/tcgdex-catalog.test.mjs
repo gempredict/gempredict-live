@@ -378,7 +378,7 @@ test('withheld live photo reports remove unsupported financial prose and retain 
     assert.equal(analysis.worthGrading, null);
     assert.doesNotMatch(analysis.worthGradingReason, /high market value|resale price|worthwhile/i);
     assert.match(analysis.imageSummary, /30th Celebration.*Visible corner whitening/);
-    assert.equal(analysis.surfaceNote, 'Visible surface scratches.');
+    assert.equal(analysis.surfaceNote, 'Not assessed from the photo.');
     assert.equal(analysis.cornersNote, 'Visible corner whitening.');
     assert.equal(analysis.estimatedGrade, result.payload.imageAnalysis.estimatedGrade);
   }

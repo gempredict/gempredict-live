@@ -1,3 +1,6 @@
+import { buildVisionPrompt } from '../lib/visionPrompt.mjs';
+import { readVisualEvidence, conditionPresentation } from '../lib/visualEvidence.mjs';
+import { readIdentityReadings } from '../lib/visionIdentityEvidence.mjs';
 import { VISION_MODEL_CONFIGURATION } from '../lib/modelConfiguration.mjs';
 import test from 'node:test';
 import assert from 'node:assert/strict';
@@ -12,7 +15,7 @@ const vision = source.slice(source.indexOf('async function fetchImageAnalysis(')
 function harness(response) {
   const requests = [];
   const analyze = vm.runInNewContext(`${helpers}\n${vision}\nfetchImageAnalysis;`, {
-    Buffer, VISION_MODEL_CONFIGURATION,
+    buildVisionPrompt, conditionPresentation, readVisualEvidence, readIdentityReadings, Buffer, VISION_MODEL_CONFIGURATION,
     CARD_TYPE_LABELS: { pokemon: 'Pokemon' },
     anthropic: { messages: { create: async request => { requests.push(request); return response; } } },
   });
@@ -78,7 +81,7 @@ test('vision asks for structured observations separately from unverified identit
   const { analyze, requests } = harness({ content: [{ type: 'text', text: '{}' }] });
   const result = await run(analyze);
   const prompt = requests[0].messages[0].content.find(block => block.type === 'text').text;
-  assert.match(prompt, /visualObservations - array of \{attribute, code\}/);
+  assert.match(prompt, /visualObservations - array of \{attribute,code,certainty,evidence\}/);
   assert.match(prompt, /Separate visual evidence from identity speculation/);
   assert.match(prompt, /estimatedGrade - null/); assert.match(prompt, /gradeCeiling - null/);
   assert.doesNotMatch(prompt, /should generally project as PSA 9 or better/);

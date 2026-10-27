@@ -1,3 +1,4 @@
+import { supportedObservation } from './visionEvidence.mjs';
 import { createTcgDexCatalog } from "../../lib/tcgdexCatalog.mjs";
 const proposal = { subject: 'Pikachu ex', year: '2023', brandSet: 'Paldea Evolved', cardNumber: '149/128', parallel: 'Holo Special Art', language: 'English', autoOrRelic: 'none' };
 const set = { id: '30th', name: '30th Celebration', releaseDate: '2026-09-16', cardCount: { official: 128 }, tcgOnline: '30C' };
@@ -5,5 +6,5 @@ const hosted = { id: '30th-149', localId: '149', name: 'Pikachu ex', rarity: 'Sp
 export const catalog = () => createTcgDexCatalog({ fetchImpl: async url => ({ ok: true, json: async () => structuredClone(new URL(url).pathname.endsWith('/cards') ? [{ id: hosted.id, localId: '149', name: hosted.name }] : new URL(url).pathname.includes('/cards/') ? hosted : set) }) });
 export const title = '2026 Pokemon 30th Celebration Pikachu ex 149/128 English Holo Special Illustration Rare';
 export const listings = (text = title) => Array.from({ length: 3 }, (_, i) => ({ itemId: `mock-${i}`, title: text, condition: 'Ungraded', localizedAspects: [{ name: 'Language', value: 'English' }], price: { value: '40', currency: 'USD' } }));
-const vision = { identityConfidence: 92, identifiedBrandSet: '2023 Pokémon Paldea Evolved', identifiedYear: '2023', imageSummary: 'Paldea Evolved has clean surfaces. A PSA 8–9 candidate. Corner whitening is visible.', estimatedGrade: 'PSA 8–9 candidate', gradeCeiling: 'PSA 9', mostLikelyGradeRange: 'PSA 8–9', primaryLimiter: 'Slight edge whitening.', psa10Upside: 'PSA 10 candidate.', confidenceLevel: 'high' };
+const vision = { visualObservations: [supportedObservation()], identityConfidence: 92, identifiedBrandSet: '2023 Pokémon Paldea Evolved', identifiedYear: '2023', imageSummary: 'Paldea Evolved has clean surfaces. A PSA 8–9 candidate. Corner whitening is visible.', estimatedGrade: 'PSA 8–9 candidate', gradeCeiling: 'PSA 9', mostLikelyGradeRange: 'PSA 8–9', primaryLimiter: 'Slight edge whitening.', psa10Upside: 'PSA 10 candidate.', confidenceLevel: 'high' };
 export const liveReportScenario = () => ({ proposal, vision, neutral: listings(), market: [], catalogOptions: catalog(), routingEnv: { NODE_ENV: 'development' } });

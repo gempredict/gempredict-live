@@ -1,0 +1,10 @@
+{
+  "repeats": 3,
+  "maxRequests": 18,
+  "maxEstimatedCostUSD": null,
+  "rates": { "anthropic": { "inputPerMillion": null, "outputPerMillion": null }, "openai": { "inputPerMillion": null, "outputPerMillion": null }, "google": { "inputPerMillion": null, "outputPerMillion": null } },
+  "fixtures": [
+    { "id": "pikachu-original", "physicalCardId": "pikachu-case", "category": "pokemon", "consentToProviderUpload": false, "rightsReference": null, "front": { "path": null, "sha256": null }, "back": { "path": null, "sha256": null }, "groundTruth": { "verified": false, "reference": null, "identity": {}, "conditionReviewed": false, "assessableAttributes": [], "visibleDefects": [] } },
+    { "id": "pikachu-improved", "physicalCardId": "pikachu-case", "category": "pokemon", "consentToProviderUpload": false, "rightsReference": null, "front": { "path": null, "sha256": null }, "back": { "path": null, "sha256": null }, "groundTruth": { "verified": false, "reference": null, "identity": {}, "conditionReviewed": false, "assessableAttributes": [], "visibleDefects": [] } }
+  ]
+}

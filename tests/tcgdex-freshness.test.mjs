@@ -125,7 +125,7 @@ test('actual handler corrects stale catalog printing before valuation and retain
   assert.match(result.report.imageAnalysis.imageSummary, /30th Celebration.*Visible corner whitening/);
   assert.doesNotMatch(result.report.imageAnalysis.imageSummary, /Stellar Crown/);
   assert.equal(result.report.imageAnalysis.psa10Upside, null);
-  assert.deepEqual([...result.report.imageAnalysis.gemRiskFactors], ['Visible corner whitening.']);
+  assert.deepEqual([...result.report.imageAnalysis.gemRiskFactors], ['Visible corner whitening.', 'The back is not visible; assessment is incomplete.']);
   for (const finish of ['Reverse-Holo Special Art', 'Non-Holo Special Art', 'Base', 'Holo Alternate Art']) {
     assert.equal(identitySearchGate(result.report.identityVerification, { ...result.report.canonicalCard, parallel: finish }).allowed, false);
   }
