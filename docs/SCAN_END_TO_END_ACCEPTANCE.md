@@ -109,6 +109,14 @@ row counts appear in safe diagnostics; actual retrieval counts still reflect the
 100-row window, not the reduced unique pool. Neutral evidence uses the same source
 keys, preserving observation/conflict handling.
 
+The final malformed-cache regression also reproduced a non-iterable evidence traversal crash
+when saved comparable data was an object rather than an array. Saved-report
+validation now invalidates financial evidence before traversing that malformed
+container. Source rendering also validates arrays and monetary rows. Canonical
+identity and variant facts survive; stale prices and recommendations are withheld. The
+integrated test mutates the cache, refreshes and reopens it with zero page errors.
+This does not grant trust to the malformed evidence or fabricate source details.
+
 ## D. Remaining blockers: internal versus external
 
 **Internal confirmed defects above are corrected and regression-tested.** A full
@@ -180,7 +188,7 @@ with equal/no-worse latency/cost budgets; retain catalog authority regardless.
 
 ## F. Final validation and review
 
-- **341 automated tests passed; 0 failed, skipped or todo.** Includes eight new
+- **342 automated tests passed; 0 failed, skipped or todo.** Includes nine new
   node regressions for source URLs/deduplication, controlled proposal consistency,
   negative exact matches, contradictory copies and model-input sensitivity.
 - Production build passed. Existing optional Google Fonts optimization download
@@ -193,7 +201,7 @@ with equal/no-worse latency/cost budgets; retain catalog authority regardless.
 - All **seven browser scripts** passed (nine script modes including text-only
   and Obsidian). Existing Stage A's16 scenarios, two mobile emulations, financial
   cases, saved/variant protections and both live-report persistence outcomes pass.
-- New integrated acceptance: **12 assertions PASS, 0 FAIL**, nine controlled
+- New integrated acceptance: **13 assertions PASS, 0 FAIL**, nine controlled
   browser requests; the five identical-input requests have one unique captured
   model-request configuration/prompt/image fingerprint. Product scorecard:
   **2 conditional/offline PASS, 11 BLOCKED, 0 remaining confirmed FAIL**.

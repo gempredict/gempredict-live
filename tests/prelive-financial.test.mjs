@@ -1,7 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { predictionPricingReceipt } from '../lib/pricingDiagnostics.mjs';
-import { protectValuation } from '../lib/valuationProtection.mjs';
+import { protectValuation, reportFromPrediction, safeStoredReport } from '../lib/valuationProtection.mjs';
 import { verifiedIdentity, verifiedVariant } from './helpers/verifiedIdentity.mjs';
 import { syntheticSales } from './helpers/soldFixtures.mjs';
 import { liveReportScenario } from './helpers/liveReportFixture.mjs';
@@ -80,5 +80,18 @@ test('duplicate and contradictory supplier records cannot inflate qualified coun
   for (const patch of [{ soldAt: null }, { identity: { ...card, parallel: 'Reverse Holo Special Art' } }]) {
     const invalid = { ...sales, records: sales.records.map(record => ({ ...record, ...patch })) };
     assert.equal(receipt(base(invalid)).soldSamples.raw.acceptedCount, 0);
+  }
+});
+
+test('malformed saved listing containers fail closed without crashing or discarding verified identity', () => {
+  const original = reportFromPrediction(base());
+  for (const rawComparableItems of [{}, 'invalid']) {
+    const report = { ...original, marketData: { ...original.marketData, rawComparableItems } };
+    const restored = safeStoredReport(report);
+    assert.equal(restored.rawValue, null); assert.equal(restored.atlas, null);
+    assert.equal(restored.valuationVerification.reason, 'financial_inconsistent');
+    assert.equal(restored.canonicalCard.cardNumber, original.canonicalCard.cardNumber);
+    assert.equal(restored.variantVerification.status, original.variantVerification.status);
+    assert.equal(safeStoredReport(restored).rawValue, null);
   }
 });

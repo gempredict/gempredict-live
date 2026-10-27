@@ -13,6 +13,7 @@ const {chromium,devices}=createRequire(import.meta.url)('playwright');
 const server=spawn(process.execPath,['node_modules/next/dist/bin/next','start','--port','3100','--hostname','127.0.0.1'],{stdio:'ignore'});
 const runs=[],failures=[],checks=[];let browser;
 const check=(name,fn)=>{try{fn();checks.push({name,status:'PASS'});}catch(e){checks.push({name,status:'FAIL',evidence:e.message});failures.push(name);}};
+let completed=false;
 const output=process.env.SCAN_ACCEPTANCE_OUTPUT||'/tmp/gp-scan-acceptance.json';
 try {
  for(let i=0;i<60;i++){try{if((await fetch('http://127.0.0.1:3100')).ok)break;}catch{}await delay(250);}
@@ -94,9 +95,18 @@ try {
  await page.getByRole('button',{name:'Confirm and revalue',exact:true}).click();
  await page.getByRole('alert').filter({hasText:'Fresh check completed.'}).waitFor();
  check('revaluation cannot promote asking prices',()=>assert.equal(runs.at(-1).financial.at(-1),'provisional'));
+ const malformed=await page.evaluate(()=>JSON.parse(localStorage.getItem('gp_saved_reports'))[0]);
+ malformed.marketData.rawComparableItems={invalid:'cached shape'};
+ await page.evaluate(value=>localStorage.setItem('gp_saved_reports',JSON.stringify([value])),malformed);
+ await page.reload({waitUntil:'domcontentloaded'});await page.getByRole('button',{name:'Load',exact:true}).click();
+ let restored=false;try{await page.getByTestId('financial-report').waitFor({timeout:3000});restored=true;}catch{}
+ check('malformed cached source lists cannot crash a report',()=>assert.equal(restored,true));
+ if(restored)assert.match(await page.getByTestId('financial-report').innerText(),/Valuation and grading ROI withheld/);
  check('no browser exceptions',()=>assert.deepEqual(errors,[]));
+ completed=true;
 }finally{
  await browser?.close();server.kill('SIGTERM');
+ if(!completed){checks.push({name:'acceptance execution completed',status:'FAIL',evidence:'Harness aborted before all assertions; see command failure.'});failures.push('acceptance execution completed');}
  const passed=name=>checks.some(c=>c.name===name&&c.status==='PASS');
  const evidence=[
   ['Upload/conversion/orientation','BLOCKED','Original 2.1 MB Pikachu HEIF and physical iPhone unavailable. Real browser codec/server parser passed on libheif and generated back fixtures.'],
@@ -114,11 +124,12 @@ try {
   ['Physical-card repeatability','BLOCKED','Five identical sample-image runs, three transformed sample runs and separate wrong-proposal replays do not establish real-iPhone/live-model consistency.']
  ];
  const components=evidence.map(([name,status,evidence],index)=>({component:index+1,name,status,evidence}));
- const componentChecks={1:['real upload -> codec -> multipart parser -> actual vision request bytes'],6:['one unique source is counted once','comparable links available in provisional report','source navigation matches original listing (mock only)'],10:['identical-image deterministic identity and financials'],11:['no false recommendation or rejected identity in financial answer','photo and financial sections agree on provisional pricing'],12:['save/refresh/reopen keeps provisional math','revaluation cannot promote asking prices','no browser exceptions'],13:['identical-image deterministic identity and financials']};
+ const componentChecks={1:['real upload -> codec -> multipart parser -> actual vision request bytes'],6:['one unique source is counted once','comparable links available in provisional report','source navigation matches original listing (mock only)'],10:['identical-image deterministic identity and financials'],11:['no false recommendation or rejected identity in financial answer','photo and financial sections agree on provisional pricing'],12:['save/refresh/reopen keeps provisional math','revaluation cannot promote asking prices','no browser exceptions','malformed cached source lists cannot crash a report'],13:['identical-image deterministic identity and financials']};
+ if(!completed){components[11].status='FAIL';components[11].evidence='Acceptance execution aborted; persistence flow not fully verified.';}
  for(const component of components){
   const failed=checks.filter(c=>componentChecks[component.component]?.includes(c.name)&&c.status==='FAIL');
   if(failed.length){component.status='FAIL';component.evidence=failed.map(c=>c.name+': '+c.evidence).join('; ');}
  }
- writeFileSync(output,JSON.stringify({scope:'OFFLINE_ONLY_NOT_LAUNCH_READY',codeRevision:execFileSync('git',['rev-parse','HEAD'],{encoding:'utf8'}).trim(),sourceFingerprint:digest(['pages/api/predict.js','pages/api/ebay-search.js','src/App.jsx','lib/modelConfiguration.mjs','lib/ebayListingProvenance.mjs'].map(f=>[f,readFileSync(f,'utf8')])),workingTreeDirty:!!execFileSync('git',['status','--porcelain'],{encoding:'utf8'}).trim(),originalPhotoAvailable:false,fixture:'libheif sample; not Pikachu',inputFingerprint:digest(readFileSync(new URL('./fixtures/mobile/example.heic',import.meta.url))),controls:{identicalImageRuns:5,transformedImageRuns:3,financialInputs:[56.99,75,180,30],market:'fixed synthetic one-source asking snapshot; duplicates deliberately injected',model:'mocked SDK replies, actual production prompt/config capture',providerCalls:'none'},runs,checks,components},null,2));
+ writeFileSync(output,JSON.stringify({scope:'OFFLINE_ONLY_NOT_LAUNCH_READY',codeRevision:execFileSync('git',['rev-parse','HEAD'],{encoding:'utf8'}).trim(),sourceFingerprint:digest(execFileSync('git',['ls-files','lib','pages','src','data','next.config.js','package.json','package-lock.json'],{encoding:'utf8'}).trim().split('\n').filter(Boolean).map(f=>[f,digest(readFileSync(f))])),workingTreeDirty:!!execFileSync('git',['status','--porcelain'],{encoding:'utf8'}).trim(),originalPhotoAvailable:false,fixture:'libheif sample; not Pikachu',inputFingerprint:digest(readFileSync(new URL('./fixtures/mobile/example.heic',import.meta.url))),controls:{identicalImageRuns:5,transformedImageRuns:3,financialInputs:[56.99,75,180,30],market:'fixed synthetic one-source asking snapshot; duplicates deliberately injected',model:'mocked SDK replies, actual production prompt/config capture',providerCalls:'none'},runs,checks,components},null,2));
 }
 assert.deepEqual(failures,[]);console.log(`PASS integrated scan acceptance: ${runs.length} controlled requests, report ${output}; live capabilities remain BLOCKED.`);
