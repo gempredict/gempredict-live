@@ -1,3 +1,4 @@
+import { VISION_MODEL_CONFIGURATION, VALUATION_MODEL_CONFIGURATION } from '../../lib/modelConfiguration.mjs';
 import { fetchCompletedSales } from "../../lib/completedSales.mjs";
 import { loggingFailure } from "../../lib/supabaseDiagnostics.mjs";
 import { predictionPricingReceipt } from "../../lib/pricingDiagnostics.mjs";
@@ -387,14 +388,14 @@ const preLiveRawMarket = marketData?.marketSummary?.rawUsedCount > 0
 const marketContext =
   preLiveRawMarket != null
     ? "\n\nLIVE MARKET DATA:\n" +
-      "- Current GemPredict Fair Market Value: $" + preLiveRawMarket + "\n" +
+      "- Active asking median (not completed sales): $" + preLiveRawMarket + "\n" +
       "- Use this as the raw card value baseline.\n" +
       "- Do not refer to a different raw value in the analysis or action.\n"
     : "";
   
   const prompt =
   "IMPORTANT MARKET RULES:\n" +
-"- If live market data is available, treat it as the authoritative raw market value.\n" +
+"- Use selected asking prices only as a conditional scenario baseline, never as verified fair market value or completed sales. Grade prices and individual probabilities remain modeled estimates.\n" +
 "- Never estimate a PSA 10 value that is less than the raw market value unless there is an explicit and compelling reason.\n" +
 "- In normal markets the relationship should generally be:\n" +
 "  PSA10 >= PSA9 >= Raw.\n" +
@@ -443,7 +444,7 @@ marketContext +
     "Be realistic. Most raw cards do not get PSA 10. Standard grading fees are approximately $80. Factor that into all ROI calculations and recommendations.";
 
   const message = await anthropic.messages.create({
-    model: "claude-sonnet-4-6", max_tokens: 1000,
+    ...VALUATION_MODEL_CONFIGURATION,
     messages: [{ role: "user", content: prompt }],
   });
 
@@ -527,6 +528,7 @@ const backMime = backImageMimeType &&
   "Category ratings must follow visible defects and limitations. Missing or uninspectable attributes must be null. Do not translate ratings into numeric grades or optimistic candidate labels.\n\n" +
 
 "Card identification task:\n" +
+"- These are unverified proposals. Read the full printed collector number, language and set code when legible. Familiar artwork alone cannot establish a set/year or high confidence. Never invent missing printed text.\n" +
 "- Identify the card as specifically as possible from the image and provided card name.\n" +
 "- Look for year, brand, set, player/character, card number, parallel, serial numbering, autograph/relic indicators, and visible text.\n" +
 "- Do not invent details. If a detail is uncertain, use null and explain uncertainty in identityNotes.\n" +
@@ -590,7 +592,7 @@ const backMime = backImageMimeType &&
   "Be strict, specific, and internally consistent. Avoid canned language.";
 
   const message = await anthropic.messages.create({
-    model: "claude-sonnet-4-6", max_tokens: 2000,
+    ...VISION_MODEL_CONFIGURATION,
     messages: [{
       role: "user",
       content: [
@@ -955,7 +957,7 @@ const atlasIdentityConfidence = imageAnalysis
       ? atlasOrchestrator({ ...result, gpScore: { score: result.prediction.gemPredictScore } })
       : null;
     if (preview || process.env.NODE_ENV === 'development') {
-      result.pricingDiagnostics = predictionPricingReceipt(result, { startedAt, privatePreview: preview, mode: confirmedVariant ? 'revaluation' : imageBuffer ? 'scan' : 'text' });
+      result.pricingDiagnostics = predictionPricingReceipt(result, { startedAt, privatePreview: preview, codeRevision: process.env.VERCEL_GIT_COMMIT_SHA, mode: confirmedVariant ? 'revaluation' : imageBuffer ? 'scan' : 'text' });
       console.log('[GemPredict] Pricing diagnostic', JSON.stringify({ ...result.pricingDiagnostics, searches: undefined }));
       result.pricingDiagnostics.searches.forEach((search, index) => console.log('[GemPredict] Pricing search', JSON.stringify({ requestId: result.pricingDiagnostics.requestId, attempt: index + 1, ...search })));
     }

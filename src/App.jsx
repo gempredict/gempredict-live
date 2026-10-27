@@ -1,3 +1,4 @@
+import { safeEbayListingUrl } from '../lib/ebayListingProvenance.mjs';
 import { normalizeMobileImage, assertUploadBudget, UploadError } from "../lib/mobileImages.mjs";
 import { requestPrediction } from "../lib/predictionTransport.mjs";
 import { identitySearchGate } from '../lib/catalogIdentity.mjs';
@@ -213,7 +214,7 @@ function ImageAnalysisCard({ data, report }) {
           <div style={labelSt}>{catalogBacked ? "Catalog-supported identity" : "Current identity — verification pending"}</div>
           <strong>{[canonical.year, canonical.brandSet, canonical.subject, canonical.parallel, canonical.cardNumber && `#${canonical.cardNumber}`, canonical.language].filter(Boolean).join(" · ")}</strong>
           {corrected && <p>The independent catalog corrected the initial AI interpretation below.</p>}
-          <p style={{ fontSize: "0.78rem" }}>{trusted ? "Identity and version checks passed with matching market evidence." : "Pricing and grading recommendations remain withheld until all verification checks pass."}</p>
+          <p style={{ fontSize: "0.78rem" }}>{trusted ? "Identity and version checks passed with matching market evidence." : isMarketAnalysisAvailable(report) ? "Identity and version verified. Pricing is provisional; grading recommendations are withheld." : "Pricing and grading recommendations remain withheld until all verification checks pass."}</p>
         </div>
       )}
             {/* Initial photo interpretation retained as provenance, not truth. */}
@@ -222,7 +223,7 @@ function ImageAnalysisCard({ data, report }) {
         data.identifiedYear ||
         data.identifiedParallel ||
         data.identifiedCardNumber) && (
-        <div data-testid="photo-initial-identity"
+        <details data-testid="photo-initial-identity"
           style={{
             margin: "1rem 1.25rem 0",
             background: C.cream,
@@ -231,7 +232,7 @@ function ImageAnalysisCard({ data, report }) {
             padding: "0.9rem 1rem",
           }}
         >
-          <div
+          <summary
             style={{
               fontSize: "0.65rem",
               fontWeight: 700,
@@ -242,7 +243,7 @@ function ImageAnalysisCard({ data, report }) {
             }}
           >
             Initial AI interpretation — unverified
-          </div>
+          </summary>
 
           <div style={{ fontSize: "0.95rem", fontWeight: 800, color: C.ink }}>
             {[data.identifiedYear, data.identifiedBrandSet, data.identifiedSubject]
@@ -304,7 +305,7 @@ function ImageAnalysisCard({ data, report }) {
               {data.identityNotes}
             </div>
           )}
-        </div>
+        </details>
       )}
 
       <div style={{ padding: "1.1rem 1.25rem" }}>
@@ -508,6 +509,7 @@ function WithheldResultCard({ data, onSave, isSaved, onVerifyVariant, onRescan }
     catch (error) { setMessage(error.message); }
     finally { setBusy(false); }
   }
+  const sources = (data.marketData?.rawComparableItems || []).map(item => ({ ...item, sourceUrl: safeEbayListingUrl(item) }));
   const reason = data.valuationVerification?.explanation || "This version needs a fresh valuation.";
   return <div data-testid="financial-report" style={{ background: C.white, border: "1px solid " + C.border, borderRadius: 18, padding: "1.25rem" }}>
     <h3 style={{ marginTop: 0 }}>{canonicalDisplayName(data.canonicalCard) || data.cardTitle}</h3>
@@ -517,13 +519,18 @@ function WithheldResultCard({ data, onSave, isSaved, onVerifyVariant, onRescan }
       <p><strong>{data.financialDecision.rawSource === 'completed_sales' ? 'Observed raw sold median' : 'Observed active asking median'}: ${formatMoney(data.rawValue)}</strong> — {data.financialDecision.observedRaw?.count || data.financialDecision.observedAsking?.count || 0} observations. {data.marketData?.marketSummary?.fairMarketValue == null && 'Not verified fair market value.'}</p>
       <p>Active eBay asking signal: {data.financialDecision.observedAsking ? `$${formatMoney(data.financialDecision.observedAsking.median)} from ${data.financialDecision.observedAsking.count} listings; ${data.financialDecision.observedAsking.confidence}% asking-price confidence.` : 'Unavailable.'}</p>
       <p>PSA 9: ${formatMoney(data.psa9Value)} ({data.financialDecision.graded['PSA 9'].source === 'completed_sales' ? `${data.financialDecision.graded['PSA 9'].evidence.count} observed completed sales` : 'modeled estimate, not verified sales'}). PSA 10: ${formatMoney(data.psa10Value)} ({data.financialDecision.graded['PSA 10'].source === 'completed_sales' ? `${data.financialDecision.graded['PSA 10'].evidence.count} observed completed sales` : 'modeled estimate, not verified sales'}).</p>
+      <p>PSA 10 chance: {data.psa10Probability}% — {data.financialDecision.probability.qualified ? 'calibrated model' : 'uncalibrated modeled estimate'}, not a grade guarantee. Population: {data.financialDecision.population?.status || 'unavailable'}. Historical gem rate: {data.financialDecision.population?.historicalGemRate == null ? 'unavailable' : 'see evidence'}.</p>
+      <p>Conditional net ${formatMoney(data.expectedNetValue)} after the $80 grading fee; other costs and lower grades excluded. Sold-data status: {data.financialDecision.sales?.status || 'unavailable'}.</p>
+      {sources.length > 0 && <div data-testid="comparable-sources"><strong>Active asking comparables</strong><ul>{sources.slice(0, 10).map((item, index) => <li key={item.itemId || index}>${formatMoney(item.priceValue)} — {item.sourceUrl ? <a href={item.sourceUrl} target="_blank" rel="noopener noreferrer">View eBay listing</a> : 'Source link unavailable'}</li>)}</ul>{sources.length > 10 && <p>{sources.length} total; showing 10 source links.</p>}</div>}
+      <details data-testid="financial-methodology"><summary>Evidence and assumptions</summary>
       <p>Individual PSA 10 probability: {data.psa10Probability}% ({data.financialDecision.probability.qualified ? 'calibrated model' : 'uncalibrated modeled estimate'}); not a historical population gem rate. Historical gem rate: {data.financialDecision.population?.status === 'available' && data.financialDecision.population.historicalGemRate != null ? `${(data.financialDecision.population.historicalGemRate * 100).toFixed(1)}% of recorded submissions, not an individual prediction` : 'unavailable'}. Population: {data.financialDecision.population?.status === 'available' ? `${data.financialDecision.population.psa10Population} PSA 10 out of ${data.financialDecision.population.totalPSAPopulation} PSA submissions` : 'unavailable; no estimated counts shown'}.</p>
       <p>Conditional grading scenario: expected net ${formatMoney(data.expectedNetValue)}, upside ${formatMoney(data.gradingUpside)}. Includes the $80 grading fee; excludes other costs and outcomes below PSA 9. These are projections, not realized returns.</p>
       {Object.entries(data.financialDecision.sales?.groups || {}).map(([grade, group]) => <p key={grade}>{grade} sold sample: {group.count} transactions, ${formatMoney(group.low)}–${formatMoney(group.high)}, newest {group.newest.slice(0, 10)} ({group.daysSinceNewest} days ago). {data.financialDecision.sales.truncated ? 'Incomplete response; this sample cannot authorize financial trust.' : group.qualified ? 'Meets the configured sample/recency policy.' : 'Insufficient recent evidence.'}</p>)}
       <p>Sold-data status: {data.financialDecision.sales?.status || 'unavailable'}. {data.financialDecision.reasons.join(', ')}.</p>
+      <p>{reason}</p></details>
     </div>}
-    <p>{reason}</p>
-    <p style={{ fontSize: "0.82rem", color: C.inkSoft }}>Visual observations remain available below. Financial scenarios are conditional; provisional evidence does not authorize a grading recommendation.</p>
+    {!isMarketAnalysisAvailable(data) && <p>{reason}</p>}
+    <p style={{ fontSize: "0.82rem", color: C.inkSoft }}>Inspect physical condition. Financial recommendations remain conditional on qualified evidence.</p>
     <button onClick={() => setEditing(!editing)}>Verify Variant</button>
     {editing && <div style={{ display: "grid", gap: "0.6rem", marginTop: "0.8rem" }}>
       <p>Enter the exact identity printed on the card, then check fresh prices. No photo is required.</p>

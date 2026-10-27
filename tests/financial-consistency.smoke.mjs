@@ -56,6 +56,7 @@ try {
     await page.getByRole('button', { name: 'Analyze My Card', exact: true }).click();
     await page.getByTestId('market-evidence-analysis').waitFor();
     const assertVisible = async () => {
+      await page.getByTestId('financial-methodology').evaluate(el => { el.open = true; });
       const body = await page.getByTestId('market-evidence-analysis').locator('..').innerText();
       assert.match(body, /Provisional market analysis/);
       assert.match(body, /modeled estimate, not verified sales/);

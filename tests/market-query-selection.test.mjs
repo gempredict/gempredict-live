@@ -1,3 +1,4 @@
+import { VALUATION_MODEL_CONFIGURATION } from '../lib/modelConfiguration.mjs';
 import { verifiedVariant } from './helpers/verifiedIdentity.mjs';
 import test from 'node:test';
 import assert from 'node:assert/strict';
@@ -217,13 +218,13 @@ test('prediction prompt consumes selected market evidence without a duplicate pr
   const body = source.slice(source.indexOf('async function fetchPrediction('), source.indexOf('// ─── Vision analysis'));
   const prompts = [];
   const prediction = vm.runInNewContext(`${body}\nfetchPrediction;`, {
-    anthropic: { messages: { create: async request => { prompts.push(request.messages[0].content); return { content: [{ type: 'text', text: '{}' }] }; } } },
+    VALUATION_MODEL_CONFIGURATION, anthropic: { messages: { create: async request => { prompts.push(request.messages[0].content); return { content: [{ type: 'text', text: '{}' }] }; } } },
     CARD_TYPE_LABELS: { pokemon: 'Pokemon' }, CONDITION_LABELS: { strong: 'Strong' },
     extractJSON: () => ({}), normaliseCard: () => ({ rawValue: 20 }),
     fetch: () => assert.fail('Prediction must reuse selected evidence, never prefetch again'),
   });
   await prediction('Pikachu', 'pokemon', '2017 Shining Legends', 'strong', pikachu, { marketSummary: { rawUsedCount: 10, rawMedian: 20 } });
-  assert.match(prompts[0], /Fair Market Value: \$20/);
+  assert.match(prompts[0], /Active asking median \(not completed sales\): \$20/);
   await prediction('Pikachu', 'pokemon', '2017 Shining Legends', 'strong', pikachu, { marketSummary: { rawUsedCount: 0, rawMedian: null } });
   assert.doesNotMatch(prompts[1], /LIVE MARKET DATA:/);
 });

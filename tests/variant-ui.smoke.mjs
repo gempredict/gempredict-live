@@ -122,6 +122,7 @@ try {
   assert.match(photoIdentity, /Catalog-supported identity/i);
   assert.match(photoIdentity, /2026.*30th Celebration.*Pikachu ex.*Holo Special Art.*149\/128/);
   assert.doesNotMatch(photoIdentity, /Stellar Crown/);
+  await photoPage.getByTestId('photo-initial-identity').locator('summary').click();
   const photoText = await photoPage.locator('body').innerText();
   assert.match(photoText, /Initial AI interpretation — unverified/i);
   assert.match(photoText, /Initial AI confidence:/);

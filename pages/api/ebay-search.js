@@ -1,3 +1,4 @@
+import { deduplicateBrowseListings, safeEbayListingUrl } from '../../lib/ebayListingProvenance.mjs';
 import { listingDiagnostics } from "../../lib/pricingDiagnostics.mjs";
 import { calculateMarketConfidence } from "../../lib/marketConfidence.mjs";
 import { matchesVariantValuation, expandVariantAliases } from "../../lib/variantVerification.mjs";
@@ -106,7 +107,9 @@ export default async function handler(req, res) {
     if (searchData.itemSummaries != null && !Array.isArray(searchData.itemSummaries)) throw new SyntaxError('Invalid Browse response');
     if (!Array.isArray(searchData.itemSummaries) && searchData.total !== 0) throw new SyntaxError('Missing Browse results');
     stage = 'filter';
-    const items = (searchData.itemSummaries || [])
+    const retrieved = (searchData.itemSummaries || []).slice(0, 100);
+    const deduplicated = deduplicateBrowseListings(retrieved);
+    const items = deduplicated.items
       .slice(0, 100) // Enforce the retrieval bound even on an oversized provider response.
       .map(function(item) {
         const priceValue = item.price && item.price.value
@@ -139,7 +142,7 @@ return {
     : null,
   priceValue: Number.isFinite(priceValue) ? priceValue : null,
   condition: item.condition || null,
-  itemWebUrl: item.itemWebUrl || null,
+  itemWebUrl: safeEbayListingUrl(item),
   image: item.image && item.image.imageUrl ? item.image.imageUrl : null,
   itemId: item.itemId || null,
 };
@@ -215,7 +218,7 @@ const avgMatchScore =
     return res.status(200).json({
   success: true,
   environment: "production",
-  marketDiagnostics: listingDiagnostics(items, rawComparableItems, filteredRawPrices.length, searchData.total),
+  marketDiagnostics: { ...listingDiagnostics(items, rawComparableItems, filteredRawPrices.length, searchData.total), retrievedCount: retrieved.length, unexaminedProviderCount: Math.max(0,(searchData.total || 0)-retrieved.length), duplicateCount: deduplicated.duplicateCount, conflictingDuplicateCount: deduplicated.conflictingDuplicateCount },
   query: q,
   identity,
       total: searchData.total || 0,
@@ -231,7 +234,7 @@ rawOutlierCount: rawPrices.length - filteredRawPrices.length,
         rawLowest: roundMoney(rawLowest),
         rawHighest: roundMoney(rawHighest),
         rawMedian: roundMoney(rawMedian),
-        fairMarketValue: roundMoney(rawMedian),
+        fairMarketValue: null, // Browse inventory is asking evidence, never realized FMV.
         rawTypicalRangeLow: roundMoney(rawTypicalRangeLow),
 rawTypicalRangeHigh: roundMoney(rawTypicalRangeHigh),
         marketConfidence,

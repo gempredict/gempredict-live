@@ -1,3 +1,4 @@
+import { VISION_MODEL_CONFIGURATION, VALUATION_MODEL_CONFIGURATION } from '../lib/modelConfiguration.mjs';
 import { fetchCompletedSales } from "../lib/completedSales.mjs";
 import { isVariantVerificationTrusted } from "../lib/valuationProtection.mjs";
 import { predictionPricingReceipt } from "../lib/pricingDiagnostics.mjs";
@@ -33,7 +34,7 @@ async function predict(fields, imageAnalysis = null, evidence = neutralListings)
   const marketUrls = [];
   const neutralQueries = [];
   const context = {
-    isVariantVerificationTrusted, fetchCompletedSales, predictionPricingReceipt, isVercelPreview, verifyPreviewIntegration,
+    VISION_MODEL_CONFIGURATION, VALUATION_MODEL_CONFIGURATION, isVariantVerificationTrusted, fetchCompletedSales, predictionPricingReceipt, isVercelPreview, verifyPreviewIntegration,
     console: { log() {}, error() {} }, Buffer,
     CARD_NAME_MIN: 2, CARD_NAME_MAX: 80, CARD_SET_MAX: 60, IMAGE_MAX_BYTES: 10485760,
     RATE_LIMIT_MAX: 5, VALID_CARD_TYPES: new Set(['onepiece', 'pokemon']), supabase: null,

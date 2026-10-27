@@ -26,6 +26,7 @@ try {
     const identity = page.getByTestId('photo-final-identity'); await identity.waitFor();
     assert.match(await identity.innerText(), /2026.*30th Celebration.*Pikachu ex.*149\/128/);
     assert.doesNotMatch(await identity.innerText(), /Stellar Crown/);
+    await page.getByTestId('photo-initial-identity').locator('summary').click();
     const body = await page.locator('body').innerText();
     assert.match(body, /Initial AI interpretation — unverified/i);
     assert.match(body, /Stellar Crown/); // initial interpretation is retained as provenance

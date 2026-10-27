@@ -82,7 +82,7 @@ test('route confidence follows exactly the final raw valuation observations and 
     assert.equal(filtered.rawUsedCount, 6);
     assert.equal(filtered.rawOutlierCount, 2);
     assert.equal(filtered.rawMedian, 12.5);
-    assert.equal(filtered.fairMarketValue, 12.5);
+    assert.equal(filtered.fairMarketValue, null); // Browse prices remain active asking evidence.
     assert.equal(filtered.rawTypicalRangeLow, 11);
     assert.equal(filtered.rawTypicalRangeHigh, 14);
     assert.equal(filtered.marketConfidence, 65); // post-filter range is <=25%, pre-filter is >25%

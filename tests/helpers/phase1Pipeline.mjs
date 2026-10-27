@@ -1,3 +1,5 @@
+import { VISION_MODEL_CONFIGURATION, VALUATION_MODEL_CONFIGURATION } from '../../lib/modelConfiguration.mjs';
+import { createHash } from 'node:crypto';
 import { fetchCompletedSales } from "../../lib/completedSales.mjs";
 import { isVariantVerificationTrusted } from "../../lib/valuationProtection.mjs";
 import { predictionPricingReceipt } from "../../lib/pricingDiagnostics.mjs";
@@ -48,18 +50,18 @@ export async function runPipeline(scenario) {
   const originalFetch = globalThis.fetch;
   const originalId = process.env.EBAY_PROD_CLIENT_ID;
   const originalSecret = process.env.EBAY_PROD_CLIENT_SECRET;
-  const metrics = { pricingLogs: [], preflightRequests: 0, logCalls: 0, parseCalls: 0, responseHeaders: {}, neutralOAuth: 0, neutralBrowse: 0, valuationOAuth: 0, valuationBrowse: 0, valuationQueries: [], claudeVision: 0, claudePrediction: 0 };
+  const metrics = { modelRequests: [], pricingLogs: [], preflightRequests: 0, logCalls: 0, parseCalls: 0, responseHeaders: {}, neutralOAuth: 0, neutralBrowse: 0, valuationOAuth: 0, valuationBrowse: 0, valuationQueries: [], claudeVision: 0, claudePrediction: 0 };
   const errors = [];
   const model = { cardTitle: scenario.proposal?.subject || scenario.fields?.cardName || 'Unrecognized card', cardMeta: 'Mock model proposal', psa9Value: 120, psa10Value: 200, psa10Probability: 60, ...scenario.model };
   const context = {
-    isVariantVerificationTrusted, fetchCompletedSales: card => fetchCompletedSales(card, { provider: scenario.soldProvider || null }), predictionPricingReceipt, isVercelPreview, verifyPreviewIntegration: options => verifyPreviewIntegration({ ...options, ...(scenario.assetCheck ? { verifyAssets: scenario.assetCheck } : {}) }),
+    VISION_MODEL_CONFIGURATION, VALUATION_MODEL_CONFIGURATION, isVariantVerificationTrusted, fetchCompletedSales: card => fetchCompletedSales(card, { provider: scenario.soldProvider || null }), predictionPricingReceipt, isVercelPreview, verifyPreviewIntegration: options => verifyPreviewIntegration({ ...options, ...(scenario.assetCheck ? { verifyAssets: scenario.assetCheck } : {}) }),
     MAX_IMAGE_BYTES, Buffer, console: { log(label, data) { if (String(label).startsWith('[GemPredict] Pricing')) metrics.pricingLogs.push(JSON.parse(data)); }, error(...args) { errors.push(args.map(value => String(value)).join(" ")); } }, supabase: null,
     process: { env: { NEXT_PUBLIC_SITE_URL: 'http://stage-a.local', ...scenario.routingEnv } },
     logRequest: async () => { metrics.logCalls++; },
     buildCanonicalCardFromImageAnalysis, buildCanonicalCardFromText, missingTextIdentityFields,
     identitySearchGate, calculateGradingEconomics, getUserIdentityProtection, reconcileVariant, parseVariantConfirmation, protectValuation, selectMarketQuery,
     atlasOrchestrator, calculateIdentityConfidence,
-    parseRequest: async () => { metrics.parseCalls++; return { fields: scenario.fields || { cardName: 'Unknown card from image', cardType: scenario.type || 'pokemon' }, imageBuffer: scenario.textOnly ? null : Buffer.from('mock card image'), imageMimeType: 'image/png' }; },
+    parseRequest: async () => { metrics.parseCalls++; if (scenario.parsedRequest) return scenario.parsedRequest; return { fields: scenario.fields || { cardName: 'Unknown card from image', cardType: scenario.type || 'pokemon' }, imageBuffer: scenario.textOnly ? null : Buffer.from('mock card image'), imageMimeType: 'image/png' }; },
     resolveMarketIdentity: (card, options) => resolveMarketIdentity(card, { ...options, catalogSource: 'mock-unconfigured', ...scenario.catalogOptions, clientId: 'mock', clientSecret: 'mock', fetchImpl: async url => {
       if (String(url).includes('/oauth2/token')) { metrics.neutralOAuth++; return { ok: true, json: async () => ({ access_token: 'mock' }) }; }
       metrics.neutralBrowse++;
@@ -82,6 +84,10 @@ export async function runPipeline(scenario) {
     },
     anthropic: { messages: { create: async request => {
       const vision = Array.isArray(request.messages[0].content);
+      const hash = value => createHash('sha256').update(value).digest('hex');
+      metrics.modelRequests.push({ kind: vision ? 'vision' : 'valuation', model: request.model, temperature: request.temperature ?? 'provider_default', max_tokens: request.max_tokens,
+        promptFingerprint: hash(vision ? request.messages[0].content.filter(x => x.type === 'text').map(x => x.text).join('') : request.messages[0].content),
+        imageFingerprints: vision ? request.messages[0].content.filter(x => x.type === 'image').map(x => hash(Buffer.from(x.source.data,'base64'))) : [] });
       let reply;
       if (vision) {
         metrics.claudeVision++;
@@ -90,7 +96,7 @@ export async function runPipeline(scenario) {
       } else {
         metrics.claudePrediction++;
         metrics.predictionPrompt = request.messages[0].content;
-        const baseline = Number(metrics.predictionPrompt.match(/Fair Market Value: \$([\d.]+)/)?.[1] || 999);
+        const baseline = Number(metrics.predictionPrompt.match(/Active asking median \(not completed sales\): \$([\d.]+)/)?.[1] || 999);
         const rawValue = scenario.model?.rawValue ?? baseline;
         const upside = model.psa10Value - rawValue - 80;
         const net = model.psa10Value * 0.6 + model.psa9Value * 0.4 - rawValue - 80;

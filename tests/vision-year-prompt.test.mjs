@@ -1,3 +1,4 @@
+import { VISION_MODEL_CONFIGURATION } from '../lib/modelConfiguration.mjs';
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
@@ -11,7 +12,7 @@ const vision = source.slice(source.indexOf('async function fetchImageAnalysis(')
 function harness(response) {
   const requests = [];
   const analyze = vm.runInNewContext(`${helpers}\n${vision}\nfetchImageAnalysis;`, {
-    Buffer,
+    Buffer, VISION_MODEL_CONFIGURATION,
     CARD_TYPE_LABELS: { pokemon: 'Pokemon' },
     anthropic: { messages: { create: async request => { requests.push(request); return response; } } },
   });
@@ -23,6 +24,7 @@ test('vision request prioritizes visible year evidence, explains copyright propo
   const { analyze, requests } = harness({ content: [{ type: 'text', text: '{}' }] });
   await run(analyze);
   assert.equal(requests[0].max_tokens, 2000);
+  assert.equal(requests[0].temperature, 0);
   const prompt = requests[0].messages[0].content.find(block => block.type === 'text').text;
   assert.match(prompt, /prioritize a year actually visible on the card or strongly supported by visible product identifiers/);
   assert.match(prompt, /General model knowledge alone is not year evidence/);

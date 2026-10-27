@@ -44,6 +44,7 @@ try {
     await page.getByRole('button', { name: 'Load', exact: true }).click();
     await page.getByTestId('photo-final-identity').waitFor();
     assert.match(await page.getByTestId('photo-final-identity').innerText(), /2026.*30th Celebration.*149\/128/);
+    await page.getByTestId('photo-initial-identity').locator('summary').click();
     assert.match(await page.getByTestId('photo-initial-identity').innerText(), identityFirst ? /Obsidian Flames/ : /Paldea Evolved/);
     assert.equal(initial.report.imageAnalysis.identityConfidence, identityFirst ? 90 : 92);
     const visibleFacts = await page.locator('body').evaluate(body => { const copy = body.cloneNode(true); copy.querySelectorAll('[data-testid="photo-initial-identity"]').forEach(node => node.remove()); return copy.textContent; });
