@@ -1,5 +1,5 @@
 #!/usr/bin/env node
-// Smoke-only private GitHub secret inputs; no external storage or model calls here.
+// Smoke-only encrypted photo input; no external storage or model calls here.
 import fs from 'node:fs';
 import path from 'node:path';
 import {fileURLToPath} from 'node:url';
@@ -11,6 +11,18 @@ import {seal,openEnvelope,dataKey} from './bundle.mjs';
 import {createSpendGuard} from './spend.mjs';
 const root=path.resolve(path.dirname(fileURLToPath(import.meta.url)),'../..');
 export const CHUNK_SIZE=32000,MAX_CHUNKS=48;
+// Input format anchor, separate from the executing workflow SHA (which includes
+// the ciphertext itself). The live approval gate still checks the actual run SHA.
+export const BROWSER_PHOTO_REVISION='f390b32987a79d2c9c075af62eba459d4c627c0b';
+export async function browserPhotoBundle(front,back,key,{now=Date.now()}={}){
+ const payload=await photoPayload(front,back,BROWSER_PHOTO_REVISION,{now});
+ return seal(payload,key,{purpose:'smoke-photos',revision:BROWSER_PHOTO_REVISION,now,ttlMs:24*60*60000});
+}
+export async function receiveBrowserPhotos(encrypted,key,directory,{now=Date.now()}={}){
+ const payload=openEnvelope(encrypted,key,{purpose:'smoke-photos',revision:BROWSER_PHOTO_REVISION,now});
+ const env={VISION_BENCH_PHOTO_META:JSON.stringify(payload.metadata),...Object.fromEntries(payload.chunks.map((c,i)=>[name(i),c]))};
+ return decodePhotos(env,directory,BROWSER_PHOTO_REVISION,{now});
+}
 const digest=b=>createHash('sha256').update(b).digest('hex');
 const name=i=>`VISION_BENCH_PHOTO_${String(i).padStart(2,'0')}`;
 const write=(file,value)=>fs.writeFileSync(file,JSON.stringify(value),{mode:0o600,flag:'wx'});
@@ -63,7 +75,8 @@ export function runnerDirectory(env=process.env){
 function approved(){const context=liveContext();if(context.mode!=='smoke')throw Error('smoke_only');return context;}
 async function receive(){
  const {revision}=approved(),dir=runnerDirectory();dataKey(process.env.VISION_BENCH_DATA_KEY);fs.mkdirSync(dir,{mode:0o700});
- const manifest=await decodePhotos(process.env,path.join(dir,'photos'),revision);write(path.join(dir,'manifest.json'),manifest);
+ const bundle=fs.readFileSync(path.join(root,'benchmarks/private-smoke.enc'));
+ const manifest=await receiveBrowserPhotos(bundle,process.env.VISION_BENCH_DATA_KEY,path.join(dir,'photos'));write(path.join(dir,'manifest.json'),manifest);
  console.log('Private smoke pair validated; zero provider requests.');
 }
 async function run(){

@@ -15,7 +15,7 @@ export function dataKey(encoded) {
  const key=Buffer.from(encoded,'base64');if(key.length!==32)throw Error('invalid_data_key');return key;
 }
 export function seal(value,keyText,{purpose,revision,now=Date.now(),ttlMs=20*60000}={}) {
- if(!['photos','metrics'].includes(purpose)||!Number.isFinite(ttlMs)||ttlMs<=0||ttlMs>30*60000||!/^[a-f0-9]{40}$/.test(revision||''))throw Error('invalid_envelope_policy');
+ if(!['photos','metrics','smoke-photos'].includes(purpose)||!Number.isFinite(ttlMs)||ttlMs<=0||ttlMs>(purpose==='smoke-photos'?24*60*60000:30*60000)||!/^[a-f0-9]{40}$/.test(revision||''))throw Error('invalid_envelope_policy');
  const header=Buffer.from(JSON.stringify({version:1,purpose,revision,repository:'gempredict/gempredict-live',createdAt:now,expiresAt:now+ttlMs}));
  const plaintext=Buffer.from(JSON.stringify(value));if(plaintext.length>20*1024*1024)throw Error('bundle_size');
  const iv=randomBytes(12),cipher=createCipheriv('aes-256-gcm',dataKey(keyText),iv);cipher.setAAD(header);
@@ -29,7 +29,7 @@ export function openEnvelope(buffer,keyText,{purpose,revision,now=Date.now(),all
  const cipher=createDecipheriv('aes-256-gcm',dataKey(keyText),iv);cipher.setAAD(header);cipher.setAuthTag(tag);
  const plaintext=Buffer.concat([cipher.update(buffer.subarray(40+length)),cipher.final()]);
  const meta=JSON.parse(header);
- if(meta.version!==1||meta.purpose!==purpose||meta.revision!==revision||meta.repository!=='gempredict/gempredict-live'||!Number.isSafeInteger(meta.createdAt)||!Number.isSafeInteger(meta.expiresAt)||meta.expiresAt-meta.createdAt>30*60000||meta.expiresAt<=meta.createdAt||meta.createdAt>now+60000||meta.expiresAt<=now&&!(purpose==='metrics'&&allowExpiredMetrics))throw Error('envelope_expired_or_wrong_context');
+ if(!['photos','metrics','smoke-photos'].includes(purpose)||meta.version!==1||meta.purpose!==purpose||meta.revision!==revision||meta.repository!=='gempredict/gempredict-live'||!Number.isSafeInteger(meta.createdAt)||!Number.isSafeInteger(meta.expiresAt)||meta.expiresAt-meta.createdAt>(purpose==='smoke-photos'?24*60*60000:30*60000)||meta.expiresAt<=meta.createdAt||meta.createdAt>now+60000||meta.expiresAt<=now&&!(purpose==='metrics'&&allowExpiredMetrics))throw Error('envelope_expired_or_wrong_context');
  return JSON.parse(plaintext);
 }
 export function validatePrivateManifest(manifest) {

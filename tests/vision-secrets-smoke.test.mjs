@@ -6,7 +6,7 @@ import os from 'node:os';
 import path from 'node:path';
 import {createHash,randomBytes} from 'node:crypto';
 import sharp from 'sharp';
-import {photoPayload,decodePhotos,runnerDirectory,MAX_CHUNKS,CHUNK_SIZE} from '../scripts/vision-benchmark/secrets-smoke.mjs';
+import {photoPayload,decodePhotos,runnerDirectory,MAX_CHUNKS,CHUNK_SIZE,browserPhotoBundle,receiveBrowserPhotos,BROWSER_PHOTO_REVISION} from '../scripts/vision-benchmark/secrets-smoke.mjs';
 import {executeBenchmark,planBenchmark,providers,providerRequest} from '../scripts/vision-benchmark/core.mjs';
 import {REVIEWED_AT} from '../scripts/vision-benchmark/spend.mjs';
 import {seal,openEnvelope} from '../scripts/vision-benchmark/bundle.mjs';
@@ -76,11 +76,27 @@ test('private encrypted assessment artifact requires the owner key and exact rev
 test('workflow permits only smoke, scopes secrets, and uploads only ciphertext with one-day retention',()=>{
  const yaml=fs.readFileSync('.github/workflows/vision-benchmark.yml','utf8');
  assert.doesNotMatch(yaml,/BUNDLE_URL|RESULTS_URL|STORAGE_HOST|toJSON\(secrets\)|- full/);
- assert.equal([...yaml.matchAll(/VISION_BENCH_PHOTO_\d\d:/g)].length,48);
+ assert.equal([...yaml.matchAll(/VISION_BENCH_PHOTO_\d\d:/g)].length,0);
  assert.match(yaml,/inputs.mode == 'smoke'/);assert.match(yaml,/LIVE_ENABLED == 'true'/);
  assert.match(yaml,/retention-days: 1/);assert.match(yaml,/path:.*gp-encrypted-smoke\/assessments.enc/);
  assert.match(yaml,/permissions:\n  contents: read/);assert.doesNotMatch(yaml,/GITHUB_STEP_SUMMARY|contents: write|id-token: write/);
- const receiver=yaml.split('- name: Receive private')[1].split('- name: Run the existing')[0];assert.doesNotMatch(receiver,/ANTHROPIC_KEY|OPENAI_KEY|GEMINI_KEY/);
+ const receiver=yaml.split('- name: Decrypt private')[1].split('- name: Run the existing')[0];assert.doesNotMatch(receiver,/ANTHROPIC_KEY|OPENAI_KEY|GEMINI_KEY/);
  const provider=yaml.split('- name: Run the existing')[1].split('- name: Encrypt private')[0];assert.doesNotMatch(provider,/PHOTO_|DATA_KEY/);
  assert.throws(()=>runnerDirectory({RUNNER_TEMP:process.cwd()}),/private_temp/);
+});
+
+
+test('browser ciphertext round-trip reuses admission, rejects wrong keys/tampering/expired inputs',async t=>{
+ t.mock.method(Date,'now',()=>now);const {dir,front}=await setup(t),key=randomBytes(32).toString('base64');
+ const encrypted=await browserPhotoBundle(front,front,key,{now});
+ assert.equal(encrypted.includes(source),false);assert.equal(encrypted.includes(Buffer.from(key)),false);
+ const m=await receiveBrowserPhotos(encrypted,key,path.join(dir,'browser'),{now});
+ assert.equal(m.maxRequests,3);assert.equal(m.executionProfile,'provider_smoke_unscored');
+ await assert.rejects(()=>receiveBrowserPhotos(encrypted,randomBytes(32).toString('base64'),path.join(dir,'bad'),{now}));
+ const corrupt=Buffer.from(encrypted);corrupt[corrupt.length-1]^=1;
+ await assert.rejects(()=>receiveBrowserPhotos(corrupt,key,path.join(dir,'bad'),{now}));
+ await assert.rejects(()=>receiveBrowserPhotos(encrypted,key,path.join(dir,'bad'),{now:now+25*3600000}),/expired/);
+ assert.throws(()=>openEnvelope(encrypted,key,{purpose:'smoke-photos',revision:BROWSER_PHOTO_REVISION,now:now+25*3600000,allowExpiredMetrics:true}),/expired/);
+ assert.throws(()=>seal({},key,{purpose:'photos',revision:BROWSER_PHOTO_REVISION,ttlMs:24*3600000}),/policy/);
+ assert.equal(fs.existsSync(path.join(dir,'bad')),false);
 });

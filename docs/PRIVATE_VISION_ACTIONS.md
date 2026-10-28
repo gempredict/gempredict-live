@@ -1,75 +1,37 @@
-# Three real vision responses: no external storage
+# Browser-only three-provider smoke
 
-The registered workflow is still `Private vision benchmark`. Dispatch the **restoration branch**, whose workflow now supports `dry-run` and **smoke only**. No update to main or new registration is needed. The initial smoke sends one identical front/back pair to Claude Sonnet 4.6, GPT-4.1 and Gemini 3.1 Pro, once each. It does not run the 18-evaluation comparison.
+No local checkout, Node installation, terminal, GitHub CLI, storage account or new service is required for the owner. The existing registered workflow and repository API secrets are reused. Execute only `restore/phase1-identity-market-matching`; main and the customer scanner are unchanged.
 
-## Three owner actions
+## Owner actions
 
-### 1. Install the private pair with one local helper command
+1. Open the private `data-key.txt` file supplied in the Codex Cloud task (outside Git). Copy its single line into a **new environment secret** named `VISION_BENCH_DATA_KEY` under repository Settings → Environments → `vision-benchmark`. Keep a private downloaded copy for recovery; do not paste it into chat, issues, logs or Git. No photo chunks or manifest secrets are needed.
+2. Only after explicit authorization for the three-call smoke and its $0.75 admission ceiling, set the existing repository variable `VISION_BENCH_LIVE_ENABLED` to `true`. In Actions → Private vision benchmark → Run workflow, choose branch `restore/phase1-identity-market-matching`, mode `smoke`, confirmation `AUTHORIZE_SMOKE_0_75_USD`. Approve the existing environment if requested. Do not run main, full comparison or a second dispatch. A dry-run requires no private key or API calls.
+3. Share the resulting run URL with Codex. The connected GitHub tools can list/download its encrypted artifact; Codex can decrypt it using the retained private workspace key and report the actual assessments in this private chat. If artifact download through the connection is unavailable, download `encrypted-vision-smoke` in the browser and attach the ZIP here. No owner decryption command is needed. After retrieval, disable live mode, delete the temporary DATA_KEY environment secret and delete the encrypted artifact using the browser.
 
-On a trusted computer with this restoration checkout, locked npm dependencies installed (`npm ci --ignore-scripts`), and GitHub CLI authenticated as the repository owner, run:
+The transferred photos are the **original front/back pair** already supplied privately to this task. The improved pair is not needed for the initial three-call smoke. Neither condition labels nor claimed PSA ground truth are needed: this is an **unscored assessment test**, not an accuracy benchmark or model-selection verdict.
 
-```sh
-node scripts/vision-benchmark/secrets-smoke.mjs install \
-  --front '/PRIVATE/IMG_0893(1).jpeg' --back '/PRIVATE/IMG_0894(1).jpeg' \
-  --revision EXACT_RESTORATION_COMMIT_SHA \
-  --private-dir /PRIVATE/gempredict-smoke-key \
-  --consent-provider-upload
-```
+## What is stored where
 
-Replace paths and SHA with actual values. This step makes **no model calls**. It prepares JPEGs at quality 90, maximum 1536 pixels without upscaling, rotates EXIF orientation and strips metadata. It rejects images too large for the approved limits rather than degrading them repeatedly. For an alternative pair, supply the improved front/back instead. There is no need to transfer all four photographs for a three-request smoke test.
+- `benchmarks/private-smoke.enc` in the restoration branch contains **AES-256-GCM ciphertext only**. No raw JPEG, base64 photo plaintext, private manifest or key is committed. Public Git history retains ciphertext even after the file is removed; deleting a later working copy does not erase that history. Confidentiality depends on keeping the random 256-bit key private. This is an intentional use of the user's allowance to avoid committing *raw* photographs.
+- The random key stays outside Git in the private Codex workspace, with mode 600, and is manually installed through GitHub's secret UI. The task never prints it. The helper preserves a copy for result decryption; retain a private browser download because cloud workspace persistence is not guaranteed across new tasks.
+- The photo envelope is authenticated against the repository, purpose `smoke-photos`, the reviewed input-format anchor `f390b32987a79d2c9c075af62eba459d4c627c0b`, and a maximum 24-hour expiry. This input-format anchor is separate from the executing workflow SHA: the latter includes the ciphertext commit and is checked by the existing live approval gate. Both photo hashes, fixed filenames, dimensions and spend admission are still verified before any provider call. Expiry cannot be bypassed through the metrics-recovery option. Old `photos` envelopes retain their original 30-minute limit.
+- The prepared pair is JPEG quality 90, maximum 1536 pixels without upscaling, EXIF-rotated with metadata removed. The normal benchmark preparation is then applied identically for all providers. Too-large or insufficient-resolution inputs are rejected rather than repeatedly compressed to force admission.
+- The receiver step has the input key but no provider API keys. Evaluation has provider keys but not the encryption key in its environment. Raw assessments remain runner-private. The result step uploads only AES-GCM encrypted parsed assessments/model IDs/usage/latency/reservation metadata, never raw HTTP responses, photos, keys, manifests or filesystem paths. The ciphertext artifact has one-day retention. Artifacts on this public repository are not access-private; encryption supplies confidentiality.
+- Dependency, build and offline-test steps receive no private inputs or provider keys. Logs contain generic status only; no model prose or private image data is printed. Cleanup runs with `always()` on ephemeral GitHub-hosted runners. Unexpected runner termination can prevent cleanup; do not use persistent self-hosted runners.
+- Repository write access, environment approval and the private key remain trust boundaries. A malicious authorized writer can change a secret-bearing workflow. Keep access restricted and approve only the reviewed restoration SHA.
 
-The helper puts only photo chunks, a checksum/revision/24-hour-expiry record and a random result-encryption key into **GitHub environment secrets** under `vision-benchmark`. Existing provider keys and variables remain unchanged. Secret values go through stdin, never command arguments or logs. Preparation children never receive provider keys. Partial uploads fail hash validation; metadata is installed last. The original pair requires 40 chunks and the improved pair 44 in the measured task files, plus two small secrets; the helper handles this automatically. GitHub limits secrets to 48 KB, so each chunk is at most 32,000 bytes. Both fit within the 100-environment-secret limit if the environment has room; do not manually paste dozens of values.
+## Authorization and spend
 
-The local `data-key.txt` is mode 600, outside Git. Keep it until decryption. Use a fresh private output directory for each installation. Do not attach it to an issue or commit it. The helper requires owner GitHub CLI access to write environment secrets; Codex's current GitHub connector does not supply that operation. If the computer does not already have the checkout/Node/GitHub CLI, that remains a prerequisite—not another cloud service to configure. Installing photos does not set `VISION_BENCH_LIVE_ENABLED` or authorize model calls.
+There are at most **three provider attempts total, one per provider, no retries**. Manual trigger, approved owner ID, exact repository/branch, first run attempt, environment restrictions, enable flag and explicit confirmation remain required. The implementation task does not enable live mode, dispatch the workflow or make paid calls.
 
-### 2. Explicitly authorize and dispatch smoke
+The existing benchmark CLI, blind prompt, provider adapters and pre-request reservations are reused. Models remain Claude Sonnet 4.6 (`claude-sonnet-4-6`), GPT-4.1 (`gpt-4.1-2025-04-14`) and Gemini 3.1 Pro (`gemini-3.1-pro-preview`). These are real provider targets; account availability and output quality remain unverified until live responses complete. A malformed response, missing usage, changed model ID or exceeded bound stops remaining calls. Gemini thinking may consume its 2k output ceiling and cause truncation; no silent retry or larger cap is permitted.
 
-Only after owner approval for **three requests, at most the $0.75 admission ceiling**, set the existing `VISION_BENCH_LIVE_ENABLED` repository variable to `true`. Open the existing workflow, choose branch `restore/phase1-identity-market-matching`, mode `smoke`, confirmation `AUTHORIZE_SMOKE_0_75_USD`, and approve the environment if requested. Dispatch within 24 hours of photo installation, at the exact SHA supplied to the installer. The existing owner-ID, environment branch restriction, first-attempt-only check and manual trigger remain mandatory.
+The conservative three-call reservation is $0.6475 against the $0.75 admission ceiling, using the existing reviewed October 28, 2026 rates, 64k input/2k total-output envelopes and 25% headroom. This is **not a provider hard billing cap** or an account-wide spending counter. Failed attempts retain reservations; a new dispatch needs a new authorization and reconciliation. Rates expire after seven days. Photo input expires after 24 hours; if expired, Codex must prepare a fresh encrypted bundle before another dispatch, without a paid call or owner installation. The same still-private key can be reused for that refresh.
 
-No paid dispatch is performed by the implementation task. Do not enable or dispatch full comparison: this simplified route intentionally offers only dry-run/smoke. A separate dispatch is a new authorization; never repeat a failed run without reconciling attempted calls and provider billing.
+Results remain **unscored** and do not establish professional grading accuracy or a model winner. Scored benchmark modes still require independently reviewed labels. Production, Vercel, Supabase, hybrid-identification prototypes and market-data research are outside this change.
 
-### 3. Download, decrypt and clean up
+## Verification (Codex only)
 
-Download the run's `encrypted-vision-smoke` artifact (one-day retention) and extract `assessments.enc` outside Git. Decrypt locally:
+Run the existing benchmark/security suite, workflow syntax validation, credential-free dry-run, full automated tests, production build and relevant browser tests. Exercise the real private pair through envelope encryption, receiver decryption and existing image/spend admission with no credentials or transport. Test wrong key, corrupt ciphertext, expired/wrong-purpose envelopes and unchanged three-request limits. Test encrypted result recovery locally using synthetic assessments, clearly distinguished from live output.
 
-```sh
-node scripts/vision-benchmark/secrets-smoke.mjs open \
-  --input /PRIVATE/assessments.enc \
-  --key-file /PRIVATE/gempredict-smoke-key/data-key.txt \
-  --revision EXACT_RESTORATION_COMMIT_SHA --output /PRIVATE/assessments.json
-```
-
-The result contains actual parsed provider assessments, model IDs, usage, latency, estimated token cost and request reservations. It does **not** claim accuracy, professional grading validity or a model winner. No independently reviewed condition labels are needed for this unscored connectivity/usefulness smoke; scored benchmark modes still require them.
-
-Set `VISION_BENCH_LIVE_ENABLED` back to false, then remove temporary input/encryption secrets:
-
-```sh
-node scripts/vision-benchmark/secrets-smoke.mjs clear
-```
-
-`clear` removes only this helper's `VISION_BENCH_PHOTO_*` and `VISION_BENCH_DATA_KEY` **environment** secrets. It preserves provider credentials, owner variables and unrelated secrets. Delete the encrypted artifact after retrieval and remove local private files when no longer needed.
-
-## Security and cost boundaries
-
-- The public repository contains no photographs, keys, private manifests or provider responses. No external storage account, signed GET/PUT URLs, new API credentials, paid subscription or Production change is required.
-- GitHub artifacts in a public repository are **not access-private**. Only AES-256-GCM ciphertext is uploaded; photos, plaintext assessments and encryption keys are never artifacts or summaries. Confidentiality depends on retaining the local key privately and restricting repository write/environment access. Repository writers able to change approved secret-bearing workflows remain trusted actors. Losing the local key makes the artifact unrecoverable.
-- Workflow logs contain generic status only. Dependency/build/test steps run before private inputs and API keys are supplied. The receiver has photo/encryption secrets but no API keys; evaluation has API keys but no photo chunks/encryption key in its environment; the encryption step has only the key. Temporary decrypted files are mode 600 in mode-700 directories outside checkout. Always-run cleanup removes inputs, plaintext results and ciphertext runner files. GitHub-hosted ephemeral runners are required; termination can prevent cleanup.
-- The existing benchmark CLI, shared blind prompt, provider adapters, image preparation and HTTPS transport are reused. Unscored mode is narrowly limited to one pair, one repeat, three maximum calls, with no reference identity inserted into prompts. Existing scored benchmarks still reject absent ground truth. The customer scanner is unchanged.
-- Each request reserves capacity **before transport**, with a durable journal. The maximum is **three requests total, one per provider**, with no retries or automatic full run. First provider/format/usage/model safety failure stops the sequence. Errors retain their full reservation. All images and the combined prompt bound are admitted before the first request.
-- Existing conservative reservations are $0.6475 for the three-call plan, below $0.75, at reviewed October 28, 2026 rates, 64k input / 2k total-output envelopes and 25% headroom. **This is not a provider hard billing cap** or account-wide counter. Rates expire after seven days; provider prices, availability and billing must still be checked. Do not change caps or reset rate-review dates merely to force calls.
-- Models remain `claude-sonnet-4-6`, `gpt-4.1-2025-04-14`, `gemini-3.1-pro-preview`. Provider/account availability and actual output quality are untested until calls complete. Gemini thinking may consume the 2k output ceiling and leave invalid/truncated JSON; that stops the run rather than silently retrying with more spending.
-- Inline photo uploads are subject to provider retention policies. OpenAI uses `store:false`; no zero-retention guarantee is implied.
-- The old object-storage helpers remain unused for this workflow; their secrets/URLs are no longer prerequisites. Hybrid identification and market-data research are separate.
-
-## Offline verification
-
-```sh
-node --test tests/vision-benchmark.test.mjs tests/vision-actions.test.mjs tests/vision-secrets-smoke.test.mjs
-node scripts/vision-benchmark/actions.mjs dry-run
-node --test tests/*.test.mjs
-npm run build
-```
-
-Use actionlint for workflow syntax. Offline/mock tests are not real model results. The original and improved private pairs passed local secret-capacity and image/spend admission checks without provider calls. Hosted secret transfer, paid responses and encrypted hosted-result retrieval remain unverified.
-
-References: [GitHub secret size/limits](https://docs.github.com/en/actions/reference/security/secrets), [secrets and GitHub CLI](https://docs.github.com/en/actions/how-tos/write-workflows/choose-what-workflows-do/use-secrets), [artifact access](https://docs.github.com/en/actions/how-tos/manage-workflow-runs/download-workflow-artifacts), [workflow dispatch](https://docs.github.com/en/actions/how-tos/write-workflows/choose-when-workflows-run/trigger-a-workflow).
+The browser-only owner path needs no terminal commands. The legacy local CLI installer remains available but is no longer used by this workflow.

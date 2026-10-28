@@ -87,58 +87,9 @@ jobs:
           fi
       - name: Validate approval before retrieving any private data
         run: node --input-type=module -e "import {liveContext} from './scripts/vision-benchmark/actions.mjs'; liveContext();"
-      - name: Receive private front and back from environment secrets
+      - name: Decrypt private front and back on the runner
         env:
-          VISION_BENCH_PHOTO_META: ${{ secrets.VISION_BENCH_PHOTO_META }}
           VISION_BENCH_DATA_KEY: ${{ secrets.VISION_BENCH_DATA_KEY }}
-          VISION_BENCH_PHOTO_00: ${{ secrets.VISION_BENCH_PHOTO_00 }}
-          VISION_BENCH_PHOTO_01: ${{ secrets.VISION_BENCH_PHOTO_01 }}
-          VISION_BENCH_PHOTO_02: ${{ secrets.VISION_BENCH_PHOTO_02 }}
-          VISION_BENCH_PHOTO_03: ${{ secrets.VISION_BENCH_PHOTO_03 }}
-          VISION_BENCH_PHOTO_04: ${{ secrets.VISION_BENCH_PHOTO_04 }}
-          VISION_BENCH_PHOTO_05: ${{ secrets.VISION_BENCH_PHOTO_05 }}
-          VISION_BENCH_PHOTO_06: ${{ secrets.VISION_BENCH_PHOTO_06 }}
-          VISION_BENCH_PHOTO_07: ${{ secrets.VISION_BENCH_PHOTO_07 }}
-          VISION_BENCH_PHOTO_08: ${{ secrets.VISION_BENCH_PHOTO_08 }}
-          VISION_BENCH_PHOTO_09: ${{ secrets.VISION_BENCH_PHOTO_09 }}
-          VISION_BENCH_PHOTO_10: ${{ secrets.VISION_BENCH_PHOTO_10 }}
-          VISION_BENCH_PHOTO_11: ${{ secrets.VISION_BENCH_PHOTO_11 }}
-          VISION_BENCH_PHOTO_12: ${{ secrets.VISION_BENCH_PHOTO_12 }}
-          VISION_BENCH_PHOTO_13: ${{ secrets.VISION_BENCH_PHOTO_13 }}
-          VISION_BENCH_PHOTO_14: ${{ secrets.VISION_BENCH_PHOTO_14 }}
-          VISION_BENCH_PHOTO_15: ${{ secrets.VISION_BENCH_PHOTO_15 }}
-          VISION_BENCH_PHOTO_16: ${{ secrets.VISION_BENCH_PHOTO_16 }}
-          VISION_BENCH_PHOTO_17: ${{ secrets.VISION_BENCH_PHOTO_17 }}
-          VISION_BENCH_PHOTO_18: ${{ secrets.VISION_BENCH_PHOTO_18 }}
-          VISION_BENCH_PHOTO_19: ${{ secrets.VISION_BENCH_PHOTO_19 }}
-          VISION_BENCH_PHOTO_20: ${{ secrets.VISION_BENCH_PHOTO_20 }}
-          VISION_BENCH_PHOTO_21: ${{ secrets.VISION_BENCH_PHOTO_21 }}
-          VISION_BENCH_PHOTO_22: ${{ secrets.VISION_BENCH_PHOTO_22 }}
-          VISION_BENCH_PHOTO_23: ${{ secrets.VISION_BENCH_PHOTO_23 }}
-          VISION_BENCH_PHOTO_24: ${{ secrets.VISION_BENCH_PHOTO_24 }}
-          VISION_BENCH_PHOTO_25: ${{ secrets.VISION_BENCH_PHOTO_25 }}
-          VISION_BENCH_PHOTO_26: ${{ secrets.VISION_BENCH_PHOTO_26 }}
-          VISION_BENCH_PHOTO_27: ${{ secrets.VISION_BENCH_PHOTO_27 }}
-          VISION_BENCH_PHOTO_28: ${{ secrets.VISION_BENCH_PHOTO_28 }}
-          VISION_BENCH_PHOTO_29: ${{ secrets.VISION_BENCH_PHOTO_29 }}
-          VISION_BENCH_PHOTO_30: ${{ secrets.VISION_BENCH_PHOTO_30 }}
-          VISION_BENCH_PHOTO_31: ${{ secrets.VISION_BENCH_PHOTO_31 }}
-          VISION_BENCH_PHOTO_32: ${{ secrets.VISION_BENCH_PHOTO_32 }}
-          VISION_BENCH_PHOTO_33: ${{ secrets.VISION_BENCH_PHOTO_33 }}
-          VISION_BENCH_PHOTO_34: ${{ secrets.VISION_BENCH_PHOTO_34 }}
-          VISION_BENCH_PHOTO_35: ${{ secrets.VISION_BENCH_PHOTO_35 }}
-          VISION_BENCH_PHOTO_36: ${{ secrets.VISION_BENCH_PHOTO_36 }}
-          VISION_BENCH_PHOTO_37: ${{ secrets.VISION_BENCH_PHOTO_37 }}
-          VISION_BENCH_PHOTO_38: ${{ secrets.VISION_BENCH_PHOTO_38 }}
-          VISION_BENCH_PHOTO_39: ${{ secrets.VISION_BENCH_PHOTO_39 }}
-          VISION_BENCH_PHOTO_40: ${{ secrets.VISION_BENCH_PHOTO_40 }}
-          VISION_BENCH_PHOTO_41: ${{ secrets.VISION_BENCH_PHOTO_41 }}
-          VISION_BENCH_PHOTO_42: ${{ secrets.VISION_BENCH_PHOTO_42 }}
-          VISION_BENCH_PHOTO_43: ${{ secrets.VISION_BENCH_PHOTO_43 }}
-          VISION_BENCH_PHOTO_44: ${{ secrets.VISION_BENCH_PHOTO_44 }}
-          VISION_BENCH_PHOTO_45: ${{ secrets.VISION_BENCH_PHOTO_45 }}
-          VISION_BENCH_PHOTO_46: ${{ secrets.VISION_BENCH_PHOTO_46 }}
-          VISION_BENCH_PHOTO_47: ${{ secrets.VISION_BENCH_PHOTO_47 }}
         run: node scripts/vision-benchmark/secrets-smoke.mjs receive
       - name: Run the existing bounded benchmark
         env:
