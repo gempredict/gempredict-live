@@ -10,7 +10,7 @@ const blob=data=>createHash('sha1').update(`blob ${Buffer.byteLength(data)}\0`).
 export function bundledCatalog(root=process.cwd()) {
  const snapshot=JSON.parse(fs.readFileSync(path.join(root,'data/tcgdex/upstream-snapshot.json')));
  const sets=new Map(snapshot.sources.map(s=>parseCatalogLiteral(s.content).data).filter(data=>data.id&&data.cardCount).map(data=>[data.id,data]));
- return validateCatalogSnapshot(snapshot).map(r=>({id:r.id,subject:r.names.en,cardNumber:`${r.localId}/${r.officialCount}`,localId:r.localId,brandSet:r.setNames.en,setId:r.setId,setCode:sets.get(r.setId)?.abbreviations?.official||null,year:r.releaseDate.slice(0,4),language:'en',rarity:r.rarity,printings:[r.type],stamp:r.stamp,source:r.provenance}));
+ return validateCatalogSnapshot(snapshot).map(r=>({id:r.id,subject:r.names.en,cardNumber:`${r.localId}/${r.officialCount}`,localId:r.localId,brandSet:r.setNames.en,setId:r.setId,setCode:sets.get(r.setId)?.abbreviations?.official||null,year:r.releaseDate.slice(0,4),releaseDate:r.releaseDate,officialCount:r.officialCount,language:'en',rarity:r.rarity,printings:[r.type],stamp:r.stamp,source:r.provenance}));
 }
 export function sourceCatalog(source,revision) {
  if(!/^[a-f0-9]{40}$/.test(revision||''))throw Error('source_revision_required');
@@ -39,7 +39,7 @@ export function sourceCatalog(source,revision) {
    // No default printing, no inference from rarity. Explicit upstream types only.
    const variants=Array.isArray(card.variants)?card.variants:[];
    const printings=[...new Set(variants.map(v=>v?.type).filter(t=>['holo','normal','reverse'].includes(t)))];
-   records.push({id:`${set.id}-${localId}`,subject:card.name.en,cardNumber:`${localId}/${set.cardCount.official}`,localId,brandSet:set.name.en,setId:set.id,setCode:set.abbreviations?.official||null,year:set.releaseDate.slice(0,4),language:'en',rarity:card.rarity||null,printings,stamp:variants.flatMap(v=>Array.isArray(v.stamp)?v.stamp:[]),source:{repository:'tcgdex/cards-database',revision,cardPath:file,cardBlob:indexed.get(file),setPath,setBlob:indexed.get(setPath)}});
+   records.push({id:`${set.id}-${localId}`,subject:card.name.en,cardNumber:`${localId}/${set.cardCount.official}`,localId,brandSet:set.name.en,setId:set.id,setCode:set.abbreviations?.official||null,year:set.releaseDate.slice(0,4),releaseDate:set.releaseDate,officialCount:set.cardCount.official,language:'en',rarity:card.rarity||null,printings,stamp:variants.flatMap(v=>Array.isArray(v.stamp)?v.stamp:[]),source:{repository:'tcgdex/cards-database',revision,cardPath:file,cardBlob:indexed.get(file),setPath,setBlob:indexed.get(setPath)}});
   }catch(e){reject(/^source_|^unsupported_|^untracked_|^invalid_/.test(e.message)?e.message:'unsupported_literal');}
  }
  return {records,rejected,scannedNumericCards:[...indexed.keys()].filter(f=>/^data\/.+\/\d+\.ts$/.test(f)).length};

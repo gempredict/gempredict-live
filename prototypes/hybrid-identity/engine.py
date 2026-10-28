@@ -3,6 +3,8 @@ import argparse
 import hashlib
 import json
 import math
+import os
+import shutil
 import re
 import subprocess
 import time
@@ -186,7 +188,7 @@ def extract_ocr(card):
     # Generic Pokémon layout bands, never card-specific coordinates or text hints.
     regions = [('name', (.10,.005,.70,.085)), ('footer', (.02,.895,.48,.955)),
                ('collector', (.08,.935,.52,.985))]
-    for name, region in regions:
+    for name, region in (regions if shutil.which('tesseract') and os.environ.get('GEMPREDICT_SCENE_ONLY')!='1' else []):
         for mode in ('gray', 'inverse', 'threshold'):
             words.extend(ocr_pass(card, region, mode, name))
     words.extend(scene_words(card,'color'))
@@ -322,7 +324,7 @@ def runtime_versions():
     import rapidocr_onnxruntime
     directory=Path(rapidocr_onnxruntime.__file__).parent/'models'
     models={file.name:digest(file.read_bytes()) for file in sorted(directory.glob('*.onnx'))}
-    version=subprocess.run(['tesseract','--version'],capture_output=True,text=True,timeout=5).stdout.splitlines()[0]
+    version=subprocess.run(['tesseract','--version'],capture_output=True,text=True,timeout=5).stdout.splitlines()[0] if shutil.which('tesseract') and os.environ.get('GEMPREDICT_SCENE_ONLY')!='1' else 'unavailable_scene_ocr_only'
     return {'tesseract':version,'rapidocr':importlib.metadata.version('rapidocr-onnxruntime'),'onnxruntime':importlib.metadata.version('onnxruntime'),'modelHashes':models}
 
 def identify(front, back, catalog, references=None, excluded=None):

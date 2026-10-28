@@ -6,6 +6,7 @@ const nextConfig = {
       '/api/predict': [
         './data/tcgdex/upstream-snapshot.json',
         './data/tcgdex/LICENSE',
+        './data/hybrid/catalog.json', './data/hybrid/manifest.json', './data/hybrid/LICENSE',
       ],
     },
   },

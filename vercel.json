@@ -1,0 +1,6 @@
+{
+  "functions": {
+    "api/hybrid-ocr.py": { "maxDuration": 120, "excludeFiles": "{.git/**,.next/**,node_modules/**,benchmarks/**,tests/**,public/**,src/**}" },
+    "pages/api/predict.js": { "maxDuration": 120 }
+  }
+}

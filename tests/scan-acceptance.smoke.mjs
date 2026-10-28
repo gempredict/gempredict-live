@@ -81,7 +81,7 @@ try {
  const links=await card.locator('a[href="https://www.ebay.com/itm/123456789012"]').count();
  check('comparable links available in provisional report',()=>assert.equal(links,1));
  if(links){const [popup]=await Promise.all([page.waitForEvent('popup'),card.getByRole('link',{name:'View eBay listing'}).click()]);
-  await popup.waitForLoadState('domcontentloaded');check('source navigation matches original listing (mock only)',()=>assert.equal(popup.url(),'https://www.ebay.com/itm/123456789012'));await popup.close();}
+  await popup.waitForURL('https://www.ebay.com/itm/123456789012');await popup.waitForLoadState('domcontentloaded');check('source navigation matches original listing (mock only)',()=>assert.equal(popup.url(),'https://www.ebay.com/itm/123456789012'));await popup.close();}
  const methodOpen=await card.getByTestId('financial-methodology').getAttribute('open');
  const aiOpen=await page.getByTestId('photo-initial-identity').first().getAttribute('open');
  check('methodology and rejected AI interpretation are secondary',()=>{assert.equal(methodOpen,null);assert.equal(aiOpen,null);});

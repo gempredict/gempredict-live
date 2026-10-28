@@ -518,6 +518,7 @@ function WithheldResultCard({ data, onSave, isSaved, onVerifyVariant, onRescan }
   return <div data-testid="financial-report" style={{ background: C.white, border: "1px solid " + C.border, borderRadius: 18, padding: "1.25rem" }}>
     <h3 style={{ marginTop: 0 }}>{identitySearchGate(data.identityVerification,data.canonicalCard).allowed ? canonicalDisplayName(data.canonicalCard) : "Card identity needs verification"}</h3>
     <p>{identitySearchGate(data.identityVerification, data.canonicalCard).allowed ? 'Independently verified identity' : 'Identity unverified'} · Language: {data.canonicalCard?.language === 'en' ? 'English' : data.canonicalCard?.language || 'unverified'}</p>
+    {data.hybridIdentification && <p data-testid="local-identity-evidence">Local OCR: {data.hybridIdentification.catalogIdentitySupported ? "printed identity supported" : "confirmation required"}. Catalog rarity: {data.canonicalCard?.rarity || "unresolved"}. Catalog printing: {data.canonicalCard?.printings?.join(", ") || "unresolved"}; physical printing unverified. Independent artwork references unavailable.</p>}
     {identitySearchGate(data.identityVerification,data.canonicalCard).allowed && <p data-testid="catalog-rarity">Catalog rarity: {data.identityVerification?.catalog?.candidate?.rarity || 'unavailable'} · Printing / artwork: {data.canonicalCard?.parallel || 'unverified'}. Physical rarity markings are not independently inspected.</p>}
     {data.identityVerification?.catalog?.requiresConfirmation && data.identityVerification.catalog.candidate && <p data-testid="catalog-candidate">Catalog candidate: {canonicalDisplayName(data.identityVerification.catalog.candidate)}. Confirm the printed identity and full collector number; this candidate is not a verified scan identity.</p>}
     <strong>{isValuationTrusted(data) ? (data.verdict === 'grade' ? 'Grade It — evidence-supported conditional analysis' : 'Skip It — evidence-supported conditional analysis') : isMarketAnalysisAvailable(data) ? 'Provisional market analysis — recommendation withheld' : 'Valuation and grading ROI withheld'}</strong>
@@ -1262,6 +1263,7 @@ const emailRef    = useRef(null);
       if (imageFile) {
         // Multipart/form-data when image is present
         const formData = new FormData();
+        if (new URLSearchParams(window.location.search).get("identityOnly") === "1") formData.append("identityOnly", "true");
         formData.append("cardName", cardName.trim());
         formData.append("cardType",  cardType);
         formData.append("cardSet",   cardSet.trim());

@@ -1,3 +1,4 @@
+import {identifyUploadedCard, hybridSeed, hybridLookup, identityOnlyReport} from '../../lib/hybridIdentification.mjs';
 import { buildVisionPrompt } from '../../lib/visionPrompt.mjs';
 import { readVisualEvidence, conditionPresentation } from '../../lib/visualEvidence.mjs';
 import { readIdentityReadings } from '../../lib/visionIdentityEvidence.mjs';
@@ -560,6 +561,15 @@ if (hasTypedCardName && looksLikeJunk(cardName)) {
     return res.status(400).json({ error: "Image file is too large. Please prepare a smaller photo and retry." });
   }
 
+  // Preview local identity is established before any paid model or market call.
+  const hybridIdentification = imageBuffer && cardType === 'pokemon' && preview
+    ? await identifyUploadedCard(imageBuffer, {requestHeaders:req.headers}) : null;
+  const localIdentity = hybridSeed(hybridIdentification);
+  if (fields.identityOnly === 'true' || fields.identityOnly === true) {
+    if (!preview || !imageBuffer || cardType !== 'pokemon') return res.status(400).json({error:'Local identity-only validation requires a protected Pokémon Preview upload.'});
+    return res.status(200).json(identityOnlyReport(hybridIdentification));
+  }
+
   let emailSaved = false;
   if (email) {
     if (!isValidEmail(email)) return res.status(400).json({ error: "Please enter a valid email address." });
@@ -621,24 +631,27 @@ let effectiveCardName =
             .join(" ")
             .trim();
 
-    const originalCanonicalCard = buildCanonicalCardFromImageAnalysis(
+    const originalCanonicalCard = localIdentity || buildCanonicalCardFromImageAnalysis(
   imageAnalysis,
   cardName,
   cardSet
 ) || confirmedCardIdentity || (!imageBuffer ? buildCanonicalCardFromText({ ...fields, cardName, cardSet }) : null);
 
+if (localIdentity) { effectiveCardName=localIdentity.displayName; effectiveCardSet=[localIdentity.year,localIdentity.brandSet].join(' '); }
+
 // This measures visible image identifiers only. Text/confirmation identities
 // still use market verification, but have no image confidence to calculate.
-const atlasIdentityConfidence = imageAnalysis
+const atlasIdentityConfidence = imageAnalysis && !hybridIdentification
   ? calculateIdentityConfidence(imageAnalysis)
   : null;
 
     // Protect explicit year/set choices independently; a typed subject alone
     // does not lock either field against neutral market evidence.
     const identityEvidence = await resolveMarketIdentity(originalCanonicalCard, {
+      ...(hybridIdentification ? {catalogLookup:hybridLookup(hybridIdentification),catalogSource:'tcgdex',allowCatalogCorrection:true}:{}),
       cardType,
-      visionReadings: imageAnalysis?.identityReadings || [],
-      allowCollectorDiscovery: !!imageAnalysis && cardType === 'pokemon',
+      visionReadings: hybridIdentification ? [] : imageAnalysis?.identityReadings || [],
+      allowCollectorDiscovery: !hybridIdentification && !!imageAnalysis && cardType === 'pokemon',
       collectorNumberProtected: !!confirmedCardIdentity || /\d+\s*\/\s*\d+/.test([hasUserCardName ? cardName : '', cardSet].join(' ')),
       ...getUserIdentityProtection({ cardName, cardSet, year: fields.year, set: fields.set, confirmedIdentity: fields.confirmedIdentity }),
     });
@@ -652,6 +665,7 @@ const atlasIdentityConfidence = imageAnalysis
     if (identityEvidence.identityVerification?.catalog?.source === 'tcgdex' && (identityEvidence.identityVerification.catalog.requiresConfirmation || ['ambiguous', 'conflict', 'insufficient_evidence'].includes(identityEvidence.identityVerification.catalog.status))) {
       variantVerification = { ...variantVerification, status: 'needs_confirmation', explanation: 'Independent catalog evidence is conflicting or incomplete. Confirm the printed identity, language and version, or rescan clearer identifiers. Valuation remains withheld.' };
     }
+    if (hybridIdentification && !confirmedVariant) variantVerification={...variantVerification,status:'needs_confirmation',explanation:'Local OCR establishes a catalog candidate, not physical printing. Confirm the edition/printing before valuation.'};
     // Existing photo-confirmation requests retain their original behavior.
     const isTextIdentityRequest = !imageBuffer && (!confirmedCardIdentity || fields.textOnlyIdentity === true || fields.textOnlyIdentity === "true");
     const missingIdentityFields = isTextIdentityRequest ? missingTextIdentityFields(canonicalCard) : [];
@@ -706,6 +720,7 @@ const atlasIdentityConfidence = imageAnalysis
       : { status: 'unavailable', reason: 'identity_or_variant_unresolved', records: [] };
     const result = protectValuation({
   success: true,
+  hybridIdentification,
   completedSales,
   populationRecord: null,
   probabilityEvidence: null,

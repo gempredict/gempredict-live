@@ -1,3 +1,4 @@
+import {hybridSeed,hybridLookup,identityOnlyReport} from '../../lib/hybridIdentification.mjs';
 import { supportedObservation } from './visionEvidence.mjs';
 import { buildVisionPrompt } from '../../lib/visionPrompt.mjs';
 import { readVisualEvidence, conditionPresentation } from '../../lib/visualEvidence.mjs';
@@ -58,6 +59,7 @@ export async function runPipeline(scenario) {
   const errors = [];
   const model = { cardTitle: scenario.proposal?.subject || scenario.fields?.cardName || 'Unrecognized card', cardMeta: 'Mock model proposal', psa9Value: 120, psa10Value: 200, psa10Probability: 60, ...scenario.model };
   const context = {
+    hybridSeed,hybridLookup,identityOnlyReport,identifyUploadedCard: async()=>scenario.hybridResult || null,
     buildVisionPrompt, conditionPresentation, readVisualEvidence, readIdentityReadings, VISION_MODEL_CONFIGURATION, VALUATION_MODEL_CONFIGURATION, isVariantVerificationTrusted, fetchCompletedSales: card => fetchCompletedSales(card, { provider: scenario.soldProvider || null }), predictionPricingReceipt, isVercelPreview, verifyPreviewIntegration: options => verifyPreviewIntegration({ ...options, ...(scenario.assetCheck ? { verifyAssets: scenario.assetCheck } : {}) }),
     MAX_IMAGE_BYTES, Buffer, console: { log(label, data) { if (String(label).startsWith('[GemPredict] Pricing')) metrics.pricingLogs.push(JSON.parse(data)); }, error(...args) { errors.push(args.map(value => String(value)).join(" ")); } }, supabase: null,
     process: { env: { NEXT_PUBLIC_SITE_URL: 'http://stage-a.local', ...scenario.routingEnv } },
@@ -66,7 +68,7 @@ export async function runPipeline(scenario) {
     identitySearchGate, calculateGradingEconomics, getUserIdentityProtection, reconcileVariant, parseVariantConfirmation, protectValuation, selectMarketQuery,
     atlasOrchestrator, calculateIdentityConfidence,
     parseRequest: async () => { metrics.parseCalls++; if (scenario.parsedRequest) return scenario.parsedRequest; return { fields: scenario.fields || { cardName: 'Unknown card from image', cardType: scenario.type || 'pokemon' }, imageBuffer: scenario.textOnly ? null : Buffer.from('mock card image'), imageMimeType: 'image/png' }; },
-    resolveMarketIdentity: (card, options) => resolveMarketIdentity(card, { ...options, catalogSource: 'mock-unconfigured', ...scenario.catalogOptions, clientId: 'mock', clientSecret: 'mock', fetchImpl: async url => {
+    resolveMarketIdentity: (card, options) => resolveMarketIdentity(card, { ...options, ...(scenario.hybridResult ? {} : {catalogSource: 'mock-unconfigured'}), ...scenario.catalogOptions, clientId: 'mock', clientSecret: 'mock', fetchImpl: async url => {
       if (String(url).includes('/oauth2/token')) { metrics.neutralOAuth++; return { ok: true, json: async () => ({ access_token: 'mock' }) }; }
       metrics.neutralBrowse++;
       metrics.neutralQuery = new URL(url).searchParams.get('q');
@@ -125,6 +127,7 @@ export async function runPipeline(scenario) {
       observed: { original: scenario.proposal || scenario.fields?.originalIdentityProposal || scenario.fields?.confirmedCardIdentity || buildCanonicalCardFromText(scenario.fields), reconciled: null, yearStatus: null, setStatus: null, variantStatus: null, comparableCount: null, usedCount: null, marketConfidence: null, valuationStatus: 'no_result', marketMedian: null, modelRaw: null, expectedNet: null, upside: null } };
     if (scenario.method === 'GET') return { httpStatus: code, payload, metrics, errors };
     const report = reportFromPrediction(payload);
+    if (payload.receipt?.mode === 'local_identity_only') return {httpStatus:code,payload,report,metrics,errors};
     const copied = copySummary(report);
     const summary = payload.marketData.marketSummary;
     return { id: scenario.id, expectedTrusted: scenario.expectedTrusted, httpStatus: code, payload, report, copied, metrics, errors,

@@ -1,0 +1,9 @@
+# CPU OCR in the existing Vercel project; no external inference service.
+numpy==2.3.5
+Pillow==12.3.0
+opencv-python-headless==4.13.0.92
+onnxruntime==1.23.2
+Shapely==2.1.2
+pyclipper==1.4.0
+PyYAML==6.0.3
+six==1.17.0
