@@ -55,3 +55,40 @@ same-deployment routing and Vercel Trusted Sources authentication are reused;
 cookies are not forwarded. The hosted browser executor must have network access
 to the exact Preview hostname. If denied by Codex network policy, report that
 blocker and leave genuine hosted acceptance unverified.
+
+## Printed identity gate correction
+
+The original identity-only report unconditionally set both
+`catalog.requiresConfirmation=true` and `valuationIdentityGate.allowed=false`.
+That was an orchestration error: even supported printed identity could never
+pass. Missing reference artwork was already allowed by the evidence rule and was
+not the blocker. `variantVerification.status=needs_confirmation` correctly
+remains in place, independently of the printed-card identity result.
+
+Now `requiresConfirmation` follows printed support and the report computes the
+existing `identitySearchGate` against the final canonical card. Its rejection
+conditions remain: confirmation/language requirements, catalog conflicts,
+missing/invalid canonical or candidate fields/reference, final identity/artwork/
+finish conflicts, explicit year/set conflicts, or unverified catalog status.
+No pricing gate is removed. Variant eligibility, qualified financial evidence,
+condition restrictions and saved-report protections are unchanged. A printed
+identity may pass while financial eligibility remains false.
+
+Automatic printed verification requires: full exact normalized name read at OCR
+confidence >=70; exactly one supported full collector fraction in >=2 processing
+passes at confidence >=45 and no contradictory high-confidence fraction;
+consistent exact printed set code and English language in >=2 distinct passes
+with no conflicting parsed mark; one matching identity across the entire pinned
+catalog subset (not just top five); valid card detection and >=0.12 rank margin.
+The OCR engine records mark observations only above confidence 70. Reprocessed
+views of one photo are correlated, not independent physical observations. Unknown
+set/language reads, lookalike names or ambiguous catalog variants require
+confirmation. Reference artwork is optional and never fabricated; physical finish
+and authenticity are not established by text agreement or a catalog Holo flag.
+
+Real local re-evaluation: original verifies printed identity with exact name in
+color/gray passes and `30C`/`en` in three footer passes. Improved still returns
+30th-149 but no reliable set/language readings, and does not verify. Both retain
+`needs_confirmation` for physical printing, null prices and null Atlas. Fresh
+hosted original/improved photographic receipts on the corrected deployment are
+required before declaring hosted acceptance; old receipts do not validate new code.

@@ -28,8 +28,11 @@ try{
   const response=await responsePromise;const data=await response.json();
   assert.equal(response.status(),200);assert.equal(attempted,1);assert.equal(data.receipt?.mode,'local_identity_only');assert.equal(data.receipt.paidProviderCalls,0);
   assert.equal(data.canonicalCard?.id,'30th-149');assert.equal(data.canonicalCard.year,'2026');assert.equal(data.canonicalCard.cardNumber,'149/128');assert.equal(data.canonicalCard.brandSet,'30th Celebration');assert.equal(data.canonicalCard.subject,'Pikachu ex');
+  assert.equal(data.receipt.printedIdentityVerified,pair==='original');assert.equal(data.valuationIdentityGate.allowed,pair==='original');
   assert.equal(data.variantVerification.status,'needs_confirmation');assert.equal(data.atlas,null);assert.equal(data.prediction.rawValue,null);
-  await page.getByTestId('local-identity-evidence').waitFor();assert.doesNotMatch(await page.locator('body').innerText(),/2023 Scarlet & Violet 151/);
+  await page.getByTestId('local-identity-evidence').waitFor();
+  if(pair==='original')assert.match(await page.getByTestId('financial-report').innerText(),/Verified printed-card identity/);
+  else assert.match(await page.getByTestId('financial-report').innerText(),/Identity unverified/);assert.doesNotMatch(await page.locator('body').innerText(),/2023 Scarlet & Violet 151/);
   receipts.push({pair,...data.receipt,canonicalCard:data.canonicalCard,localStatus:data.hybridIdentification.status,variantStatus:data.variantVerification.status});await page.close();
  }
  fs.writeFileSync(output,JSON.stringify(receipts,null,2),{mode:0o600});console.log('PASS two genuine browser uploads; receipts stored privately, no paid calls.');

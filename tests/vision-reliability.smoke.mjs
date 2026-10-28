@@ -24,7 +24,7 @@ try{
    await page.getByRole('button',{name:'Copy Summary',exact:true}).click();const copied=await page.evaluate(()=>window.__copied);assert.match(copied,/Unverified card/);assert.doesNotMatch(copied,/151|149\/165/);
    await page.getByRole('button',{name:'Verify Variant',exact:true}).click();assert.equal(await page.getByLabel('Card number',{exact:true}).inputValue(),'149/128');
   }else{
-   assert.match(await page.getByTestId('catalog-rarity').innerText(),/Catalog rarity: Special illustration rare.*Printing \/ artwork: Holo Special Art/);
+   assert.match(await page.getByTestId('catalog-rarity').innerText(),/Catalog rarity: Special Illustration Rare \(SIR\).*Artwork: Special Art.*Catalog printing: Holo/);
    assert.match(body,/\$56.99/);assert.match(body,/30%.*uncalibrated/);assert.equal(result.report.atlas,null);
    if(mode==='unsupported'){assert.doesNotMatch(body,/Visible surface scratches|Visible corner softening/);assert.match(body,/Possible surface scratches.*unconfirmed/);assert.match(body,/Suspected — unconfirmed/i);}
    else {assert.match(body,/Visible surface scratches/);assert.equal(result.report.imageAnalysis.surface,'fair');}

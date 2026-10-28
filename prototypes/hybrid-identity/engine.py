@@ -281,13 +281,15 @@ def rank_candidates(ocr, catalog, artwork=None):
             names=[name_key(s) for s in header]
             name_scores[subject]=max([max(1.0 if candidate in text else max([SequenceMatcher(None,candidate,text[i:i+len(candidate)]).ratio() for i in range(max(1,len(text)-len(candidate)+1))],default=0) for candidate in {subject,core} if len(candidate)>=3) for text in names],default=0)
         name_score=name_scores[subject]
+        exact_names=[{'text':line['text'],'pass':line['pass'],'confidence':line.get('confidence',0)} for line in ocr['lines'] if line['pass'].startswith('name') and line.get('confidence',0)>=70 and name_key(line['text'])==subject]
+        printed_marks=[{'code':code,'language':lang,'pass':view} for (code,lang),views in marks.items() for view in sorted(views)]
         code=record.get('setCode')
         code_seen=any(mark[0]==str(code or '').upper() for mark in clear_marks)
         en_seen=any(mark[1]=='en' for mark in clear_marks)
         art=artwork.get(record['id'],{'status':'reference_unavailable','score':0})
         score=.45*int(number_match)+.25*name_score+.15*int(code_seen)+.15*art['score']
         ranked.append({'id':record['id'],'identity':record,'score':round(score,4),
-                       'evidence':{'collectorNumber':{'supported':number_match,'readings':number_rows},'name':{'score':round(name_score,4),'supported':name_score>=.8},'setCode':{'supported':code_seen,'value':code if code_seen else None},'language':{'supported':en_seen,'value':'en' if en_seen else None},'artwork':art}})
+                       'evidence':{'collectorNumber':{'supported':number_match,'readings':number_rows},'name':{'score':round(name_score,4),'supported':name_score>=.8,'exactReadings':exact_names},'setCode':{'supported':code_seen,'value':code if code_seen else None,'readings':printed_marks},'language':{'supported':en_seen,'value':'en' if en_seen else None},'artwork':art}})
     ranked.sort(key=lambda r:(-r['score'],r['id']))
     return ranked,rejected,clear_numbers
 
