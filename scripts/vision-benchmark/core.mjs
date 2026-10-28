@@ -26,11 +26,13 @@ const identityFields=['subject','year','brandSet','cardNumber','language','paral
 const predictionFields={subject:'identifiedSubject',year:'identifiedYear',brandSet:'identifiedBrandSet',cardNumber:'identifiedCardNumber',language:'identifiedLanguage',parallel:'identifiedParallel',rarity:'identifiedRarity'};
 const key=v=>typeof v==='string'?v.toLowerCase().replace(/[^a-z0-9/]/g,''):'';
 export function planBenchmark(manifest,{live=false,authorized=false,env=process.env}={}) {
+ const unscored=manifest.executionProfile==='provider_smoke_unscored';
  const blockers=[];const fixtures=Array.isArray(manifest.fixtures)?manifest.fixtures:[];
  if(!fixtures.length)blockers.push('real_photo_fixtures_missing');
  if(new Set(fixtures.map(f=>f.id)).size!==fixtures.length)blockers.push('duplicate_fixture_ids');
  if(!live||!authorized)blockers.push('paid_calls_not_explicitly_authorized');
- if(!Number.isInteger(manifest.repeats)||((manifest.executionProfile==='provider_smoke'&&fixtures.length===1&&manifest.maxRequests===3)?manifest.repeats!==1:manifest.repeats<2||manifest.repeats>10))blockers.push('repeat_count_invalid');
+ if(!Number.isInteger(manifest.repeats)||((['provider_smoke','provider_smoke_unscored'].includes(manifest.executionProfile)&&fixtures.length===1&&manifest.maxRequests===3)?manifest.repeats!==1:manifest.repeats<2||manifest.repeats>10))blockers.push('repeat_count_invalid');
+ if(unscored&&(fixtures.length!==1||manifest.repeats!==1||manifest.maxRequests!==3||manifest.spendPolicy?.profile!=='smoke'))blockers.push('unscored_smoke_scope_invalid');
  const calls=fixtures.length*(manifest.repeats||0)*Object.keys(providers).length;
  if(!Number.isInteger(manifest.maxRequests)||calls>manifest.maxRequests||calls>300)blockers.push('request_budget_invalid');
  if(!Number.isFinite(manifest.maxEstimatedCostUSD)||manifest.maxEstimatedCostUSD<=0)blockers.push('cost_budget_missing');
@@ -42,6 +44,7 @@ export function planBenchmark(manifest,{live=false,authorized=false,env=process.
   if(!/^[a-z0-9_-]{1,64}$/i.test(f.id||''))blockers.push('fixture_id_invalid');
   if(!['pokemon','sports'].includes(f.category)||f.synthetic===true||f.consentToProviderUpload!==true||!f.rightsReference)blockers.push(`${f.id}:real_image_rights_or_consent_missing`);
   if(!f.front?.path||!/^[a-f0-9]{64}$/i.test(f.front?.sha256||'')||f.back?.path&&!/^[a-f0-9]{64}$/i.test(f.back.sha256||''))blockers.push(`${f.id}:front_photo_or_hash_missing`);
+  if(unscored)continue;
   const truth=f.groundTruth;
   if(truth?.verified!==true||!truth.reference||!identityFields.every(field=>typeof truth.identity?.[field]==='string'&&truth.identity[field].trim()))blockers.push(`${f.id}:independent_identity_labels_unverified`);
   if(truth?.conditionReviewed!==true||!Array.isArray(truth.assessableAttributes)||!truth.assessableAttributes.length||truth.assessableAttributes.some(a=>!['centering','corners','edges','surface'].includes(a))||!Array.isArray(truth.visibleDefects)||truth.visibleDefects.some(t=>!t||!truth.assessableAttributes.includes(t.attribute)||t.code==='no_defect_observed'||readVisualEvidence({visualObservations:[t]}).findings.length!==1))blockers.push(`${f.id}:visible_condition_labels_unverified`);
@@ -111,10 +114,11 @@ export async function executeBenchmark(manifest,prepared,{env=process.env,transp
    if(guard)guard.observe(reservation,usage,returnedModel,id);
    const cost=usage.input!=null&&usage.output!=null?(usage.input*manifest.rates[id].inputPerMillion+usage.output*manifest.rates[id].outputPerMillion)/1e6:null;
    if(cost!=null)estimatedCost+=cost;
-   rows.push({requestAttempted:true,fixtureId:fixture.id,physicalCardId:fixture.physicalCardId||fixture.id,provider:id,repeat,requestedModel:providers[id].model,returnedModel,temperature:providers[id].temperature,promptFingerprint:hash(prompt),imageFingerprints:images.map(i=>hash(i.buffer)),latencyMs:Math.round(performance.now()-started),usage,estimatedCostUSD:cost,...scoreResponse(parsed,fixture.groundTruth,{inspectedSides:images.length>1?['front','back']:['front']})});
+   rows.push({requestAttempted:true,fixtureId:fixture.id,physicalCardId:fixture.physicalCardId||fixture.id,provider:id,repeat,requestedModel:providers[id].model,returnedModel,temperature:providers[id].temperature,promptFingerprint:hash(prompt),imageFingerprints:images.map(i=>hash(i.buffer)),latencyMs:Math.round(performance.now()-started),usage,estimatedCostUSD:cost,...(manifest.executionProfile==='provider_smoke_unscored'?{assessment:parsed}:scoreResponse(parsed,fixture.groundTruth,{inspectedSides:images.length>1?['front','back']:['front']}))});
    if(cost==null)return {status:'BLOCKED_USAGE_UNAVAILABLE',testOnly,rows,estimatedCostUSD:estimatedCost};
   }catch{rows.push({requestAttempted:attempted,fixtureId:fixture.id,provider:id,repeat,error:'provider_or_response_failure',latencyMs:Math.round(performance.now()-started)});if(guard){guard.stop();return {status:'STOPPED_SAFETY_FAILURE',testOnly,rows,estimatedCostUSD:estimatedCost,spendReservation:guard.report()};}}
  }
+ if(manifest.executionProfile==='provider_smoke_unscored')return {status:testOnly?'HARNESS_TEST_ONLY_NOT_MODEL_ACCURACY':'SMOKE_COMPLETE_UNSCORED',testOnly,rows,estimatedCostUSD:estimatedCost,spendReservation:guard?.report(),accuracyScored:false};
  const summaries=Object.fromEntries(Object.keys(providers).map(id=>{
   const all=rows.filter(r=>r.provider===id),valid=all.filter(r=>!r.error);const latencies=valid.map(r=>r.latencyMs).sort((a,b)=>a-b);
   return [id,{requests:all.length,validResponses:valid.length,exactIdentityRate:valid.length?valid.filter(r=>r.exactIdentity).length/valid.length:null,highConfidenceWrong:valid.filter(r=>r.identityConfidence>=80&&!r.exactIdentity).length,identityAbstentions:valid.reduce((n,r)=>n+r.identityMissing.length,0),identityBrierScore:valid.some(r=>r.identityConfidence!=null)?valid.filter(r=>r.identityConfidence!=null).reduce((n,r)=>n+(r.identityConfidence/100-Number(r.exactIdentity))**2,0)/valid.filter(r=>r.identityConfidence!=null).length:null,identityAccuracy:Object.fromEntries(identityFields.map(field=>[field,valid.length?valid.filter(r=>r.identity[field]).length/valid.length:null])),falsePositiveDefects:valid.reduce((n,r)=>n+r.falsePositiveDefects,0),falseNegativeDefects:valid.reduce((n,r)=>n+r.falseNegativeDefects,0),unsupportedConfirmedClaims:valid.reduce((n,r)=>n+r.unsupportedConfirmedClaims,0),latencyP50Ms:latencies[Math.floor(latencies.length*.5)]??null,latencyP95Ms:latencies[Math.min(latencies.length-1,Math.floor(latencies.length*.95))]??null,

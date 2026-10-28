@@ -129,11 +129,13 @@ test('preparation child processes cannot inherit provider/storage/GitHub credent
  const safe=benchmarkChildEnvironment({PATH:'/usr/bin',HTTPS_PROXY:'http://trusted-proxy',NODE_EXTRA_CA_CERTS:'/trusted-ca',Claude_API_Key:'SYNTHETIC',VISION_BENCH_DATA_KEY:'SYNTHETIC',VISION_BENCH_BUNDLE_URL:'SYNTHETIC',GITHUB_TOKEN:'SYNTHETIC',NODE_DEBUG:'http',DEBUG:'*',NODE_OPTIONS:'--trace-warnings'});
  assert.deepEqual(safe,{PATH:'/usr/bin',HTTPS_PROXY:'http://trusted-proxy',NODE_EXTRA_CA_CERTS:'/trusted-ca'});
 });
-test('workflow is manual-only, least-privilege, SHA-pinned and never publishes data artifacts or summaries',()=>{
+test('workflow is manual-only, least-privilege, SHA-pinned and publishes only an encrypted artifact without summaries',()=>{
  const yaml=fs.readFileSync('.github/workflows/vision-benchmark.yml','utf8');
  assert.match(yaml,/on:\n  workflow_dispatch:/);assert.doesNotMatch(yaml,/\n  (?:push|pull_request|pull_request_target|schedule|workflow_run):/);
- assert.match(yaml,/permissions:\n  contents: read/);assert.doesNotMatch(yaml,/(?:write-all|contents: write|id-token: write|upload-artifact|GITHUB_STEP_SUMMARY)/);
+ assert.match(yaml,/permissions:\n  contents: read/);assert.doesNotMatch(yaml,/(?:write-all|contents: write|id-token: write|GITHUB_STEP_SUMMARY)/);
  for(const action of yaml.matchAll(/uses: (\S+)/g))assert.match(action[1],/@[a-f0-9]{40}$/);
+ assert.match(yaml,/path: \$\{\{ runner.temp \}\}\/gp-encrypted-smoke\/assessments\.enc/);
+ assert.doesNotMatch(yaml,/BUNDLE_URL|RESULTS_URL|STORAGE_HOST/);
  assert.doesNotMatch(yaml,/run:.*\$\{\{/);assert.match(yaml,/persist-credentials: false/);assert.match(yaml,/if: always\(\)/);
 });
 

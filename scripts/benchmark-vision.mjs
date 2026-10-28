@@ -17,4 +17,4 @@ if(plan.status==='READY_FOR_AUTHORIZED_CALLS'){
 }
 const report={...result,codeRevision:execFileSync('git',['rev-parse','HEAD'],{encoding:'utf8'}).trim(),workingTreeDirty:!!execFileSync('git',['status','--porcelain'],{encoding:'utf8'}).trim(),manifestFingerprint:hash(manifest),providerRequestsAttempted:result.providerCallsPerformed===null?null:result.rows?.filter(row=>row.requestAttempted!==false).length||0,rateBasis:{table:manifest.rates,asOf:manifest.ratesAsOf||null,kind:'user_reviewed_token_rate_estimate_not_invoice'},realModelAccuracyClaim:result.status==='COMPLETE_NOT_AUTOMATIC_APPROVAL'?'Measured against user-supplied independent labels; review required':'NONE'};
 fs.writeFileSync(output,JSON.stringify(report,null,2),{mode:0o600});fs.chmodSync(output,0o600);console.log(JSON.stringify({status:report.status,plannedRequests:plan.plannedRequests,output,blockers:report.blockers||[]}));
-if(report.status!=='COMPLETE_NOT_AUTOMATIC_APPROVAL')process.exitCode=2;
+if(!['COMPLETE_NOT_AUTOMATIC_APPROVAL','SMOKE_COMPLETE_UNSCORED'].includes(report.status))process.exitCode=2;

@@ -4,16 +4,15 @@ on:
   workflow_dispatch:
     inputs:
       mode:
-        description: Dry-run first, then smoke, then full comparison after review
+        description: Dry-run or explicitly authorized three-request private smoke
         type: choice
         required: true
         default: dry-run
         options:
           - dry-run
           - smoke
-          - full
       confirmation:
-        description: Live only - AUTHORIZE_SMOKE_0_75_USD or AUTHORIZE_FULL_4_25_USD
+        description: Live only - AUTHORIZE_SMOKE_0_75_USD
         type: string
         required: false
         default: ''
@@ -43,14 +42,14 @@ jobs:
           npm ci --ignore-scripts
           npm ci --prefix benchmarks/ci-tools --ignore-scripts
       - name: Offline benchmark security tests
-        run: node --test tests/vision-benchmark.test.mjs tests/vision-actions.test.mjs
+        run: node --test tests/vision-benchmark.test.mjs tests/vision-actions.test.mjs tests/vision-secrets-smoke.test.mjs
       - name: Credential-free dry-run
         run: node scripts/vision-benchmark/actions.mjs dry-run
 
   live:
     needs: dry-run
     if: >-
-      inputs.mode != 'dry-run' &&
+      inputs.mode == 'smoke' &&
       github.repository == 'gempredict/gempredict-live' &&
       github.ref == 'refs/heads/restore/phase1-identity-market-matching' &&
       github.run_attempt == 1 &&
@@ -64,7 +63,6 @@ jobs:
       BENCH_CONFIRMATION: ${{ inputs.confirmation }}
       BENCH_OWNER_ID: ${{ vars.VISION_BENCH_OWNER_ID }}
       BENCH_LIVE_ENABLED: ${{ vars.VISION_BENCH_LIVE_ENABLED }}
-      BENCH_STORAGE_HOST: ${{ vars.VISION_BENCH_STORAGE_HOST }}
     steps:
       - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
         with:
@@ -89,24 +87,79 @@ jobs:
           fi
       - name: Validate approval before retrieving any private data
         run: node --input-type=module -e "import {liveContext} from './scripts/vision-benchmark/actions.mjs'; liveContext();"
-      - name: Retrieve and validate short-lived encrypted photos
+      - name: Receive private front and back from environment secrets
         env:
-          VISION_BENCH_BUNDLE_URL: ${{ secrets.VISION_BENCH_BUNDLE_URL }}
-          VISION_BENCH_RESULTS_URL: ${{ secrets.VISION_BENCH_RESULTS_URL }}
+          VISION_BENCH_PHOTO_META: ${{ secrets.VISION_BENCH_PHOTO_META }}
           VISION_BENCH_DATA_KEY: ${{ secrets.VISION_BENCH_DATA_KEY }}
-        run: node scripts/vision-benchmark/actions.mjs fetch
+          VISION_BENCH_PHOTO_00: ${{ secrets.VISION_BENCH_PHOTO_00 }}
+          VISION_BENCH_PHOTO_01: ${{ secrets.VISION_BENCH_PHOTO_01 }}
+          VISION_BENCH_PHOTO_02: ${{ secrets.VISION_BENCH_PHOTO_02 }}
+          VISION_BENCH_PHOTO_03: ${{ secrets.VISION_BENCH_PHOTO_03 }}
+          VISION_BENCH_PHOTO_04: ${{ secrets.VISION_BENCH_PHOTO_04 }}
+          VISION_BENCH_PHOTO_05: ${{ secrets.VISION_BENCH_PHOTO_05 }}
+          VISION_BENCH_PHOTO_06: ${{ secrets.VISION_BENCH_PHOTO_06 }}
+          VISION_BENCH_PHOTO_07: ${{ secrets.VISION_BENCH_PHOTO_07 }}
+          VISION_BENCH_PHOTO_08: ${{ secrets.VISION_BENCH_PHOTO_08 }}
+          VISION_BENCH_PHOTO_09: ${{ secrets.VISION_BENCH_PHOTO_09 }}
+          VISION_BENCH_PHOTO_10: ${{ secrets.VISION_BENCH_PHOTO_10 }}
+          VISION_BENCH_PHOTO_11: ${{ secrets.VISION_BENCH_PHOTO_11 }}
+          VISION_BENCH_PHOTO_12: ${{ secrets.VISION_BENCH_PHOTO_12 }}
+          VISION_BENCH_PHOTO_13: ${{ secrets.VISION_BENCH_PHOTO_13 }}
+          VISION_BENCH_PHOTO_14: ${{ secrets.VISION_BENCH_PHOTO_14 }}
+          VISION_BENCH_PHOTO_15: ${{ secrets.VISION_BENCH_PHOTO_15 }}
+          VISION_BENCH_PHOTO_16: ${{ secrets.VISION_BENCH_PHOTO_16 }}
+          VISION_BENCH_PHOTO_17: ${{ secrets.VISION_BENCH_PHOTO_17 }}
+          VISION_BENCH_PHOTO_18: ${{ secrets.VISION_BENCH_PHOTO_18 }}
+          VISION_BENCH_PHOTO_19: ${{ secrets.VISION_BENCH_PHOTO_19 }}
+          VISION_BENCH_PHOTO_20: ${{ secrets.VISION_BENCH_PHOTO_20 }}
+          VISION_BENCH_PHOTO_21: ${{ secrets.VISION_BENCH_PHOTO_21 }}
+          VISION_BENCH_PHOTO_22: ${{ secrets.VISION_BENCH_PHOTO_22 }}
+          VISION_BENCH_PHOTO_23: ${{ secrets.VISION_BENCH_PHOTO_23 }}
+          VISION_BENCH_PHOTO_24: ${{ secrets.VISION_BENCH_PHOTO_24 }}
+          VISION_BENCH_PHOTO_25: ${{ secrets.VISION_BENCH_PHOTO_25 }}
+          VISION_BENCH_PHOTO_26: ${{ secrets.VISION_BENCH_PHOTO_26 }}
+          VISION_BENCH_PHOTO_27: ${{ secrets.VISION_BENCH_PHOTO_27 }}
+          VISION_BENCH_PHOTO_28: ${{ secrets.VISION_BENCH_PHOTO_28 }}
+          VISION_BENCH_PHOTO_29: ${{ secrets.VISION_BENCH_PHOTO_29 }}
+          VISION_BENCH_PHOTO_30: ${{ secrets.VISION_BENCH_PHOTO_30 }}
+          VISION_BENCH_PHOTO_31: ${{ secrets.VISION_BENCH_PHOTO_31 }}
+          VISION_BENCH_PHOTO_32: ${{ secrets.VISION_BENCH_PHOTO_32 }}
+          VISION_BENCH_PHOTO_33: ${{ secrets.VISION_BENCH_PHOTO_33 }}
+          VISION_BENCH_PHOTO_34: ${{ secrets.VISION_BENCH_PHOTO_34 }}
+          VISION_BENCH_PHOTO_35: ${{ secrets.VISION_BENCH_PHOTO_35 }}
+          VISION_BENCH_PHOTO_36: ${{ secrets.VISION_BENCH_PHOTO_36 }}
+          VISION_BENCH_PHOTO_37: ${{ secrets.VISION_BENCH_PHOTO_37 }}
+          VISION_BENCH_PHOTO_38: ${{ secrets.VISION_BENCH_PHOTO_38 }}
+          VISION_BENCH_PHOTO_39: ${{ secrets.VISION_BENCH_PHOTO_39 }}
+          VISION_BENCH_PHOTO_40: ${{ secrets.VISION_BENCH_PHOTO_40 }}
+          VISION_BENCH_PHOTO_41: ${{ secrets.VISION_BENCH_PHOTO_41 }}
+          VISION_BENCH_PHOTO_42: ${{ secrets.VISION_BENCH_PHOTO_42 }}
+          VISION_BENCH_PHOTO_43: ${{ secrets.VISION_BENCH_PHOTO_43 }}
+          VISION_BENCH_PHOTO_44: ${{ secrets.VISION_BENCH_PHOTO_44 }}
+          VISION_BENCH_PHOTO_45: ${{ secrets.VISION_BENCH_PHOTO_45 }}
+          VISION_BENCH_PHOTO_46: ${{ secrets.VISION_BENCH_PHOTO_46 }}
+          VISION_BENCH_PHOTO_47: ${{ secrets.VISION_BENCH_PHOTO_47 }}
+        run: node scripts/vision-benchmark/secrets-smoke.mjs receive
       - name: Run the existing bounded benchmark
         env:
           VISION_BENCH_ANTHROPIC_KEY: ${{ secrets.VISION_BENCH_ANTHROPIC_KEY || secrets.CLAUDE_API_KEY }}
           VISION_BENCH_OPENAI_KEY: ${{ secrets.VISION_BENCH_OPENAI_KEY }}
           VISION_BENCH_GEMINI_KEY: ${{ secrets.VISION_BENCH_GEMINI_KEY }}
-        run: node scripts/vision-benchmark/actions.mjs run
-      - name: Deliver encrypted sanitized metrics only
+        run: node scripts/vision-benchmark/secrets-smoke.mjs run
+      - name: Encrypt private assessments
         if: always()
         env:
-          VISION_BENCH_RESULTS_URL: ${{ secrets.VISION_BENCH_RESULTS_URL }}
           VISION_BENCH_DATA_KEY: ${{ secrets.VISION_BENCH_DATA_KEY }}
-        run: node scripts/vision-benchmark/actions.mjs deliver
+        run: node scripts/vision-benchmark/secrets-smoke.mjs encrypt
+      - name: Upload only encrypted assessments
+        if: always()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        with:
+          name: encrypted-vision-smoke
+          path: ${{ runner.temp }}/gp-encrypted-smoke/assessments.enc
+          if-no-files-found: error
+          retention-days: 1
+          compression-level: 0
       - name: Remove all private runner files
         if: always()
-        run: node scripts/vision-benchmark/actions.mjs cleanup
+        run: node scripts/vision-benchmark/secrets-smoke.mjs cleanup
