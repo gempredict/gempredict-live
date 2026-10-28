@@ -10,6 +10,16 @@ export const providers=Object.freeze({
  openai:{model:'gpt-4.1-2025-04-14',key:'VISION_BENCH_OPENAI_KEY',url:'https://api.openai.com/v1/responses',temperature:0},
  google:{model:'gemini-3.1-pro-preview',key:'VISION_BENCH_GEMINI_KEY',url:'https://generativelanguage.googleapis.com/v1beta/models/gemini-3.1-pro-preview:generateContent',temperature:1}
 });
+// Resolve an existing binding in memory; never copy it to a file or mutate env.
+// The Anthropic aliases are used only with the fixed api.anthropic.com endpoint.
+export function benchmarkCredential(id,env=process.env) {
+ const provider=providers[id];
+ if(!provider)return undefined;
+ return env[provider.key] || (id==='anthropic' ? env.Claude_API_Key || env.CLAUDE_API_KEY : undefined);
+}
+export function benchmarkProxy(env=process.env) {
+ return env.HTTPS_PROXY || env.https_proxy || env.HTTP_PROXY || env.http_proxy;
+}
 export const hash=v=>createHash('sha256').update(Buffer.isBuffer(v)?v:JSON.stringify(v)).digest('hex');
 const identityFields=['subject','year','brandSet','cardNumber','language','parallel','rarity'];
 const predictionFields={subject:'identifiedSubject',year:'identifiedYear',brandSet:'identifiedBrandSet',cardNumber:'identifiedCardNumber',language:'identifiedLanguage',parallel:'identifiedParallel',rarity:'identifiedRarity'};
@@ -24,7 +34,7 @@ export function planBenchmark(manifest,{live=false,authorized=false,env=process.
  if(!Number.isInteger(manifest.maxRequests)||calls>manifest.maxRequests||calls>300)blockers.push('request_budget_invalid');
  if(!Number.isFinite(manifest.maxEstimatedCostUSD)||manifest.maxEstimatedCostUSD<=0)blockers.push('cost_budget_missing');
  for(const [id,p] of Object.entries(providers)){
-  if(!env[p.key])blockers.push(`${id}:credential_unavailable`);
+  if(!benchmarkCredential(id,env))blockers.push(`${id}:credential_unavailable`);
   if(!Number.isFinite(manifest.rates?.[id]?.inputPerMillion)||manifest.rates[id].inputPerMillion<=0||!Number.isFinite(manifest.rates?.[id]?.outputPerMillion)||manifest.rates[id].outputPerMillion<=0)blockers.push(`${id}:reviewed_token_rates_missing`);
  }
  for(const f of fixtures){
@@ -56,7 +66,7 @@ export function parseProviderResponse(id,response) {
  return {parsed,usage:safeUsage,returnedModel:typeof model==='string'?model.slice(0,100):null};
 }
 export async function callProvider(id,payload,secret) {
- const p=providers[id];const proxy=process.env.HTTPS_PROXY||process.env.HTTP_PROXY;
+ const p=providers[id];const proxy=benchmarkProxy();
  const body=JSON.stringify(payload),agent=proxy?new HttpsProxyAgent(proxy):undefined;
  try{return await new Promise((resolve,reject)=>{
   const headers={'content-type':'application/json','content-length':Buffer.byteLength(body),...(id==='anthropic'?{'x-api-key':secret,'anthropic-version':'2023-06-01'}:id==='openai'?{authorization:`Bearer ${secret}`}:{'x-goog-api-key':secret})};
@@ -90,7 +100,7 @@ export async function executeBenchmark(manifest,prepared,{env=process.env,transp
   const images=prepared.get(fixture.id),prompt=buildVisionPrompt({cardName:'Unknown card from image',typeLabel:fixture.category==='sports'?'Sports Card':'Pokemon',hasBack:images.length>1});
   const payload=providerRequest(id,prompt,images),started=performance.now();
   try {
-   const response=await transport(id,payload,env[providers[id].key]);const {parsed,usage,returnedModel}=parseProviderResponse(id,response);
+   const response=await transport(id,payload,benchmarkCredential(id,env));const {parsed,usage,returnedModel}=parseProviderResponse(id,response);
    const cost=usage.input!=null&&usage.output!=null?(usage.input*manifest.rates[id].inputPerMillion+usage.output*manifest.rates[id].outputPerMillion)/1e6:null;
    if(cost!=null)estimatedCost+=cost;
    rows.push({fixtureId:fixture.id,physicalCardId:fixture.physicalCardId||fixture.id,provider:id,repeat,requestedModel:providers[id].model,returnedModel,temperature:providers[id].temperature,promptFingerprint:hash(prompt),imageFingerprints:images.map(i=>hash(i.buffer)),latencyMs:Math.round(performance.now()-started),usage,estimatedCostUSD:cost,...scoreResponse(parsed,fixture.groundTruth,{inspectedSides:images.length>1?['front','back']:['front']})});

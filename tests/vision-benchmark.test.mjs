@@ -1,6 +1,6 @@
 // Harness tests only. No image/model accuracy is asserted from these fixtures.
 import test from 'node:test';import assert from 'node:assert/strict';
-import {providers,planBenchmark,providerRequest,parseProviderResponse,scoreResponse,executeBenchmark} from '../scripts/vision-benchmark/core.mjs';
+import {benchmarkCredential,benchmarkProxy,providers,planBenchmark,providerRequest,parseProviderResponse,scoreResponse,executeBenchmark} from '../scripts/vision-benchmark/core.mjs';
 const identity={subject:'Pikachu ex',year:'2026',brandSet:'30th Celebration',cardNumber:'149/128',language:'English',parallel:'Holo Special Art',rarity:'Special illustration rare'};
 const truth={verified:true,reference:'synthetic-test-label-not-real',identity,conditionReviewed:true,assessableAttributes:['surface','corners'],visibleDefects:[]};
 const fixture={id:'synthetic-unit',synthetic:true,category:'pokemon',rightsReference:'test-only',consentToProviderUpload:true,front:{path:'not-real.jpg',sha256:'a'.repeat(64)},groundTruth:truth};
@@ -49,4 +49,52 @@ test('reviewed real-image plans still reject malformed or unassessable condition
   const plan=planBenchmark({...manifest,fixtures:[{...real,groundTruth:{...truth,visibleDefects}}]},{live:true,authorized:true,env});
   assert.equal(plan.status,'BLOCKED');assert.ok(plan.blockers.some(b=>b.includes('condition_labels_unverified')));
  }
+});
+
+
+test('benchmark-only Anthropic binding aliases remain opaque, isolated and do not mutate the environment',()=>{
+ const env={Claude_API_Key:'synthetic-anthropic-binding',VISION_BENCH_OPENAI_KEY:'synthetic-openai-binding',VISION_BENCH_GEMINI_KEY:'synthetic-gemini-binding'};
+ const before={...env};
+ assert.equal(benchmarkCredential('anthropic',env),env.Claude_API_Key);
+ assert.equal(benchmarkCredential('openai',env),env.VISION_BENCH_OPENAI_KEY);
+ assert.equal(benchmarkCredential('google',env),env.VISION_BENCH_GEMINI_KEY);
+ assert.equal(benchmarkCredential('openai',{Claude_API_Key:env.Claude_API_Key}),undefined);
+ assert.equal(benchmarkCredential('google',{Claude_API_Key:env.Claude_API_Key}),undefined);
+ assert.equal(benchmarkCredential('unsupported',env),undefined);
+ assert.equal(benchmarkCredential('anthropic',{CLAUDE_API_KEY:'synthetic-uppercase-binding'}),'synthetic-uppercase-binding');
+ assert.equal(benchmarkCredential('anthropic',{...env,VISION_BENCH_ANTHROPIC_KEY:'synthetic-dedicated-binding'}),'synthetic-dedicated-binding');
+ assert.deepEqual(env,before);
+ const real={...fixture,synthetic:false};
+ const plan=planBenchmark({...manifest,fixtures:[real]},{live:true,authorized:true,env});
+ assert.equal(plan.status,'READY_FOR_AUTHORIZED_CALLS');
+ assert.doesNotMatch(JSON.stringify(plan),/synthetic-.*binding/);
+});
+
+test('benchmark transport preserves inherited proxy precedence including lowercase names',()=>{
+ for(const name of ['HTTPS_PROXY','https_proxy','HTTP_PROXY','http_proxy'])assert.equal(benchmarkProxy({[name]:'http://test-proxy:8080'}),'http://test-proxy:8080');
+ assert.equal(benchmarkProxy({HTTPS_PROXY:'http://first:8080',https_proxy:'http://second:8080',HTTP_PROXY:'http://third:8080'}),'http://first:8080');
+ assert.equal(benchmarkProxy({}),undefined);
+});
+
+import https from 'node:https';
+import {EventEmitter} from 'node:events';
+import {HttpsProxyAgent} from 'https-proxy-agent';
+import {callProvider} from '../scripts/vision-benchmark/core.mjs';
+test('benchmark HTTPS requests keep credentials in provider-specific headers and retain proxy TLS verification without connecting',async t=>{
+ const previousProxy=process.env.HTTPS_PROXY;
+ process.env.HTTPS_PROXY='http://synthetic-local-proxy:8080';
+ t.after(()=>{if(previousProxy===undefined)delete process.env.HTTPS_PROXY;else process.env.HTTPS_PROXY=previousProxy;});
+ let count=0;
+ t.mock.method(https,'request',(url,options,callback)=>{
+  const id=Object.keys(providers)[count++];
+  assert.equal(url,providers[id].url);assert.equal(new URL(url).protocol,'https:');
+  assert.equal(new URL(url).search,'');assert.equal(new URL(url).username,'');
+  assert.ok(options.agent instanceof HttpsProxyAgent);
+  assert.notEqual(options.rejectUnauthorized,false);assert.equal(options.ca,undefined);
+  assert.notEqual(options.agent.options.rejectUnauthorized,false);assert.equal(options.agent.options.ca,undefined);
+  assert.equal(options.headers[id==='anthropic'?'x-api-key':id==='openai'?'authorization':'x-goog-api-key'],id==='openai'?'Bearer synthetic-test-credential':'synthetic-test-credential');
+  const req=new EventEmitter();req.end=()=>queueMicrotask(()=>{const res=new EventEmitter();res.statusCode=200;callback(res);res.emit('data',Buffer.from('{}'));res.emit('end');});return req;
+ });
+ for(const id of Object.keys(providers))await callProvider(id,{},'synthetic-test-credential');
+ assert.equal(count,3);
 });
