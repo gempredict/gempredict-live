@@ -1,3 +1,4 @@
+import {createSpendGuard} from './spend.mjs';
 // Benchmark tooling only; not a production provider router.
 import {catalogLanguageKey,catalogVariantParts} from '../../lib/catalogNormalization.mjs';
 import {createHash} from 'node:crypto';
@@ -29,7 +30,7 @@ export function planBenchmark(manifest,{live=false,authorized=false,env=process.
  if(!fixtures.length)blockers.push('real_photo_fixtures_missing');
  if(new Set(fixtures.map(f=>f.id)).size!==fixtures.length)blockers.push('duplicate_fixture_ids');
  if(!live||!authorized)blockers.push('paid_calls_not_explicitly_authorized');
- if(!Number.isInteger(manifest.repeats)||manifest.repeats<2||manifest.repeats>10)blockers.push('repeat_count_invalid');
+ if(!Number.isInteger(manifest.repeats)||((manifest.executionProfile==='provider_smoke'&&fixtures.length===1&&manifest.maxRequests===3)?manifest.repeats!==1:manifest.repeats<2||manifest.repeats>10))blockers.push('repeat_count_invalid');
  const calls=fixtures.length*(manifest.repeats||0)*Object.keys(providers).length;
  if(!Number.isInteger(manifest.maxRequests)||calls>manifest.maxRequests||calls>300)blockers.push('request_budget_invalid');
  if(!Number.isFinite(manifest.maxEstimatedCostUSD)||manifest.maxEstimatedCostUSD<=0)blockers.push('cost_budget_missing');
@@ -51,14 +52,14 @@ export function providerRequest(id,prompt,images) {
  const p=providers[id];if(!p)throw Error('unsupported_benchmark_provider');
  const inline=images.map(i=>({type:'image',source:{type:'base64',media_type:i.mime,data:i.buffer.toString('base64')}}));
  if(id==='anthropic')return {model:p.model,temperature:p.temperature,max_tokens:2000,messages:[{role:'user',content:[...inline,{type:'text',text:prompt}]}]};
- if(id==='openai')return {model:p.model,temperature:p.temperature,max_output_tokens:2000,input:[{role:'user',content:[{type:'input_text',text:prompt},...images.map(i=>({type:'input_image',image_url:`data:${i.mime};base64,${i.buffer.toString('base64')}`,detail:'high'}))]}]};
+ if(id==='openai')return {model:p.model,temperature:p.temperature,store:false,max_output_tokens:2000,input:[{role:'user',content:[{type:'input_text',text:prompt},...images.map(i=>({type:'input_image',image_url:`data:${i.mime};base64,${i.buffer.toString('base64')}`,detail:'high'}))]}]};
  return {contents:[{role:'user',parts:[{text:prompt},...images.map(i=>({inlineData:{mimeType:i.mime,data:i.buffer.toString('base64')}}))]}],generationConfig:{temperature:p.temperature,maxOutputTokens:2000,responseMimeType:'application/json'}};
 }
 export function parseProviderResponse(id,response) {
  let text,usage,model;
  if(id==='anthropic'){text=response.content?.filter(c=>c.type==='text').map(c=>c.text).join('');usage={input:response.usage?.input_tokens,output:response.usage?.output_tokens};model=response.model;}
  else if(id==='openai'){text=response.output?.flatMap(c=>c.content||[]).filter(c=>c.type==='output_text').map(c=>c.text).join('');usage={input:response.usage?.input_tokens,output:response.usage?.output_tokens};model=response.model;}
- else {text=response.candidates?.[0]?.content?.parts?.filter(p=>p.text&&!p.thought).map(p=>p.text).join('');usage={input:response.usageMetadata?.promptTokenCount,output:(response.usageMetadata?.candidatesTokenCount||0)+(response.usageMetadata?.thoughtsTokenCount||0)};model=response.modelVersion;}
+ else {text=response.candidates?.[0]?.content?.parts?.filter(p=>p.text&&!p.thought).map(p=>p.text).join('');usage={input:response.usageMetadata?.promptTokenCount,output:Number.isSafeInteger(response.usageMetadata?.candidatesTokenCount)?response.usageMetadata.candidatesTokenCount+(response.usageMetadata.thoughtsTokenCount??0):undefined};model=response.modelVersion;}
  if(typeof text!=='string')throw Error('benchmark_empty_response');
  let parsed;try{parsed=JSON.parse(text.replace(/^```(?:json)?\s*/,'').replace(/\s*```$/,''));}catch{throw Error('benchmark_invalid_json');}
  if(!parsed||typeof parsed!=='object'||Array.isArray(parsed))throw Error('benchmark_invalid_object');
@@ -66,6 +67,7 @@ export function parseProviderResponse(id,response) {
  return {parsed,usage:safeUsage,returnedModel:typeof model==='string'?model.slice(0,100):null};
 }
 export async function callProvider(id,payload,secret) {
+ if(process.env.NODE_TLS_REJECT_UNAUTHORIZED==='0')throw Error('benchmark_tls_required');
  const p=providers[id];const proxy=benchmarkProxy();
  const body=JSON.stringify(payload),agent=proxy?new HttpsProxyAgent(proxy):undefined;
  try{return await new Promise((resolve,reject)=>{
@@ -94,23 +96,29 @@ export function scoreResponse(parsed,truth,{inspectedSides=['front']}={}) {
 export async function executeBenchmark(manifest,prepared,{env=process.env,transport=callProvider,testOnly=false}={}) {
  if(transport===callProvider && planBenchmark(manifest,{live:true,authorized:manifest.paidCallsAuthorized===true,env}).status!=='READY_FOR_AUTHORIZED_CALLS')return {status:'BLOCKED',rows:[],providerCallsPerformed:0};
  testOnly = testOnly || transport !== callProvider;
+ let guard;
+ if(manifest.spendPolicy||transport===callProvider){try{guard=await createSpendGuard(manifest,prepared);}catch{return {status:'BLOCKED_SPEND_POLICY',rows:[],providerCallsPerformed:0};}}
  const rows=[];let estimatedCost=0;
  for(const fixture of manifest.fixtures)for(const id of Object.keys(providers))for(let repeat=0;repeat<manifest.repeats;repeat++){
   if(rows.length>=manifest.maxRequests||estimatedCost>=manifest.maxEstimatedCostUSD) return {status:'STOPPED_AT_BUDGET',testOnly,rows,estimatedCostUSD:estimatedCost};
   const images=prepared.get(fixture.id),prompt=buildVisionPrompt({cardName:'Unknown card from image',typeLabel:fixture.category==='sports'?'Sports Card':'Pokemon',hasBack:images.length>1});
   const payload=providerRequest(id,prompt,images),started=performance.now();
+  let attempted=false;
   try {
+   const reservation=guard?.reserve(id,fixture,payload,prompt);
+   attempted=true;
    const response=await transport(id,payload,benchmarkCredential(id,env));const {parsed,usage,returnedModel}=parseProviderResponse(id,response);
+   if(guard)guard.observe(reservation,usage,returnedModel,id);
    const cost=usage.input!=null&&usage.output!=null?(usage.input*manifest.rates[id].inputPerMillion+usage.output*manifest.rates[id].outputPerMillion)/1e6:null;
    if(cost!=null)estimatedCost+=cost;
-   rows.push({fixtureId:fixture.id,physicalCardId:fixture.physicalCardId||fixture.id,provider:id,repeat,requestedModel:providers[id].model,returnedModel,temperature:providers[id].temperature,promptFingerprint:hash(prompt),imageFingerprints:images.map(i=>hash(i.buffer)),latencyMs:Math.round(performance.now()-started),usage,estimatedCostUSD:cost,...scoreResponse(parsed,fixture.groundTruth,{inspectedSides:images.length>1?['front','back']:['front']})});
+   rows.push({requestAttempted:true,fixtureId:fixture.id,physicalCardId:fixture.physicalCardId||fixture.id,provider:id,repeat,requestedModel:providers[id].model,returnedModel,temperature:providers[id].temperature,promptFingerprint:hash(prompt),imageFingerprints:images.map(i=>hash(i.buffer)),latencyMs:Math.round(performance.now()-started),usage,estimatedCostUSD:cost,...scoreResponse(parsed,fixture.groundTruth,{inspectedSides:images.length>1?['front','back']:['front']})});
    if(cost==null)return {status:'BLOCKED_USAGE_UNAVAILABLE',testOnly,rows,estimatedCostUSD:estimatedCost};
-  }catch{rows.push({fixtureId:fixture.id,provider:id,repeat,error:'provider_or_response_failure',latencyMs:Math.round(performance.now()-started)});}
+  }catch{rows.push({requestAttempted:attempted,fixtureId:fixture.id,provider:id,repeat,error:'provider_or_response_failure',latencyMs:Math.round(performance.now()-started)});if(guard){guard.stop();return {status:'STOPPED_SAFETY_FAILURE',testOnly,rows,estimatedCostUSD:estimatedCost,spendReservation:guard.report()};}}
  }
  const summaries=Object.fromEntries(Object.keys(providers).map(id=>{
   const all=rows.filter(r=>r.provider===id),valid=all.filter(r=>!r.error);const latencies=valid.map(r=>r.latencyMs).sort((a,b)=>a-b);
   return [id,{requests:all.length,validResponses:valid.length,exactIdentityRate:valid.length?valid.filter(r=>r.exactIdentity).length/valid.length:null,highConfidenceWrong:valid.filter(r=>r.identityConfidence>=80&&!r.exactIdentity).length,identityAbstentions:valid.reduce((n,r)=>n+r.identityMissing.length,0),identityBrierScore:valid.some(r=>r.identityConfidence!=null)?valid.filter(r=>r.identityConfidence!=null).reduce((n,r)=>n+(r.identityConfidence/100-Number(r.exactIdentity))**2,0)/valid.filter(r=>r.identityConfidence!=null).length:null,identityAccuracy:Object.fromEntries(identityFields.map(field=>[field,valid.length?valid.filter(r=>r.identity[field]).length/valid.length:null])),falsePositiveDefects:valid.reduce((n,r)=>n+r.falsePositiveDefects,0),falseNegativeDefects:valid.reduce((n,r)=>n+r.falseNegativeDefects,0),unsupportedConfirmedClaims:valid.reduce((n,r)=>n+r.unsupportedConfirmedClaims,0),latencyP50Ms:latencies[Math.floor(latencies.length*.5)]??null,latencyP95Ms:latencies[Math.min(latencies.length-1,Math.floor(latencies.length*.95))]??null,
    perImageStability:manifest.fixtures.map(f=>({fixtureId:f.id,identityVersions:new Set(valid.filter(r=>r.fixtureId===f.id).map(r=>r.identityFingerprint)).size,conditionVersions:new Set(valid.filter(r=>r.fixtureId===f.id).map(r=>r.conditionFingerprint)).size})),estimatedCostUSD:valid.reduce((n,r)=>n+(r.estimatedCostUSD||0),0)}];
  }));
- return {status:testOnly?'HARNESS_TEST_ONLY_NOT_MODEL_ACCURACY':rows.some(r=>r.error)?'INCOMPLETE':'COMPLETE_NOT_AUTOMATIC_APPROVAL',testOnly,rows,summaries,estimatedCostUSD:estimatedCost,costLimitations:'Token-rate estimate; cache discounts, regional pricing, tax and actual invoices may differ. Post-response budget stop can overshoot one request; enforce provider account spend limits.'};
+ return {...(guard?{spendReservation:guard.report()}:{}),status:testOnly?'HARNESS_TEST_ONLY_NOT_MODEL_ACCURACY':rows.some(r=>r.error)?'INCOMPLETE':'COMPLETE_NOT_AUTOMATIC_APPROVAL',testOnly,rows,summaries,estimatedCostUSD:estimatedCost,costLimitations:'Token-rate estimate; cache discounts, regional pricing, tax and actual invoices may differ. Post-response budget stop can overshoot one request; enforce provider account spend limits.'};
 }

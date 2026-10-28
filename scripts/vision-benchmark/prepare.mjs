@@ -1,13 +1,16 @@
 import fs from 'node:fs';import path from 'node:path';import {spawn} from 'node:child_process';import {createRequire} from 'node:module';import {setTimeout as delay} from 'node:timers/promises';
 import {hash} from './core.mjs';import {validateAnalysisImage} from '../../lib/uploadValidation.mjs';
+export function benchmarkChildEnvironment(env=process.env) {
+ return Object.fromEntries(Object.entries(env).filter(([key])=>!/(?:KEY|TOKEN|SECRET|PASSWORD|PASSPHRASE|BUNDLE_URL|RESULTS_URL)$/i.test(key)&&!['DEBUG','NODE_DEBUG','NODE_OPTIONS'].includes(key)));
+}
 // Use the actual client normalizer for HEIF, rotation, resizing and quality floor.
 // This is local-only preparation. /api and every non-local request are blocked.
 export async function prepareRealPhotos(manifest,root) {
  const {chromium}=createRequire(import.meta.url)('playwright');
- const server=spawn(process.execPath,['node_modules/next/dist/bin/next','start','--port','3102','--hostname','127.0.0.1'],{stdio:'ignore'});let browser;
+ const server=spawn(process.execPath,['node_modules/next/dist/bin/next','start','--port','3102','--hostname','127.0.0.1'],{stdio:'ignore',env:benchmarkChildEnvironment()});let browser;
  try{
   let ready=false;for(let i=0;i<60;i++){try{if((await fetch('http://127.0.0.1:3102')).ok){ready=true;break;}}catch{}await delay(250);}if(!ready)throw Error('benchmark_local_build_unavailable');
-  browser=await chromium.launch({executablePath:process.env.CHROMIUM_PATH||'/usr/bin/chromium',headless:true,args:['--no-sandbox']});
+  browser=await chromium.launch({executablePath:process.env.CHROMIUM_PATH||'/usr/bin/chromium',headless:true,env:benchmarkChildEnvironment(),args:['--no-sandbox']});
   const prepared=new Map();
   for(const fixture of manifest.fixtures){
    const page=await browser.newPage();
