@@ -46,7 +46,7 @@ jobs:
       - name: CardSight credential-free validation
         run: |
           node --test tests/cardsight-access.test.mjs
-          node scripts/cardsight/access.mjs dry-run
+          node scripts/cardsight/access.mjs discovery-dry-run
       - name: Credential-free dry-run
         run: node scripts/vision-benchmark/actions.mjs dry-run
 
@@ -120,11 +120,11 @@ jobs:
         run: node scripts/vision-benchmark/secrets-smoke.mjs cleanup
 
   cardsight-access:
-    name: CardSight read-only access (maximum two requests)
+    name: CardSight final catalog discovery (maximum one request)
     needs: dry-run
     if: >-
       inputs.mode == 'dry-run' &&
-      inputs.confirmation == 'AUTHORIZE_CARDSIGHT_TWO_FREE_REQUESTS' &&
+      inputs.confirmation == 'AUTHORIZE_CARDSIGHT_ONE_CATALOG_REQUEST' &&
       github.repository == 'gempredict/gempredict-live' &&
       github.ref == 'refs/heads/restore/phase1-identity-market-matching' &&
       github.run_attempt == 1 &&
@@ -142,7 +142,7 @@ jobs:
           node-version: '24.19.0'
       - name: CardSight offline boundary tests
         run: node --test tests/cardsight-access.test.mjs
-      - name: Read catalog and pricing, no retries or paid AI
+      - name: Run explicitly approved CardSight audit, no retries or paid AI
         env:
           CARDSIGHT_MODE: ${{ inputs.mode }}
           CARDSIGHT_APPROVAL: ${{ inputs.confirmation }}

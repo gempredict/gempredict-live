@@ -1,3 +1,6 @@
+> Current live test: use the final one-request diagnostic at the end of this document.
+> Earlier two-request instructions below describe the historical e77d768c test only.
+
 # CardSight access test — two requests, no scanner integration
 
 This reuses `.github/workflows/vision-benchmark.yml`, which is already registered
@@ -71,3 +74,35 @@ to establish a complete match is not proof the card is absent from the provider.
 No downloaded SDK/TypeScript is executed or added as an application dependency.
 Offline tests explicitly mock transports; dry-run attempts zero API requests.
 Live findings may only be claimed from a completed owner-triggered Actions run.
+
+## Final catalog discovery after the owner's e77d768c live result
+
+The owner reports HTTP 200, zero catalog records, one request and no pricing.
+The prior filters were documented: name is a case-insensitive partial subject
+match, year is an exact release-year filter, and releaseName is a case-insensitive
+partial release-name filter. The conjunction was valid; zero results does not
+identify which field or catalog/index coverage caused the miss. No indexing delay
+or alternate release spelling has been demonstrated.
+
+One final owner-dispatched diagnostic is available using the SAME registered
+workflow and restoration branch, `mode=dry-run`, confirmation:
+**AUTHORIZE_CARDSIGHT_ONE_CATALOG_REQUEST**.
+
+It sends exactly one GET:
+`/v1/catalog/cards?name=Pikachu+ex&sort=year&order=desc&take=100`.
+There is no year or release filter, pagination, retry or pricing call, including
+when a match is found. The original two-request confirmation is now rejected by the live entry point
+and no longer enables the workflow job. The legacy two-request helper remains
+covered by offline mocks but is not called by the live workflow. The separate approval preserves
+owner/repository/branch/first-attempt guards and the existing one-invocation sentinel.
+
+Only allowlisted catalog metadata is reported: IDs, names, numbers, release names,
+set names, years, language/rarity fields, total/returned counts and truncation.
+Any catalog price fields are discarded. Unknown language/rarity remain unknown.
+A zero result is an observed query miss, not proof that every possible alias is
+absent. A truncated first page cannot establish full coverage absence either.
+
+If the target still cannot be established, stop CardSight investigation and move
+to a bounded The Card API evaluation under separately authorized access; do not
+add more catalog-discovery infrastructure or keep trying filters. No live request
+was made while preparing this change.

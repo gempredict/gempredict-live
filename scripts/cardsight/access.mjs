@@ -4,12 +4,13 @@ import fs from 'node:fs';
 import path from 'node:path';
 import {fileURLToPath} from 'node:url';
 export const APPROVAL='AUTHORIZE_CARDSIGHT_TWO_FREE_REQUESTS';
+export const DISCOVERY_APPROVAL='AUTHORIZE_CARDSIGHT_ONE_CATALOG_REQUEST';
 const origin='https://api.cardsight.ai';
 const uuid=v=>typeof v==='string'&&/^[a-f0-9]{8}-(?:[a-f0-9]{4}-){3}[a-f0-9]{12}$/i.test(v);
 const norm=v=>typeof v==='string'?v.toLowerCase().replace(/[^a-z0-9]/g,''):'';
 const release=v=>norm(v).replace(/^2026/,'').replace(/^pokemon/,'');
 export function approvedContext(env){
- if(env.GITHUB_ACTIONS!=='true'||env.GITHUB_EVENT_NAME!=='workflow_dispatch'||env.GITHUB_REPOSITORY!=='gempredict/gempredict-live'||env.GITHUB_REF!=='refs/heads/restore/phase1-identity-market-matching'||env.GITHUB_RUN_ATTEMPT!=='1'||env.CARDSIGHT_MODE!=='dry-run'||env.CARDSIGHT_APPROVAL!==APPROVAL||!/^\d+$/.test(env.CARDSIGHT_OWNER_ID||'')||env.GITHUB_ACTOR_ID!==env.CARDSIGHT_OWNER_ID||!/^\d+$/.test(env.GITHUB_RUN_ID||'')||!/^[a-f0-9]{40}$/.test(env.GITHUB_SHA||'')||env.NODE_TLS_REJECT_UNAUTHORIZED==='0')throw Error('context_not_authorized');
+ if(env.GITHUB_ACTIONS!=='true'||env.GITHUB_EVENT_NAME!=='workflow_dispatch'||env.GITHUB_REPOSITORY!=='gempredict/gempredict-live'||env.GITHUB_REF!=='refs/heads/restore/phase1-identity-market-matching'||env.GITHUB_RUN_ATTEMPT!=='1'||env.CARDSIGHT_MODE!=='dry-run'||env.CARDSIGHT_APPROVAL!==DISCOVERY_APPROVAL||!/^\d+$/.test(env.CARDSIGHT_OWNER_ID||'')||env.GITHUB_ACTOR_ID!==env.CARDSIGHT_OWNER_ID||!/^\d+$/.test(env.GITHUB_RUN_ID||'')||!/^[a-f0-9]{40}$/.test(env.GITHUB_SHA||'')||env.NODE_TLS_REJECT_UNAUTHORIZED==='0')throw Error('context_not_authorized');
 }
 export function selectCard(body){
  if(!body||!Array.isArray(body.cards)||body.cards.length>100||!Number.isInteger(body.total_count)||body.total_count<body.cards.length)return {status:'catalog_schema_unrecognized',candidates:[]};
@@ -108,8 +109,32 @@ export async function executeAccessTest(key,{request=requestOnce}={}){
  receipt.pricing=summarizePricing(second.body,receipt.catalog.cardId);
  return {...receipt,status:receipt.pricing.status};
 }
+// Final catalog-only diagnostic. Deliberately no pricing path or pagination.
+export async function executeCatalogDiscovery(key,{request=requestOnce}={}){
+ const receipt={scope:'cardsight_single_catalog_discovery_not_market_evidence',maximumRequests:1,requests:[],credential:key?'PRESENT':'MISSING',pricingRequested:false};
+ if(!key)return {...receipt,status:'credential_missing'};
+ const url=new URL('/v1/catalog/cards',origin);
+ url.search=new URLSearchParams({name:'Pikachu ex',sort:'year',order:'desc',take:'100'}).toString();
+ const entry={stage:'catalog_discovery',method:'GET',path:url.pathname,query:{name:'Pikachu ex',sort:'year',order:'desc',take:100}};
+ receipt.requests.push(entry);
+ let result;try{result=await request(url,key);}catch{result={error:'transport_failed'};}
+ entry.httpStatus=result.status??null;
+ if(result.error)return {...receipt,status:'catalog_discovery_request_failed'};
+ const body=result.body;
+ const assessment=selectCard(body);
+ if(assessment.status==='catalog_schema_unrecognized')return {...receipt,status:assessment.status};
+ const text=v=>typeof v==='string'&&v.length<=120&&/^[\p{L}\p{N} #/.,'’():+&-]+$/u.test(v)?v:null;
+ const field=(card,keys)=>(Array.isArray(card?.fields)?card.fields:[]).filter(f=>keys.includes(f?.key)).slice(0,4).map(f=>text(f.value));
+ return {...receipt,status:'catalog_discovery_observed',returned:body.cards.length,total:body.total_count,truncated:assessment.truncated,
+  providerAdvisoriesPresent:Array.isArray(body.messages)&&body.messages.length>0,
+  cards:body.cards.map(card=>({id:uuid(card?.id)?card.id:null,name:text(card?.name),number:text(card?.number),releaseYear:text(card?.releaseYear),releaseName:text(card?.releaseName),setName:text(card?.setName),language:field(card,['CARD_LANGUAGE','LANGUAGE']),rarity:field(card,['RARITY'])})),
+  targetAssessment:assessment,
+  limitation:'One page only. A missing target on a truncated page is not proof of global catalog absence. No pricing or additional discovery request is authorized.',
+ };
+}
 async function main(){
  const mode=process.argv[2];
+ if(mode==='discovery-dry-run'){console.log(JSON.stringify({status:'DRY_RUN_NO_REQUESTS',maximumLiveRequests:1,catalog:'/v1/catalog/cards?name=Pikachu+ex&sort=year&order=desc&take=100',pricingRequested:false}));return;}
  if(mode==='dry-run'){console.log(JSON.stringify({status:'DRY_RUN_NO_REQUESTS',maximumLiveRequests:2,authentication:'X-API-Key header',catalog:'/v1/catalog/cards',pricing:'/v1/pricing/{card_id}?period=90d&listing_type=both'}));return;}
  if(mode!=='live')throw Error('invalid_mode');
  approvedContext(process.env);
@@ -118,11 +143,11 @@ async function main(){
  const sentinel=path.join(process.env.RUNNER_TEMP,`cardsight-${process.env.GITHUB_RUN_ID}.attempted`);
  fs.closeSync(fs.openSync(sentinel,'wx',0o600));
  const key=process.env.CARDSIGHT_API_KEY;
- const result=await executeAccessTest(key);
+ const result=await executeCatalogDiscovery(key);
  let output=JSON.stringify({...result,revision:process.env.GITHUB_SHA},null,2);
  if(key)for(const value of new Set([key,encodeURIComponent(key)]))output=output.split(value).join('[REDACTED]');
  console.log(output);
  if(process.env.GITHUB_STEP_SUMMARY)fs.appendFileSync(process.env.GITHUB_STEP_SUMMARY,'CardSight read-only access test (not a valuation)\n\n```json\n'+output+'\n```\n');
- if(result.status!=='pricing_response_observed')process.exitCode=1;
+ if(!['pricing_response_observed','catalog_discovery_observed'].includes(result.status))process.exitCode=1;
 }
 if(process.argv[1]&&path.resolve(process.argv[1])===fileURLToPath(import.meta.url))main().catch(()=>{console.error('CardSight test stopped safely; no raw response, credentials or exception details were logged.');process.exitCode=1;});
