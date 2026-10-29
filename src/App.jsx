@@ -1846,9 +1846,9 @@ if (data.imageAnalysis) setImageAnalysis(data.imageAnalysis);
         isSaved={isSavedReport(r)}
       />
 
-      {r.imageAnalysis && (
+      {r.imageAnalysis ? (
         <ImageAnalysisCard data={r.imageAnalysis} report={r} />
-      )}
+      ) : !r.identityReceipt && <p data-testid="photo-analysis-unavailable">Photo condition analysis unavailable. No photo-based grade or defect assessment is established.</p>}
     </div>
   );
 })}

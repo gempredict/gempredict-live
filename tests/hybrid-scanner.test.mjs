@@ -82,3 +82,15 @@ test('specific confirmation reasons distinguish unreadable marks, conflicts and 
  assert.match(acceptHybridResult(raw(),{records:[...catalog.records,duplicate],pins:catalog.pins}).confirmationReasons.join(' '),/Multiple catalog editions/);
  assert.deepEqual(acceptHybridResult(raw()).confirmationReasons,[]);
 });
+
+test('full scanner conditions on verified printed identity and preserves report observations without trusting model guesses',async()=>{
+ const {runPipeline}=await import('./helpers/phase1Pipeline.mjs');
+ const {supportedObservation}=await import('./helpers/visionEvidence.mjs');
+ const result=await runPipeline({hybridResult:acceptHybridResult(raw()),fields:{cardName:'',cardType:'pokemon'},proposal:{subject:'Wrong card',brandSet:'Obsidian Flames',year:'2023',cardNumber:'149/165'},vision:{identifiedBrandSet:'Obsidian Flames',identifiedYear:'2023',identifiedSubject:'Wrong card',identifiedCardNumber:'149/165',imageSummary:'Obsidian Flames PSA 8-9 candidate',imageLimitations:['sleeve'],visualObservations:[supportedObservation('surface','scratches'),supportedObservation('centering','off_center')]},routingEnv:{VERCEL:'1',VERCEL_ENV:'preview',VERCEL_URL:'gempredict-live-unit123.vercel.app',NEXT_PUBLIC_SITE_URL:undefined},requestHeaders:{'x-vercel-oidc-token':'mock.preview.signature'}});
+ assert.equal(result.metrics.claudeVision,1);assert.equal(result.payload.canonicalCard.brandSet,'30th Celebration');
+ assert.doesNotMatch(result.report.imageAnalysis.imageSummary,/Obsidian|2023|PSA 8|Visible surface scratches|Visible off-centering/);
+ assert.match(result.report.imageAnalysis.imageSummary,/30th Celebration/);
+ assert.equal(result.report.imageAnalysis.centering,null);assert.equal(result.report.imageAnalysis.surface,null);
+ assert.equal(result.report.imageAnalysis.estimatedGrade,null);assert.equal(result.report.rawValue,null);assert.equal(result.report.atlas,null);
+ assert.equal(result.report.hybridIdentification.catalogIdentitySupported,true);
+});

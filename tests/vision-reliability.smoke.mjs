@@ -13,7 +13,7 @@ try{
  for(let i=0;i<60;i++){try{if((await fetch('http://127.0.0.1:3100')).ok)break;}catch{}await delay(250);}
  browser=await chromium.launch({executablePath:'/usr/bin/chromium',headless:true,args:['--no-sandbox']});
  for(const mode of ['unsupported','supported','candidate']){
-  const base=liveReportScenario();const result=await runPipeline({...base,proposal:{...base.proposal,cardNumber:'149/165',brandSet:'Scarlet & Violet 151'},vision:{...base.vision,identifiedBrandSet:'Scarlet & Violet 151',identifiedYear:'2023',identifiedCardNumber:'149/165',identityReadings:mode==='candidate'?[]:readings,imageLimitations:mode==='unsupported'?['glare','sleeve']:[],visualObservations:mode==='supported'?[supportedObservation('surface','scratches')]:[supportedObservation('surface','scratches'),{attribute:'corners',code:'softening'}]},market:[askingFixture()],model:{psa9Value:75,psa10Value:180,psa10Probability:30}});
+  const base=liveReportScenario();const result=await runPipeline({...base,proposal:{...base.proposal,cardNumber:'149/165',brandSet:'Scarlet & Violet 151'},vision:{...base.vision,identifiedBrandSet:'Scarlet & Violet 151',identifiedYear:'2023',identifiedCardNumber:'149/165',identityReadings:mode==='candidate'?[]:readings,imageLimitations:mode==='unsupported'?['glare','sleeve']:[],visualObservations:mode==='supported'?[supportedObservation('surface','scratches')]:[supportedObservation('surface','scratches'),supportedObservation('centering','off_center'),{attribute:'corners',code:'softening'}]},market:[askingFixture()],model:{psa9Value:75,psa10Value:180,psa10Probability:30}});
   const page=await browser.newPage();const errors=[];page.on('pageerror',e=>errors.push(e.message));
   await page.route('**/*',r=>r.request().url().startsWith('http://127.0.0.1:3100')?r.continue():r.abort());
   await page.addInitScript(report=>{localStorage.setItem('gp_saved_reports',JSON.stringify([report]));Object.defineProperty(navigator,'clipboard',{value:{writeText:async text=>{window.__copied=text;}},configurable:true});},result.report);
@@ -30,11 +30,18 @@ try{
   }else{
    assert.match(await page.getByTestId('catalog-rarity').innerText(),/Catalog rarity: Special Illustration Rare \(SIR\).*Artwork: Special Art.*Catalog printing: Holo/);
    assert.match(body,/\$56.99/);assert.match(body,/30%.*uncalibrated/);assert.equal(result.report.atlas,null);
-   if(mode==='unsupported'){assert.doesNotMatch(body,/Visible surface scratches|Visible corner softening/);assert.match(body,/Possible surface scratches.*unconfirmed/);assert.match(body,/Suspected — unconfirmed/i);}
+   if(mode==='unsupported'){assert.doesNotMatch(body,/Visible surface scratches|Visible corner softening|Visible off-centering/);assert.match(body,/Possible surface scratches.*unconfirmed/);assert.match(body,/Suspected — unconfirmed/i);}
    else {assert.match(body,/Visible surface scratches/);assert.equal(result.report.imageAnalysis.surface,'fair');}
    assert.equal(result.report.psa10Probability,30);assert.equal(result.report.financialDecision.probability.visionDefectsUsed,false);
   }
   await page.getByTestId('photo-initial-identity').locator('summary').click();assert.match(await page.getByTestId('photo-initial-identity').innerText(),/149\/165/);
+  if(mode==='unsupported'){
+   const unavailable=await browser.newPage();
+   await unavailable.route('**/*',r=>r.request().url().startsWith('http://127.0.0.1:3100')?r.continue():r.abort());
+   await unavailable.addInitScript(report=>localStorage.setItem('gp_saved_reports',JSON.stringify([{...report,imageAnalysis:null}])),result.report);
+   await unavailable.goto('http://127.0.0.1:3100',{waitUntil:'domcontentloaded'});await unavailable.getByRole('button',{name:'Load',exact:true}).click();
+   assert.match(await unavailable.getByTestId('photo-analysis-unavailable').innerText(),/No photo-based grade or defect assessment/);await unavailable.close();
+  }
   assert.deepEqual(errors,[]);await page.close();console.log(`PASS vision reliability browser: ${mode}; catalog rarity, printing and observation certainty remain separate.`);
  }
  // Clearly mocked OCR boundary: real-photo OCR is validated separately/private.

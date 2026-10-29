@@ -349,7 +349,8 @@ async function fetchImageAnalysis(
   backImageBuffer,
   backImageMimeType,
   cardName,
-  cardType
+  cardType,
+  verifiedIdentity = null
 ) {
   if (!anthropic) throw new Error("NO_API_KEY");
   if (!imageBuffer || imageBuffer.length === 0) return null;
@@ -372,7 +373,7 @@ const backMime = backImageMimeType &&
   ? backImageMimeType
   : null;
 
-  const imagePrompt = buildVisionPrompt({cardName,typeLabel,hasBack:!!backBase64});
+  const imagePrompt = buildVisionPrompt({cardName,typeLabel,hasBack:!!backBase64,verifiedIdentity});
 
   const message = await anthropic.messages.create({
     ...VISION_MODEL_CONFIGURATION,
@@ -592,7 +593,8 @@ if (hasTypedCardName && looksLikeJunk(cardName)) {
         backImageBuffer,
         backImageMimeType,
         cardName,
-        cardType
+        cardType,
+        hybridIdentification?.catalogIdentitySupported ? localIdentity : null
       ).catch(function(err) {
         console.error("[GemPredict] Image analysis error (non-fatal):", err.message);
         return null;

@@ -143,3 +143,35 @@ test('shared withheld summaries cannot present a rejected AI identity as a curre
  const s=liveReportScenario();const r=await runPipeline({...s,proposal:{...s.proposal,cardNumber:'149/165',brandSet:'Scarlet & Violet 151'},vision:{...s.vision,identifiedCardNumber:'149/165'},market:s.neutral});
  const summary=withheldSummary(r.report);assert.match(summary,/Unverified card/);assert.doesNotMatch(summary,/Scarlet & Violet 151|149\/165/);
 });
+
+test('observed three-provider smoke patterns cannot establish unsupported physical damage or centering',()=>{
+ // Minimal structural reproductions of actual run #3 patterns; no private raw responses/photos.
+ const scratch=supportedObservation('surface','scratches',{certainty:'suspected'});scratch.evidence={...scratch.evidence,region:[.1,.1,.8,.8],confidence:.6};
+ const whitening=supportedObservation('corners','whitening',{certainty:'suspected'});whitening.evidence.region=[.9,0,1,.1];
+ const centering=supportedObservation('centering','off_center');centering.evidence={...centering.evidence,side:'back',region:[0,0,1,1],measurement:{axis:'horizontal',ratio:[40,60]}};
+ for(const imageLimitations of [['sleeve'],['glare']]){
+  const result=conditionPresentation({inspectedSides:['front','back'],imageLimitations,visualObservations:[scratch,whitening,centering]},{});
+  assert.equal(result.surface,null);assert.equal(result.corners,null);assert.equal(result.centering,null);
+  assert.equal(result.conditionAssessments.centering.state,'suspected_defect');
+  assert.equal(result.conditionAssessments.corners.state,'unassessable');
+  assert.doesNotMatch(result.imageSummary,/Visible off-centering|Visible corner whitening|Visible surface scratches/);
+  assert.equal(result.estimatedGrade,null);assert.equal(result.worthGrading,null);
+ }
+});
+test('verified catalog context is optional, excludes printing claims and never enters benchmark defaults',async()=>{
+ const {buildVisionPrompt}=await import('../lib/visionPrompt.mjs');
+ const identity={subject:'Pikachu ex',year:'2026',brandSet:'30th Celebration',cardNumber:'149/128',language:'English',rarity:'Special illustration rare',parallel:'Holo Special Art',printings:['holo']};
+ const prompt=buildVisionPrompt({verifiedIdentity:identity});
+ assert.match(prompt,/Independently verified printed-card identity.*30th Celebration/);
+ assert.match(prompt,/Physical printing, authenticity and condition are NOT established/);
+ assert.doesNotMatch(prompt,/Holo Special Art|"printings"/);
+ assert.doesNotMatch(buildVisionPrompt(),/Independently verified printed-card identity|30th Celebration/);
+});
+
+test('high confidence alone cannot turn a broad damage region into localized evidence',()=>{
+ for(const [attribute,code] of [['surface','scratches'],['corners','whitening'],['corners','softening'],['edges','whitening']]){
+  const finding=supportedObservation(attribute,code);finding.evidence.region=[.1,.1,.8,.8];
+  const result=conditionPresentation({visualObservations:[finding]},{});
+  assert.equal(result[attribute],null);assert.equal(result.conditionAssessments[attribute].state,'unassessable');
+ }
+});
