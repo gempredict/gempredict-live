@@ -25,7 +25,8 @@ try {
     const market = price === 56.99 ? scenario.neutral.slice(0,1) : base.market;
     const result = await runPipeline({ ...scenario, market: market.map(item => ({ ...item, price: { value: String(price), currency: 'USD' } })), model: { rawValue: 150, psa9Value: psa9, psa10Value: psa10, psa10Probability: probability }, predictionReply: { analysis: 'Guaranteed $150 profits.', action: 'Grade immediately.', verdict: 'grade', gradingUpside: 9999 } });
     assert.equal(result.report.expectedNetValue, net);
-    const page = await browser.newPage();
+    const context=await browser.newContext();
+    const page = await context.newPage();
     const errors = [];
     page.on('pageerror', error => errors.push(error.message));
     await page.addInitScript(() => {
@@ -75,6 +76,22 @@ try {
       assert.equal(await page.evaluate(() => window.__copy), result.copied);
     };
     await assertVisible();
+    if(price===56.99){
+      // Mocked storage-denial boundary; never a genuine customer report.
+      await page.evaluate(()=>{window.__originalStorageSet=Storage.prototype.setItem;Storage.prototype.setItem=function(key,value){if(key==='gp_saved_reports')throw new DOMException('blocked','QuotaExceededError');return window.__originalStorageSet.call(this,key,value);};});
+      await page.getByRole('button',{name:'Save Report',exact:true}).click();
+      await page.getByText(/Report could not be saved in this browser/).waitFor();
+      assert.equal(await page.evaluate(()=>localStorage.getItem('gp_saved_reports')),null);
+      assert.equal(await page.getByTestId('saved-reports').count(),0);
+      assert.equal(await page.getByRole('button',{name:'Saved',exact:true}).count(),0);
+      const unsavedTab=await context.newPage();
+      await unsavedTab.route('**/*',r=>r.request().url().startsWith('http://127.0.0.1:3100')?r.continue():r.abort());
+      await unsavedTab.goto('http://127.0.0.1:3100',{waitUntil:'domcontentloaded'});
+      assert.equal(await unsavedTab.getByTestId('financial-report').count(),0);
+      assert.equal(await unsavedTab.getByTestId('saved-reports').count(),0);
+      await unsavedTab.close();
+      await page.evaluate(()=>{Storage.prototype.setItem=window.__originalStorageSet;});
+    }
     await page.getByRole('button', { name: 'Save Report', exact: true }).click();
     const saved = await page.evaluate(() => JSON.parse(localStorage.getItem('gp_saved_reports'))[0]);
     assert.equal(saved.rawValue, price);
@@ -87,6 +104,20 @@ try {
     assert.ok(savedText.includes(`${probability}% PSA 10 (modeled estimate)`));
     assert.doesNotMatch(savedText, /FMV|Fair Market Value|Grade It|Skip It|Consider It/);
     assert.equal(await page.getByText('What To Grade Next', { exact: true }).count(), 0);
+    if(price===56.99){
+      const reopened=await page.context().newPage();
+      await reopened.route('**/*',r=>r.request().url().startsWith('http://127.0.0.1:3100')?r.continue():r.abort());
+      await reopened.goto('http://127.0.0.1:3100',{waitUntil:'domcontentloaded'});
+      await reopened.getByRole('button',{name:'Load',exact:true}).click();
+      assert.match(await reopened.getByTestId('financial-report').innerText(),/56.99/);
+      await reopened.close();
+      const otherOrigin=await page.context().newPage();
+      await otherOrigin.route('**/*',r=>r.fulfill({status:200,contentType:'text/html',body:'<p>Isolated test origin</p>'}));
+      await otherOrigin.goto('http://127.0.0.1:3101');
+      assert.equal(await otherOrigin.evaluate(()=>localStorage.getItem('gp_saved_reports')),null);
+      await otherOrigin.close();
+      console.log('PASS mocked persistence: rejected save is not shown as saved; successful save reopens in same context; other origin is isolated.');
+    }
     await page.reload({ waitUntil: 'domcontentloaded' });
     await page.getByRole('button', { name: 'Load', exact: true }).click();
     await assertVisible();
@@ -114,7 +145,7 @@ try {
       assert.doesNotMatch(await page.getByTestId('saved-reports').innerText(), /FMV|Grade It|Skip It/);
     }
     assert.deepEqual(errors, []);
-    await page.close();
+    await context.close();
     console.log(`PASS financial browser: raw $${formatMoney(price)}, expected net ${net}, display/narrative/save/reopen/copy/share consistent.`);
   }
   // SYNTHETIC transactions, only in this test process; no supplier is connected.

@@ -1237,11 +1237,14 @@ const emailRef    = useRef(null);
   function clearHistory() { lsSet(LS_HISTORY, []); setHistory([]); }
   function saveReport(data) {
     data = safeStoredReport(data);
-    setSavedReports(function(prev) {
-      const deduped = prev.filter(function(r) { return r.cardTitle !== data.cardTitle; });
-      const next = [Object.assign({}, data, { savedAt: Date.now() }), ...deduped].slice(0, 10);
-      lsSet(LS_SAVED, next); return next;
-    });
+    const deduped = savedReports.filter(function(r) { return r.cardTitle !== data.cardTitle; });
+    const next = [Object.assign({}, data, { savedAt: Date.now() }), ...deduped].slice(0, 10);
+    if (!lsSet(LS_SAVED, next)) {
+      setError("Report could not be saved in this browser. Storage may be unavailable or full. Keep this page open; the report has not been saved.");
+      return;
+    }
+    setSavedReports(next);
+    setError("");
   }
   function removeSavedReport(cardTitle) {
     setSavedReports(function(prev) {
@@ -1833,6 +1836,7 @@ if (data.imageAnalysis) setImageAnalysis(data.imageAnalysis);
               <div style={{ fontSize: "0.72rem", fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.08em", color: C.inkSoft, marginBottom: "1rem" }}>
                 {results.length === 1 ? "Your Report" : "Recent Reports (" + results.length + ")"}
               </div>
+              <p style={{ fontSize: "0.78rem", color: C.inkSoft }}>Recent reports are temporary in this tab. Use Save Report to keep up to 10 reports in this browser for this exact Preview or site URL. Different Preview URLs and browsers do not share saved reports.</p>
               <div style={{ display: "flex", flexDirection: "column", gap: "1.25rem" }}>
                {results.map(function(r, i) {
   return (
@@ -2014,6 +2018,7 @@ if (data.imageAnalysis) setImageAnalysis(data.imageAnalysis);
           {savedReports.length > 0 && (
             <div data-testid="saved-reports" style={{ marginTop: "1.75rem" }}>
               <div style={{ fontSize: "0.72rem", fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.08em", color: C.inkSoft, marginBottom: "0.75rem" }}>Saved Reports</div>
+              <p style={{ fontSize: "0.78rem", color: C.inkSoft }}>Stored only in this browser for this site URL. Saving the same report title replaces its previous saved version.</p>
               <div style={{ display: "flex", flexDirection: "column", gap: "0.5rem" }}>
                 {savedReports.map(function(r) {
                   r = safeStoredReport(r);
