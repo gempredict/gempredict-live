@@ -13,8 +13,8 @@ const body=rows=>({data:rows,pagination:{total:2105,page:1,limit:25,pages:85,nex
 const env=()=>({GITHUB_ACTIONS:'true',GITHUB_EVENT_NAME:'workflow_dispatch',GITHUB_REPOSITORY:'gempredict/gempredict-live',GITHUB_REF:'refs/heads/restore/phase1-identity-market-matching',GITHUB_RUN_ATTEMPT:'1',CARD_MODE:'dry-run',CARD_APPROVAL:COVERAGE_APPROVAL,CARD_OWNER_ID:'123',GITHUB_ACTOR_ID:'123',GITHUB_RUN_ID:'123',GITHUB_SHA:'a'.repeat(40),RUNNER_TEMP:'/tmp'});
 test('three fixed searches, exactly one GET per case, 25/page and 75 total, no cursor or grade-union invention',async()=>{
  let calls=0;const r=await runCoverage('mock',{now,request:async(u,key,options)=>{
-  const c=CASES[calls++];assert.equal(u.origin+u.pathname,ENDPOINT);assert.equal(key,'mock');assert.deepEqual(options,{includeQuota:true});assert.equal(u.searchParams.get('q'),c.q);assert.equal(u.searchParams.get('limit'),'25');assert.equal(u.searchParams.get('page'),'1');assert.equal(u.searchParams.get('sort'),'date_desc');assert.equal(u.searchParams.has('cursor'),false);assert.equal(u.searchParams.has('grade'),false);
-  if(c.id==='C'){assert.equal(u.searchParams.get('grader'),'PSA');assert.equal(u.searchParams.get('graded'),'true');}
+  const c=CASES[calls++];assert.equal(u.origin+u.pathname,ENDPOINT);assert.equal(key,'mock');assert.deepEqual(options,{includeQuota:true});assert.equal(u.searchParams.get('q'),c.q);assert.equal(u.searchParams.get('limit'),'25');assert.equal(u.searchParams.get('page'),'1');assert.equal(u.searchParams.get('sort'),'date_desc');assert.equal(u.searchParams.has('cursor'),false);assert.equal(u.searchParams.get('grade'),c.id==='C'?'10':null);
+  if(c.id==='C'){assert.equal(u.searchParams.get('grader'),'PSA');assert.equal(u.searchParams.get('graded'),'true');assert.equal(u.searchParams.get('grade'),'10');}
   return {status:200,body:body(Array.from({length:25},(_,i)=>row(c,i))),quota:{remaining:4200,limit:5000,reset:1793318400}};
  }});
  assert.equal(calls,3);assert.equal(r.status,'three_searches_completed');assert.equal(r.acceptedRows,75);assert.equal(r.requests.length,3);
@@ -79,4 +79,32 @@ test('workflow reuses registered inputs, pinned actions and one secret in a sepa
 test('quota-enabled transport preserves HTTP 200 on a non-JSON failure without reading the body',async t=>{
  t.mock.method(https,'request',(u,opts,callback)=>{const req=new EventEmitter();req.end=()=>{const res=new EventEmitter();res.statusCode=200;res.headers={'content-type':'text/html','x-ratelimit-remaining':'123'};res.destroy=()=>{};callback(res);};return req;});
  const r=await requestOnce(new URL(ENDPOINT),'mock',{includeQuota:true});assert.equal(r.status,200);assert.equal(r.error,'non_json');assert.equal(r.quota.remaining,123);assert.equal(r.body,undefined);
+});
+test('broad retrieval moves number/set/grade title constraints out of full-text queries',async()=>{
+ assert.deepEqual(CASES.map(c=>c.q),['"Charizard ex"','"Pikachu ex"','"Pikachu ex"']);
+ assert.deepEqual(CASES[2].filters,{graded:'true',grader:'PSA',grade:'10'});
+ let calls=0;await runCoverage('mock',{now,request:async u=>{const c=CASES[calls++];assert.equal(u.searchParams.get('sort'),'date_desc');assert.equal(u.searchParams.get('page'),'1');assert.equal(u.searchParams.has('cursor'),false);assert.ok(!u.searchParams.get('q').includes(c.cardNumber));assert.ok(!u.searchParams.get('q').includes(c.brandSet));return {status:200,body:{data:[],pagination:{total:0,page:1,limit:25},meta:{}}};}});assert.equal(calls,3);
+});
+test('three observed 149/128 candidates survive local candidate screening, never verified printing or valuation',async()=>{
+ // Owner-supplied observation facts only; no IDs, exact timestamps, product,
+ // language or printing crosswalk values are fabricated to fill missing fields.
+ const observed=[27.99,47.99,43.49].map(price=>({title:'Pikachu ex - 149/128 - ME: 30th Celebration - Holofoil',platform:'TCGplayer',sale_date:'2026-10-29',price,currency:'USD',price_confirmed:true,listing_type:'fixed_price'}));
+ const {adaptTheCardApi,PIKACHU_TARGET}=await import('../lib/providers/theCardApiAdapter.mjs');
+ assert.equal(CASES[1].q,'"Pikachu ex"');assert.equal(observed.filter(r=>candidateMatch(r,CASES[1])).length,3);
+ const a=adaptTheCardApi(observed,PIKACHU_TARGET,{now,coverage:{lookbackDays:3}});assert.deepEqual(a.transactions.map(r=>r.amount),[27.99,47.99,43.49]);assert.ok(a.transactions.every(r=>r.identity.status==='unresolved'&&r.settlement.independentlyVerified===false));assert.equal(a.valuationApproved,false);assert.equal(a.evidence.groups.unknown.windows[30].median,null);
+});
+test('broad retrieval does not relax strict local subject, number, set, language, or ambiguous-variant screening',()=>{
+ const c=CASES[1];for(const patch of [{title:'Mega Pikachu ex - 149/128 - ME: 30th Celebration - Holofoil'},{card_number:'149/129'},{card_set:'Other set'},{language:'Japanese'},{printing:'Reverse Holofoil'},{printing:'Cosmos Holo'},{variant:{finish:'reverse'}}])assert.equal(candidateMatch(row(c,0,patch),c),false);
+ const r=summarizeCoverage(body([row(c),row(c,1,{variant:{ambiguous:true}}),row(c,2,{card_number:'150/128'})]),c,now);
+ assert.deepEqual(r.localIdentityStatus,{candidateUnverified:1,ambiguous:1,otherOrConflicting:1,verified:0});assert.equal(r.ambiguousPool.returned,1);assert.equal(r.unmatchedPool.returned,1);assert.equal(r.priceStatistics.median,null);assert.equal(r.reportedTotalMatches,2105);assert.equal(r.pagination.hasMore,true);assert.equal(r.pagination.complete,false);
+});
+test('new broad authorization cannot be replayed using the old narrow benchmark phrase',()=>{
+ assert.notEqual(COVERAGE_APPROVAL,'AUTHORIZE_THE_CARD_API_THREE_SEARCHES_75_ROWS');assert.throws(()=>approvedContext({...env(),CARD_APPROVAL:'AUTHORIZE_THE_CARD_API_THREE_SEARCHES_75_ROWS'},COVERAGE_APPROVAL));
+ const y=fs.readFileSync('.github/workflows/vision-benchmark.yml','utf8');const job=y.split('\n  the-card-api-coverage:')[1].split('\n  the-card-api-sales:')[0];assert.ok(job.includes(COVERAGE_APPROVAL));assert.equal(job.includes("'AUTHORIZE_THE_CARD_API_THREE_SEARCHES_75_ROWS'"),false);
+});
+test('newest-first requests preserve actual transaction time ranges and independently check structured grade filters',()=>{
+ const c=CASES[2];const r=summarizeCoverage(body([row(c,0,{grade:'10',grader:'PSA',sold_at:'2026-10-29T12:34:56Z'}),row(c,1,{grade:'9',grader:'PSA',sale_date:'2026-10-28',sold_at:'2026-10-28T07:08:09Z'}),row(c,2)]),c,now);
+ assert.deepEqual(r.allReturned.saleTimestampRange,{oldest:'2026-10-28T07:08:09Z',newest:'2026-10-29T12:34:56Z'});
+ assert.deepEqual(r.structuredFilterEvidence,{requestedGrader:'PSA',requestedGrade:'10',matchingProviderFields:1,missingProviderFields:1,conflictingProviderFields:1});assert.equal(r.independentlyVerifiedExactMatches,0);assert.equal(r.priceStatistics.median,null);
+ const tainted=summarizeCoverage(body([row(c,0,{sold_at:'2026-10-29T00:00:00Z PRIVATE'})]),c,now);assert.equal(tainted.allReturned.saleTimestampRange,null);assert.doesNotMatch(JSON.stringify(tainted),/PRIVATE/);
 });

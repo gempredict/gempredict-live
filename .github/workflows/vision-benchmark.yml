@@ -124,7 +124,7 @@ jobs:
     needs: dry-run
     if: >-
       inputs.mode == 'dry-run' &&
-      inputs.confirmation == 'AUTHORIZE_THE_CARD_API_THREE_SEARCHES_75_ROWS' &&
+      inputs.confirmation == 'AUTHORIZE_THE_CARD_API_BROAD_THREE_SEARCHES_75_ROWS' &&
       github.repository == 'gempredict/gempredict-live' &&
       github.ref == 'refs/heads/restore/phase1-identity-market-matching' &&
       github.run_attempt == 1 &&
