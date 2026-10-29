@@ -87,3 +87,30 @@ These tests use synthetic fixtures and mocked HTTPS only. The 11 new tests and
 not load because this runtime's preinstalled dependency tree lacks a resolvable
 `sharp` package; dependency installation is also unavailable through its failed
 shell proxy. Their existing GitHub Actions prerequisite is retained unchanged.
+
+## One-request redirect inspection
+
+The failed run 40889260704 recorded HTTP 307 but did not preserve Location.
+A separate inspection mode now requires exactly
+`AUTHORIZE_THE_CARD_API_ONE_GET_REDIRECT_HEADERS_ONLY` in **confirmation**,
+with **mode=dry-run** and the same restoration branch, owner ID and environment
+approval. Use a fresh **Run workflow**, not a rerun of the failed job.
+
+This mode makes at most one authenticated GET to the existing apex endpoint,
+using the exact public search with limit=1. It immediately destroys the response
+at the headers for every HTTP status, never reads a response body, never follows
+Location, never retries, and never forwards the key. Diagnostic output contains
+only `httpStatus` and sanitized `location`. A missing status is null and fails
+the step. The existing sales mode and its two-request/50-row cap are unchanged.
+
+Location retains the HTTP(S) origin and known `/api/v1/market/sales` route.
+Userinfo and fragments are removed. Unknown paths become `[REDACTED_PATH]`;
+only q/limit/page/sort values identical to this public request are retained.
+Other query parameters are replaced by a `_redacted=1` marker, without their
+names or values. Invalid Location values become null. API key values are also
+redacted from final output. No Location is treated as an approved destination.
+The canonical endpoint will be reviewed only after the owner shares this result.
+
+Offline verification for this change: 16 sales/redirect boundary tests and
+13 existing CardSight tests passed; script syntax check passed. No live request
+was executed during implementation.

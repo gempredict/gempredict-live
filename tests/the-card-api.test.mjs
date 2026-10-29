@@ -73,3 +73,44 @@ test('workflow retains registered inputs and spending boundaries while isolating
  assert.match(yaml,/permissions:\n  contents: read/);assert.doesNotMatch(yaml,/\n  (?:push|pull_request|schedule):/);
  for(const action of yaml.matchAll(/uses: (\S+)/g))assert.match(action[1],/@[a-f0-9]{40}$/);
 });
+
+import {REDIRECT_APPROVAL,sanitizeLocation,inspectRedirect} from '../scripts/the-card-api/verify.mjs';
+test('redirect inspection requires its own unique phrase; sales phrase cannot authorize it',()=>{
+ assert.notEqual(REDIRECT_APPROVAL,APPROVAL);
+ approvedContext({...context(),CARD_APPROVAL:REDIRECT_APPROVAL},REDIRECT_APPROVAL);
+ assert.throws(()=>approvedContext(context(),REDIRECT_APPROVAL));
+ assert.throws(()=>approvedContext({...context(),CARD_APPROVAL:REDIRECT_APPROVAL}));
+ for(const change of [{GITHUB_ACTOR_ID:'999'},{GITHUB_REF:'refs/heads/main'},{GITHUB_RUN_ATTEMPT:'2'}])assert.throws(()=>approvedContext({...context(),CARD_APPROVAL:REDIRECT_APPROVAL,...change},REDIRECT_APPROVAL));
+});
+test('Location retains public route/query and strips credentials, fragments and unknown parameters',()=>{
+ const base=new URL(ENDPOINT);base.search=new URLSearchParams({q:EXACT,limit:'1',page:'1',sort:'date_desc'}).toString();
+ const target=new URL(base);target.hostname='www.thecardapi.com';
+ assert.equal(sanitizeLocation(target.href,base),target.href);
+ target.username='private-user';target.password='private-password';target.hash='private-fragment';target.searchParams.set('token','private-token');target.searchParams.set('q','private-query');
+ const s=sanitizeLocation(target.href,base);assert.doesNotMatch(s,/private|token/);assert.match(s,/_redacted=1/);
+ assert.equal(sanitizeLocation('https://foreign.example/private-path?credential=private',base),'https://foreign.example/[REDACTED_PATH]?_redacted=1');
+ assert.equal(sanitizeLocation('/api/v1/market/sales?limit=1',base),'https://thecardapi.com/api/v1/market/sales?limit=1');
+ for(const v of [undefined,['a','b'],'javascript:alert(1)','https://example.com/\r\nsecret'])assert.equal(sanitizeLocation(v,base),null);
+});
+test('inspection consumes one GET at most and returns status and sanitized Location only',async()=>{
+ let calls=0;const request=async(u,key,options)=>{calls++;assert.equal(u.origin+u.pathname,ENDPOINT);assert.equal(u.searchParams.get('limit'),'1');assert.deepEqual(options,{headersOnly:true});return {httpStatus:307,location:'https://www.thecardapi.com/api/v1/market/sales?token=private',body:'private',headers:{key:'private'}};};
+ const r=await inspectRedirect('mock',{request});assert.equal(calls,1);assert.deepEqual(r,{httpStatus:307,location:'https://www.thecardapi.com/api/v1/market/sales?_redacted=1'});
+ calls=0;assert.deepEqual(await inspectRedirect('',{request}),{httpStatus:null,location:null});assert.equal(calls,0);
+ calls=0;const fail=await inspectRedirect('mock',{request:async()=>{calls++;throw Error('private');}});assert.equal(calls,1);assert.deepEqual(fail,{httpStatus:null,location:null});
+});
+test('native headers-only GET destroys every response without consuming a body, retrying or following',async t=>{
+ let calls=0,destroyed=0;
+ for(const status of [200,307,401,500]){
+  t.mock.method(https,'request',(url,options,callback)=>{
+   calls++;assert.equal(url.origin+url.pathname,ENDPOINT);assert.equal(options.method,'GET');assert.equal(options.headers['x-market-api-key'],'mock');
+   const req=new EventEmitter();req.destroy=()=>{};req.end=()=>{const res=new EventEmitter();res.statusCode=status;res.headers={location:'https://elsewhere.invalid/api/v1/market/sales?token=private'};res.destroy=()=>{destroyed++;};res.on=()=>{throw Error('body must never be consumed');};callback(res);};return req;
+  });
+  const r=await inspectRedirect('mock');assert.equal(r.httpStatus,status);assert.equal(r.location,'https://elsewhere.invalid/api/v1/market/sales?_redacted=1');
+ }
+ assert.equal(calls,4);assert.equal(destroyed,4);
+});
+test('workflow selects inspection command only for new phrase while retaining the single secret step',()=>{
+ const y=fs.readFileSync('.github/workflows/vision-benchmark.yml','utf8');const job=y.split('\n  the-card-api-sales:')[1].split('\n  cardsight-access:')[0];
+ assert.ok(job.includes(REDIRECT_APPROVAL));assert.match(job,/node scripts\/the-card-api\/verify.mjs inspect-redirect/);
+ assert.equal((job.match(/secrets\./g)||[]).length,1);
+});

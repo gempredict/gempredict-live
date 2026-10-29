@@ -4,11 +4,12 @@ import fs from 'node:fs';
 import path from 'node:path';
 import {fileURLToPath} from 'node:url';
 export const APPROVAL='AUTHORIZE_THE_CARD_API_MAX_2_GETS_50_ROWS';
+export const REDIRECT_APPROVAL='AUTHORIZE_THE_CARD_API_ONE_GET_REDIRECT_HEADERS_ONLY';
 export const ENDPOINT='https://thecardapi.com/api/v1/market/sales';
 export const EXACT='2026 "Pikachu ex" "30th Celebration" "149/128" (SIR,"special illustration rare")';
 export const BROAD='"Pikachu ex"';
-export function approvedContext(e){
- if(e.GITHUB_ACTIONS!=='true'||e.GITHUB_EVENT_NAME!=='workflow_dispatch'||e.GITHUB_REPOSITORY!=='gempredict/gempredict-live'||e.GITHUB_REF!=='refs/heads/restore/phase1-identity-market-matching'||e.GITHUB_RUN_ATTEMPT!=='1'||e.CARD_MODE!=='dry-run'||e.CARD_APPROVAL!==APPROVAL||!/^\d+$/.test(e.CARD_OWNER_ID||'')||e.GITHUB_ACTOR_ID!==e.CARD_OWNER_ID||!/^\d+$/.test(e.GITHUB_RUN_ID||'')||!/^[a-f0-9]{40}$/.test(e.GITHUB_SHA||'')||!e.RUNNER_TEMP||e.NODE_TLS_REJECT_UNAUTHORIZED==='0'||e.NODE_DEBUG||e.NODE_OPTIONS)throw Error('context_not_authorized');
+export function approvedContext(e,approval=APPROVAL){
+ if(e.GITHUB_ACTIONS!=='true'||e.GITHUB_EVENT_NAME!=='workflow_dispatch'||e.GITHUB_REPOSITORY!=='gempredict/gempredict-live'||e.GITHUB_REF!=='refs/heads/restore/phase1-identity-market-matching'||e.GITHUB_RUN_ATTEMPT!=='1'||e.CARD_MODE!=='dry-run'||e.CARD_APPROVAL!==approval||!/^\d+$/.test(e.CARD_OWNER_ID||'')||e.GITHUB_ACTOR_ID!==e.CARD_OWNER_ID||!/^\d+$/.test(e.GITHUB_RUN_ID||'')||!/^[a-f0-9]{40}$/.test(e.GITHUB_SHA||'')||!e.RUNNER_TEMP||e.NODE_TLS_REJECT_UNAUTHORIZED==='0'||e.NODE_DEBUG||e.NODE_OPTIONS)throw Error('context_not_authorized');
 }
 const money=v=>v===null||(typeof v==='number'&&Number.isFinite(v)&&v>=0&&v<1e9);
 const date=(s,now)=>typeof s==='string'&&/^\d{4}-\d{2}-\d{2}$/.test(s)&&Number.isFinite(Date.parse(s))&&new Date(s).toISOString().slice(0,10)===s&&Date.parse(s)<=now;
@@ -41,13 +42,14 @@ export function summarize(body,now=Date.now()){
  return {returned:rows.length,total:p.total,hasMore:p.has_more,exactResults:rows.filter(r=>r.identity==='exact_title_candidate'&&r.kind!=='unverified_completion').length,confirmedExactSales:rows.filter(r=>r.identity==='exact_title_candidate'&&r.finalPrice!==null).length,rows};
 }
 // Native HTTPS has no retry or redirect logic; bound each response and total time.
-export function requestOnce(url,key){
+export function requestOnce(url,key,{headersOnly=false}={}){
  if(url.origin!==new URL(ENDPOINT).origin||url.pathname!==new URL(ENDPOINT).pathname)throw Error('endpoint_rejected');
  return new Promise(resolve=>{
   let req,finished=false;
   const done=v=>{if(finished)return;finished=true;clearTimeout(timer);resolve(v);};
   const timer=setTimeout(()=>{done({error:'timeout'});req?.destroy();},20000);
   try{req=https.request(url,{method:'GET',agent:false,headers:{'x-market-api-key':key,Accept:'application/json'}},res=>{
+   if(headersOnly){done({httpStatus:res.statusCode??null,location:res.headers.location});res.destroy();return;}
    if(res.statusCode!==200){done({error:'http_failure',status:res.statusCode});res.destroy();return;}
    if(!String(res.headers['content-type']||'').includes('application/json')){done({error:'non_json'});res.destroy();return;}
    const chunks=[];let bytes=0;
@@ -71,10 +73,43 @@ export async function verify(key,{request=requestOnce,now=Date.now()}={}){
  }
  return {...report,status:'sales_response_observed',limitations:['Provider-reported completed observations; title candidates require owner review of variant, language and source listing.','Accepted offers without confirmed final amounts retain asks separately; asks never become sale prices.','One page per query; plan lookback and pagination limit coverage. No exact match is not proof of no sales.','No price aggregation, scanner integration, AI calls, purchases, upgrades or subscription changes.']};
 }
-export function claimRun(e){approvedContext(e);fs.closeSync(fs.openSync(path.join(e.RUNNER_TEMP,`the-card-api-${e.GITHUB_RUN_ID}.attempted`),'wx',0o600));}
+export function claimRun(e,approval=APPROVAL){approvedContext(e,approval);fs.closeSync(fs.openSync(path.join(e.RUNNER_TEMP,`the-card-api-${e.GITHUB_RUN_ID}.attempted`),'wx',0o600));}
+// Report known public route/query values only; never echo unknown URL components.
+export function sanitizeLocation(value,base){
+ if(typeof value!=='string'||value.length>4096||/[\x00-\x20\x7f]/.test(value))return null;
+ try{
+  const u=new URL(value,base);
+  if(!['https:','http:'].includes(u.protocol))return null;
+  const route=u.pathname==='/api/v1/market/sales'?u.pathname:'/[REDACTED_PATH]';
+  const safe=new URLSearchParams();let hidden=false;
+  const expected=new URL(base).searchParams;
+  for(const [k,v] of u.searchParams){
+   if(['q','limit','page','sort'].includes(k)&&expected.has(k)&&v===expected.get(k))safe.append(k,v);
+   else hidden=true;
+  }
+  if(hidden)safe.append('_redacted','1');
+  return u.origin+route+(safe.size?'?'+safe:'');
+ }catch{return null;}
+}
+export async function inspectRedirect(key,{request=requestOnce}={}){
+ if(!key)return {httpStatus:null,location:null};
+ const url=new URL(ENDPOINT);url.search=new URLSearchParams({q:EXACT,limit:'1',page:'1',sort:'date_desc'}).toString();
+ try{
+  const result=await request(url,key,{headersOnly:true});
+  return {httpStatus:Number.isInteger(result?.httpStatus)?result.httpStatus:null,location:sanitizeLocation(result?.location,url)};
+ }catch{return {httpStatus:null,location:null};}
+}
 export function redact(output,key){if(key)for(const value of new Set([key,encodeURIComponent(key)]))output=output.split(value).join('[REDACTED]');return output;}
 async function main(){
  if(process.argv[2]==='dry-run'){console.log(JSON.stringify({status:'DRY_RUN_NO_REQUESTS',endpoint:ENDPOINT,authentication:'x-market-api-key header',queries:[EXACT,BROAD],maximumRequests:2,maximumReturnedRows:50}));return;}
+ if(process.argv[2]==='inspect-redirect'){
+  claimRun(process.env,REDIRECT_APPROVAL);
+  const key=process.env.THE_CARD_API_KEY;
+  const result=await inspectRedirect(key);
+  console.log(redact(JSON.stringify(result),key));
+  if(result.httpStatus===null)process.exitCode=1;
+  return;
+ }
  if(process.argv[2]!=='live')throw Error('invalid_mode');
  claimRun(process.env);
  const key=process.env.THE_CARD_API_KEY;
