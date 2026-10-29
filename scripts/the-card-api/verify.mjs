@@ -41,8 +41,10 @@ export function validateSchema(body){
  require(p.total>=body.data.length,'pagination.total must be at least data length');
  require(p.page===1,'pagination.page must equal 1');
  require(p.limit===25,'pagination.limit must equal 25');
- // Observed empty pages may omit has_more. Absence is unknown, never false.
- require((body.data.length===0&&!Object.hasOwn(p,'has_more'))||typeof p.has_more==='boolean','pagination.has_more must be boolean');
+ // Both observed empty and populated cursor pages omit has_more.
+ require(!Object.hasOwn(p,'has_more')||typeof p.has_more==='boolean','pagination.has_more must be boolean');
+ require(!Object.hasOwn(p,'next_cursor')||p.next_cursor===null||typeof p.next_cursor==='string','pagination.next_cursor must be string or null when present');
+ require(!Object.hasOwn(p,'pages')||(Number.isInteger(p.pages)&&p.pages>=0),'pagination.pages must be a nonnegative integer when present');
  require(!!body.meta&&typeof body.meta==='object','meta must exist and be a non-null object');
  for(const r of body.data){
   require(!!r,'each record must be non-null');
@@ -57,6 +59,12 @@ export function validateSchema(body){
   require(typeof r.sold_at==='string','sold_at must be string');
  }
 }
+// Availability is evidence only; no cursor is returned or fetched.
+export function pageAvailability(p){
+ if(typeof p?.next_cursor==='string'&&p.next_cursor.trim().length>0)return {hasMore:true,evidence:'nonempty_next_cursor'};
+ if(typeof p?.has_more==='boolean')return {hasMore:p.has_more,evidence:'provider_has_more'};
+ return {hasMore:null,evidence:'unknown'};
+}
 export function summarize(body,now=Date.now()){
  validateSchema(body);
  const p=body.pagination;
@@ -66,7 +74,7 @@ export function summarize(body,now=Date.now()){
   const kind=!dated?'unverified_completion':r.listing_type==='best_offer'?(confirmed?'accepted_offer_confirmed_amount':'accepted_offer_amount_unknown'):confirmed?'completed_sale_confirmed_amount':'completed_sale_amount_unconfirmed';
   return {id:text(r.id),platform:text(r.platform),title:text(r.title),identity:exactCandidate(r)?'exact_title_candidate':'unmatched_variant_or_insufficient_identity',kind,listingType:r.listing_type,saleDate:dated?r.sale_date:null,finalPrice:confirmed?r.price:null,originalAskingPrice:r.original_price,currency:r.currency,sourceUrl:listingUrl(r.listing_url)};
  });
- return {returned:rows.length,total:p.total,hasMore:Object.hasOwn(p,'has_more')?p.has_more:null,exactResults:rows.filter(r=>r.identity==='exact_title_candidate'&&r.kind!=='unverified_completion').length,confirmedExactSales:rows.filter(r=>r.identity==='exact_title_candidate'&&r.finalPrice!==null).length,rows};
+ return {returned:rows.length,total:p.total,hasMore:pageAvailability(p).hasMore,paginationEvidence:pageAvailability(p).evidence,exactResults:rows.filter(r=>r.identity==='exact_title_candidate'&&r.kind!=='unverified_completion').length,confirmedExactSales:rows.filter(r=>r.identity==='exact_title_candidate'&&r.finalPrice!==null).length,rows};
 }
 // Native HTTPS has no retry or redirect logic; bound each response and total time.
 export function requestOnce(url,key,{headersOnly=false}={}){
@@ -98,7 +106,7 @@ export async function verify(key,{request=requestOnce,now=Date.now()}={}){
   try{entry.result=summarize(result.body,now);}catch{return {...report,status:'schema_unrecognized'};}
   if(entry.result.exactResults>0)break;
  }
- return {...report,status:'sales_response_observed',limitations:['Provider-reported completed observations; title candidates require owner review of variant, language and source listing.','Accepted offers without confirmed final amounts retain asks separately; asks never become sale prices.','One page per query; plan lookback and pagination limit coverage. hasMore=null means not reported, not complete. No exact match is not proof of no sales.','No price aggregation, scanner integration, AI calls, purchases, upgrades or subscription changes.']};
+ return {...report,status:'sales_response_observed',limitations:['Provider-reported completed observations; title candidates require owner review of variant, language and source listing.','Accepted offers without confirmed final amounts retain asks separately; asks never become sale prices.','One page per query; plan lookback and pagination limit coverage. hasMore=null means unknown, not complete. Cursor availability never triggers pagination. No exact match is not proof of no sales.','No price aggregation, scanner integration, AI calls, purchases, upgrades or subscription changes.']};
 }
 export function claimRun(e,approval=APPROVAL){approvedContext(e,approval);fs.closeSync(fs.openSync(path.join(e.RUNNER_TEMP,`the-card-api-${e.GITHUB_RUN_ID}.attempted`),'wx',0o600));}
 // Report known public route/query values only; never echo unknown URL components.
@@ -153,7 +161,7 @@ export function paginationDiagnostic(p){
  return {type:jsonType(p),fields:fieldTypes(p),...numbers,
   hasMore:{...field('has_more'),reportedValue:has('has_more')&&typeof p.has_more==='boolean'?p.has_more:null},
   nextCursor:{...field('next_cursor'),nonEmpty:has('next_cursor')&&typeof p.next_cursor==='string'?p.next_cursor.length>0:null},
-  completeness:'not_independently_established'};
+  availability:pageAvailability(p),completeness:'not_independently_established'};
 }
 export async function inspectSchema(key,{request=requestOnce,broader=false}={}){
  if(!key)return {failedRequirement:'credential missing; no request made'};

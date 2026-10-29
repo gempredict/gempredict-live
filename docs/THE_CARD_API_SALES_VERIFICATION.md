@@ -225,3 +225,34 @@ printed. A new phrase cannot authorize any other diagnostic mode.
 
 Offline verification: 28 Card API tests and 13 CardSight tests passed, along
 with syntax and credential-free dry-run checks. No live request was executed.
+
+## Observed populated cursor pagination (current behavior)
+
+This supersedes the earlier empty-only has_more exception. The owner-observed
+broader response returned 25 rows with total=2105, page=1, limit=25, pages=85,
+a nonempty next_cursor and no has_more. Both empty and populated pages may now
+omit has_more. If explicitly present, has_more must still be boolean. Optional
+next_cursor must be string or null; optional pages must be a nonnegative integer.
+All previous total/page/limit and sale-record checks remain.
+
+Availability uses a nonblank next_cursor as positive evidence of another page,
+even if has_more disagrees. Otherwise an explicit has_more boolean is reported;
+without either indicator hasMore is null with evidence unknown. Totals, page
+counts, and null/empty/missing cursors never imply completion. No pagination
+requests are made. Summaries report evidence labels rather than cursor contents.
+The input response is never filled in or mutated.
+
+The sanitized fixture uses the observed pagination values and record field layout
+with synthetic sale values and opaque cursor. Tests cover valid populated cursor
+pages, missing indicators, invalid optional metadata, no extra page requests,
+exact/broader limits, unknown accepted-offer amounts, dates, identity and source
+sanitization. Original asking prices never substitute for confirmed final prices.
+No identity checks or sale classification rules changed; valuation acceptance
+remains zero. Secrets, workflow settings and approval safeguards are unchanged.
+
+Verification: 32 Card API tests and 13 CardSight tests passed, plus syntax and
+credential-free dry-run checks. No live API requests were made.
+For one final owner sales run: use a fresh Private vision benchmark dispatch,
+branch restore/phase1-identity-market-matching, mode dry-run, confirmation
+AUTHORIZE_THE_CARD_API_MAX_2_GETS_50_ROWS. Existing owner and environment approval
+requirements apply; the maximum remains two GETs and 50 returned rows.

@@ -132,7 +132,7 @@ test('schema diagnostic reports structure and exact requirement, never response 
  const x=body([]);delete x.meta;assert.equal(schemaDiagnostic(x).failedRequirement,'meta must exist and be a non-null object');assert.deepEqual(schemaDiagnostic(x).envelope.meta,{exists:false,type:'missing'});
 });
 test('shared validator identifies each existing envelope and record constraint without relaxing it',()=>{
- const cases=[['data must be an array',b=>{b.data={};}],['data length must be at most 25',b=>{b.data=Array.from({length:26},()=>row());}],['pagination must exist and be non-null',b=>{b.pagination=null;}],['pagination.total must be an integer',b=>{b.pagination.total='1';}],['pagination.total must be at least data length',b=>{b.pagination.total=0;}],['pagination.page must equal 1',b=>{b.pagination.page=2;}],['pagination.limit must equal 25',b=>{b.pagination.limit=1;}],['pagination.has_more must be boolean',b=>{delete b.pagination.has_more;}],['meta must exist and be a non-null object',b=>{delete b.meta;}]];
+ const cases=[['data must be an array',b=>{b.data={};}],['data length must be at most 25',b=>{b.data=Array.from({length:26},()=>row());}],['pagination must exist and be non-null',b=>{b.pagination=null;}],['pagination.total must be an integer',b=>{b.pagination.total='1';}],['pagination.total must be at least data length',b=>{b.pagination.total=0;}],['pagination.page must equal 1',b=>{b.pagination.page=2;}],['pagination.limit must equal 25',b=>{b.pagination.limit=1;}],['pagination.has_more must be boolean',b=>{b.pagination.has_more='invalid';}],['meta must exist and be a non-null object',b=>{delete b.meta;}]];
  for(const [reason,mutate] of cases){const b=body([row()]);mutate(b);assert.equal(schemaDiagnostic(b).failedRequirement,reason);assert.throws(()=>summarize(b,now));}
  for(const field of ['id','platform','title','listing_type','price_confirmed','price','original_price','currency','sale_date','sold_at']){const b=body([row()]);delete b.data[0][field];assert.ok(schemaDiagnostic(b).failedRequirement.startsWith(field));assert.throws(()=>summarize(b,now));}
  const later=body([row(),row({price_confirmed:null})]);assert.equal(schemaDiagnostic(later).failedRequirement,'price_confirmed must be boolean');
@@ -166,12 +166,12 @@ test('observed empty-results shape may omit has_more without inferring completen
  // Even reported totals above zero do not turn an empty page into completeness.
  const partial=structuredClone(empty);partial.pagination.total=20;assert.equal(summarize(partial,now).hasMore,null);
 });
-test('empty-results exception rejects malformed pagination and never applies to actual sale rows',()=>{
+test('optional availability rejects malformed pagination and preserves unknown on populated pages',()=>{
  const empty=()=>({data:[],pagination:{total:0,page:1,limit:25},meta:{}});
  for(const p of [undefined,null,[],0,'private',{}, {total:-1,page:1,limit:25},{total:'0',page:1,limit:25},{total:0,page:2,limit:25},{total:0,page:1,limit:50}])assert.throws(()=>summarize({...empty(),pagination:p},now));
  for(const bad of [null,'false',0,{},[]]){const b=empty();b.pagination.has_more=bad;assert.throws(()=>summarize(b,now));}
  for(const field of ['total','page','limit']){const b=empty();delete b.pagination[field];assert.throws(()=>summarize(b,now));}
- const populated=body([row()]);delete populated.pagination.has_more;assert.throws(()=>summarize(populated,now),/has_more/);
+ const populated=body([row()]);delete populated.pagination.has_more;assert.equal(summarize(populated,now).hasMore,null);
 });
 test('empty exact result missing has_more allows only the planned broader GET; malformed page stops',async()=>{
  const empty=()=>({data:[],pagination:{total:0,page:1,limit:25},meta:{}});
@@ -193,7 +193,7 @@ test('broader schema authorization is unique and preserves owner/branch/first-at
 test('broader schema uses only the broad query, once, without returning sensitive values or accepting sales',async()=>{
  let calls=0;const b=body([row({title:'PRIVATE TITLE',price:87654.32,seller:'PRIVATE SELLER',listing_url:'https://private.example/secret'})]);delete b.pagination.has_more;b.pagination.next_cursor='PRIVATE CURSOR';
  const d=await inspectSchema('mock',{broader:true,request:async(u,key)=>{calls++;assert.equal(u.origin+u.pathname,ENDPOINT);assert.equal(u.searchParams.get('q'),BROAD);assert.equal(u.searchParams.get('limit'),'25');assert.equal(u.searchParams.has('cursor'),false);return {status:200,body:b};}});
- assert.equal(calls,1);assert.equal(d.returnedArrayLength,1);assert.equal(d.failedRequirement,'pagination.has_more must be boolean');assert.equal(d.pagination.nextCursor.nonEmpty,true);assert.equal(d.pagination.hasMore.reportedValue,null);assert.equal(d.pagination.completeness,'not_independently_established');
+ assert.equal(calls,1);assert.equal(d.returnedArrayLength,1);assert.equal(d.failedRequirement,null);assert.equal(d.pagination.nextCursor.nonEmpty,true);assert.equal(d.pagination.hasMore.reportedValue,null);assert.equal(d.pagination.completeness,'not_independently_established');
  assert.doesNotMatch(JSON.stringify(d),/PRIVATE|87654|https:|finalPrice|acceptedForValuation/);
 });
 test('pagination diagnostics expose structure and bounded counters without inferring unknown completeness',()=>{
@@ -206,4 +206,33 @@ test('broader schema failures never retry, fall back to exact, or leak provider 
  for(const response of [{status:307},{status:429},{status:200,body:{}},{error:'PRIVATE'}]){
   let calls=0;const d=await inspectSchema('mock',{broader:true,request:async u=>{calls++;assert.equal(u.searchParams.get('q'),BROAD);return response;}});assert.equal(calls,1);assert.doesNotMatch(JSON.stringify(d),/PRIVATE/);
  }
+});
+
+import {pageAvailability} from '../scripts/the-card-api/verify.mjs';
+// Sanitized schema fixture: observed counters/field layout, synthetic sale values.
+const observedCursorPage=()=>({data:Array.from({length:25},(_,i)=>row({id:'synthetic-'+i,card_set:'2026 Pokemon 30th Celebration',card_number:'149/128',grade:'10',grader:'PSA'})),pagination:{total:2105,page:1,limit:25,pages:85,next_cursor:'SYNTHETIC_OPAQUE_CURSOR'},meta:{}});
+test('observed populated cursor schema validates and records positive availability without leaking cursor',()=>{
+ const b=observedCursorPage(),before=JSON.stringify(b);const s=summarize(b,now);
+ assert.equal(s.returned,25);assert.equal(s.total,2105);assert.equal(s.hasMore,true);assert.equal(s.paginationEvidence,'nonempty_next_cursor');assert.equal(s.confirmedExactSales,25);
+ assert.equal(schemaDiagnostic(b).failedRequirement,null);assert.equal(JSON.stringify(b),before);assert.equal(Object.hasOwn(b.pagination,'has_more'),false);
+ assert.doesNotMatch(JSON.stringify(s),/SYNTHETIC_OPAQUE_CURSOR/);
+});
+test('availability remains unknown without a usable cursor or explicit boolean; totals/pages do not imply completion',()=>{
+ for(const cursor of [undefined,null,'','   ']){
+  const b=observedCursorPage();if(cursor===undefined)delete b.pagination.next_cursor;else b.pagination.next_cursor=cursor;
+  const s=summarize(b,now);assert.equal(s.hasMore,null);assert.equal(s.paginationEvidence,'unknown');
+ }
+ assert.deepEqual(pageAvailability({has_more:false,next_cursor:'opaque'}),{hasMore:true,evidence:'nonempty_next_cursor'});
+ assert.equal(pageAvailability({has_more:true}).hasMore,true);assert.equal(pageAvailability({has_more:false,next_cursor:null}).hasMore,false);
+ for(const changes of [{next_cursor:{}},{next_cursor:42},{pages:'85'},{pages:-1},{has_more:null}])assert.throws(()=>summarize({...observedCursorPage(),pagination:{...observedCursorPage().pagination,...changes}},now));
+});
+test('observed cursor never triggers more pages; broader fallback stays within two GETs and 50 rows',async()=>{
+ let calls=0;const r=await verify('mock',{now,request:async u=>{calls++;assert.equal(u.searchParams.get('page'),'1');assert.equal(u.searchParams.has('cursor'),false);assert.equal(u.searchParams.get('q'),calls===1?EXACT:BROAD);return {status:200,body:calls===1?{data:[],pagination:{total:0,page:1,limit:25},meta:{}}:observedCursorPage()};}});
+ assert.equal(calls,2);assert.equal(r.status,'sales_response_observed');assert.equal(r.requests[1].result.hasMore,true);assert.equal(r.maximumReturnedRows,50);
+ calls=0;await verify('mock',{now,request:async()=>{calls++;return {status:200,body:observedCursorPage()};}});assert.equal(calls,1);
+});
+test('cursor pagination does not weaken sale confirmation, dates, identity or source sanitization',()=>{
+ const b=observedCursorPage();b.data[0]=row({listing_type:'best_offer',price:null,original_price:999,price_confirmed:false});b.data[1]=row({sale_date:'2099-01-01'});b.data[2]=row({card_number:'150/128'});b.data[3]=row({listing_url:'https://unapproved.example/private?token=secret'});
+ const s=summarize(b,now);assert.equal(s.rows[0].finalPrice,null);assert.equal(s.rows[0].kind,'accepted_offer_amount_unknown');assert.equal(s.rows[0].originalAskingPrice,999);assert.equal(s.rows[1].finalPrice,null);assert.equal(s.rows[2].identity,'unmatched_variant_or_insufficient_identity');assert.equal(s.rows[3].sourceUrl,null);
+ delete b.data[4].price_confirmed;assert.throws(()=>summarize(b,now),/price_confirmed/);
 });
