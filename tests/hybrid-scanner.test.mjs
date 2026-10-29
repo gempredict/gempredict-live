@@ -72,3 +72,13 @@ test('catalog variants sharing printed identifiers are ambiguous even if outside
  const result=acceptHybridResult(raw(),{pins:catalog.pins,records:[...catalog.records,extra]});
  assert.equal(result.catalogIdentitySupported,false);assert.equal(identityOnlyReport(result).valuationIdentityGate.allowed,false);
 });
+
+test('specific confirmation reasons distinguish unreadable marks, conflicts and catalog ambiguity',()=>{
+ let v=raw();v.catalogIdentitySupported=false;v.status='ambiguous';v.candidates[0].evidence.setCode={supported:false,value:null,readings:[]};v.candidates[0].evidence.language={supported:false,value:null};
+ assert.match(acceptHybridResult(v).confirmationReasons.join(' '),/set code and language are not reliably readable/);
+ v=raw();v.candidates[0].evidence.setCode.readings.push({code:'SV1',language:'en',pass:'footer:other'});
+ assert.match(acceptHybridResult(v).confirmationReasons.join(' '),/readings conflict/);
+ const duplicate={...r,id:'mock-other-edition'};
+ assert.match(acceptHybridResult(raw(),{records:[...catalog.records,duplicate],pins:catalog.pins}).confirmationReasons.join(' '),/Multiple catalog editions/);
+ assert.deepEqual(acceptHybridResult(raw()).confirmationReasons,[]);
+});

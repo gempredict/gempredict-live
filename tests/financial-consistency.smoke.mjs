@@ -91,7 +91,8 @@ try {
     await page.getByRole('button', { name: 'Load', exact: true }).click();
     await assertVisible();
     if (price === 56.99) {
-      assert.match(await page.getByTestId('financial-report').innerText(), /2026.*30th Celebration.*Pikachu ex.*149\/128/);
+      assert.equal(await page.getByTestId('card-display-title').innerText(), 'Pikachu ex — Special Illustration Rare (SIR)');
+      assert.equal(await page.getByTestId('card-display-subtitle').innerText(), '2026 Pokémon 30th Celebration · #149/128 · English');
       assert.match(await page.getByTestId('financial-report').innerText(), /Language: English/);
       await page.getByRole('button', { name: 'Verify Variant', exact: true }).click();
       await page.getByRole('button', { name: 'Confirm and revalue', exact: true }).click();

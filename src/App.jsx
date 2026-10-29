@@ -1,4 +1,4 @@
-import {catalogDisplayFacts} from '../lib/catalogDisplay.mjs';
+import {catalogDisplayFacts,catalogDisplayTitle,catalogDisplaySubtitle} from '../lib/catalogDisplay.mjs';
 import { safeEbayListingUrl } from '../lib/ebayListingProvenance.mjs';
 import { normalizeMobileImage, assertUploadBudget, UploadError } from "../lib/mobileImages.mjs";
 import { requestPrediction } from "../lib/predictionTransport.mjs";
@@ -524,9 +524,10 @@ function WithheldResultCard({ data, onSave, isSaved, onVerifyVariant, onRescan }
   const sources = sourceItems.filter(item => item && typeof item === 'object' && Number.isFinite(item.priceValue) && item.priceValue > 0 && item.price?.currency === 'USD').map(item => ({ ...item, sourceUrl: safeEbayListingUrl(item) }));
   const reason = data.valuationVerification?.explanation || "This version needs a fresh valuation.";
   return <div data-testid="financial-report" style={{ background: C.white, border: "1px solid " + C.border, borderRadius: 18, padding: "1.25rem" }}>
-    <h3 style={{ marginTop: 0 }}>{identitySearchGate(data.identityVerification,data.canonicalCard).allowed ? canonicalDisplayName(data.canonicalCard) : "Card identity needs verification"}</h3>
+    <h3 data-testid="card-display-title" style={{ marginTop: 0 }}>{(proposedIdentity?.rarity ? catalogDisplayTitle(proposedIdentity) : identitySearchGate(data.identityVerification,data.canonicalCard).allowed ? canonicalDisplayName(data.canonicalCard) : "Card identity needs verification")}</h3>
+    <p data-testid="card-display-subtitle">{catalogDisplaySubtitle(proposedIdentity || {}, data.identityVerification?.catalog?.source)}</p>
     <p>{identitySearchGate(data.identityVerification, data.canonicalCard).allowed ? (data.hybridIdentification ? 'Verified printed-card identity' : 'Independently verified identity') : 'Identity unverified'} · Language: {data.canonicalCard?.language === 'en' ? 'English' : data.canonicalCard?.language || 'unverified'}</p>
-    {data.hybridIdentification && <p data-testid="local-identity-evidence">Local OCR: {data.hybridIdentification.catalogIdentitySupported ? "printed identity supported" : "confirmation required"}. Physical printing unverified. Independent artwork references unavailable.</p>}
+    {data.hybridIdentification && <p data-testid="local-identity-evidence">Local OCR: {data.hybridIdentification.catalogIdentitySupported ? "printed identity supported" : (data.hybridIdentification.confirmationReasons?.join(" ") || "Printed identifiers need confirmation")}. Physical printing unverified. Independent artwork references unavailable.</p>}
     <CatalogFacts data={data} />
     {data.identityVerification?.catalog?.requiresConfirmation && data.identityVerification.catalog.candidate && <p data-testid="catalog-candidate">Catalog candidate: {canonicalDisplayName(data.identityVerification.catalog.candidate)}. Confirm the printed identity and full collector number; this candidate is not a verified scan identity.</p>}
     <strong>{isValuationTrusted(data) ? (data.verdict === 'grade' ? 'Grade It — evidence-supported conditional analysis' : 'Skip It — evidence-supported conditional analysis') : isMarketAnalysisAvailable(data) ? 'Provisional market analysis — recommendation withheld' : 'Valuation and grading ROI withheld'}</strong>
@@ -576,17 +577,10 @@ function TrustedResultCard({ data, index, onSave, isSaved }) {
   ? data.marketData.marketSummary
   : null;
   const displayTitle =
-  canonicalDisplayName(data.canonicalCard) || data.cardTitle;
+  (data.canonicalCard?.rarity ? catalogDisplayTitle(data.canonicalCard) : canonicalDisplayName(data.canonicalCard)) || data.cardTitle;
 
 const displayMeta =
-  data.canonicalCard
-    ? [
-        data.canonicalCard.year,
-        data.canonicalCard.brandSet,
-        data.canonicalCard.parallel,
-        data.canonicalCard.cardNumber ? "#" + data.canonicalCard.cardNumber : null,
-      ].filter(Boolean).join(" · ")
-    : data.cardMeta;
+  data.canonicalCard ? (data.canonicalCard.rarity ? catalogDisplaySubtitle(data.canonicalCard, data.identityVerification?.catalog?.source) : [data.canonicalCard.year,data.canonicalCard.brandSet,data.canonicalCard.parallel,data.canonicalCard.cardNumber ? '#'+data.canonicalCard.cardNumber : null].filter(Boolean).join(' · ')) : data.cardMeta;
   const barPct   = Math.min(100, Math.max(4, (Math.abs(profit) / Math.max(data.psa10Value || 1, 1)) * 100));
   const bullets  = getVerdictBullets(data);
   const useCase  = VERDICT_USE_CASE[data.verdict] || VERDICT_USE_CASE.maybe;

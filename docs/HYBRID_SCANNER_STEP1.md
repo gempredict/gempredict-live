@@ -92,3 +92,23 @@ color/gray passes and `30C`/`en` in three footer passes. Improved still returns
 `needs_confirmation` for physical printing, null prices and null Atlas. Fresh
 hosted original/improved photographic receipts on the corrected deployment are
 required before declaring hosted acceptance; old receipts do not validate new code.
+
+### Final printed-identity display diagnostic
+
+The next display-only revision uses a general catalog rarity formatter for the
+report title and keeps year/set/number/language in the secondary identity. Artwork
+and catalog printing remain separate; this changes no catalog facts or trust rules.
+Unverified candidates retain the explicit unverified status and candidate disclaimer.
+
+Fresh local OCR of the genuine, mobile-prepared photographs returned `30th-149`
+for both sets. Original: exact name on two passes, `149/128` on three passes,
+`30C`/English on three footer passes; printed identity allowed. Improved: exact
+name on two passes and `149/128` on two passes, but no supported parsed set-code
+or language mark. Earlier raw OCR recorded `30CW`; it is not proof of a different
+set and must not be silently rewritten to `30C EN`. This is unresolved OCR
+interpretation, not catalog ambiguity. Confirmation now specifies the unreadable
+set code/language and asks for footer confirmation or a clearer close-up.
+
+No thresholds, OCR extraction, artwork matching, printing verification or financial
+gates changed. Mocked rendered regressions and local genuine-photo OCR are distinct
+from fresh hosted uploads; the latter must be repeated on the exact new Preview.
