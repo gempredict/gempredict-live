@@ -76,14 +76,19 @@ export function summarize(body,now=Date.now()){
  });
  return {returned:rows.length,total:p.total,hasMore:pageAvailability(p).hasMore,paginationEvidence:pageAvailability(p).evidence,exactResults:rows.filter(r=>r.identity==='exact_title_candidate'&&r.kind!=='unverified_completion').length,confirmedExactSales:rows.filter(r=>r.identity==='exact_title_candidate'&&r.finalPrice!==null).length,rows};
 }
+export function readQuotaHeaders(headers={}){
+ const number=name=>typeof headers[name]==='string'&&/^\d{1,12}$/.test(headers[name])?Number(headers[name]):null;
+ return {limit:number('x-ratelimit-limit'),remaining:number('x-ratelimit-remaining'),reset:number('x-ratelimit-reset')};
+}
 // Native HTTPS has no retry or redirect logic; bound each response and total time.
-export function requestOnce(url,key,{headersOnly=false}={}){
+export function requestOnce(url,key,{headersOnly=false,includeQuota=false}={}){
  if(url.origin!==new URL(ENDPOINT).origin||url.pathname!==new URL(ENDPOINT).pathname)throw Error('endpoint_rejected');
  return new Promise(resolve=>{
-  let req,finished=false;
-  const done=v=>{if(finished)return;finished=true;clearTimeout(timer);resolve(v);};
+  let req,finished=false,quota=null,statusCode=null;
+  const done=v=>{if(finished)return;finished=true;clearTimeout(timer);resolve(includeQuota?{...v,status:v.status??statusCode,quota}:v);};
   const timer=setTimeout(()=>{done({error:'timeout'});req?.destroy();},20000);
   try{req=https.request(url,{method:'GET',agent:false,headers:{'x-market-api-key':key,Accept:'application/json'}},res=>{
+   if(includeQuota){statusCode=res.statusCode??null;quota=readQuotaHeaders(res.headers);}
    if(headersOnly){done({httpStatus:res.statusCode??null,location:res.headers.location});res.destroy();return;}
    if(res.statusCode!==200){done({error:'http_failure',status:res.statusCode});res.destroy();return;}
    if(!String(res.headers['content-type']||'').includes('application/json')){done({error:'non_json'});res.destroy();return;}

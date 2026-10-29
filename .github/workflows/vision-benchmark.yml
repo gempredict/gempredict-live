@@ -119,6 +119,39 @@ jobs:
         if: always()
         run: node scripts/vision-benchmark/secrets-smoke.mjs cleanup
 
+  the-card-api-coverage:
+    name: The Card API three-card coverage (maximum three GETs, 75 rows)
+    needs: dry-run
+    if: >-
+      inputs.mode == 'dry-run' &&
+      inputs.confirmation == 'AUTHORIZE_THE_CARD_API_THREE_SEARCHES_75_ROWS' &&
+      github.repository == 'gempredict/gempredict-live' &&
+      github.ref == 'refs/heads/restore/phase1-identity-market-matching' &&
+      github.run_attempt == 1 &&
+      github.actor_id == vars.VISION_BENCH_OWNER_ID
+    environment: vision-benchmark
+    runs-on: ubuntu-24.04
+    timeout-minutes: 3
+    steps:
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+        with:
+          ref: ${{ github.sha }}
+          persist-credentials: false
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4.4.0
+        with:
+          node-version: '24.19.0'
+      - name: Credential-free coverage tests and plan
+        run: |
+          node --test tests/the-card-api-coverage.test.mjs
+          node scripts/the-card-api/coverage.mjs dry-run
+      - name: Run owner-authorized three-search coverage benchmark
+        env:
+          CARD_MODE: ${{ inputs.mode }}
+          CARD_APPROVAL: ${{ inputs.confirmation }}
+          CARD_OWNER_ID: ${{ vars.VISION_BENCH_OWNER_ID }}
+          THE_CARD_API_KEY: ${{ secrets.THE_CARD_API_KEY }}
+        run: node scripts/the-card-api/coverage.mjs live
+
   the-card-api-sales:
     name: The Card API sales verification (maximum two GETs, 50 rows)
     needs: dry-run
