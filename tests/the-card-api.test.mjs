@@ -89,7 +89,7 @@ test('Location retains public route/query and strips credentials, fragments and 
  target.username='private-user';target.password='private-password';target.hash='private-fragment';target.searchParams.set('token','private-token');target.searchParams.set('q','private-query');
  const s=sanitizeLocation(target.href,base);assert.doesNotMatch(s,/private|token/);assert.match(s,/_redacted=1/);
  assert.equal(sanitizeLocation('https://foreign.example/private-path?credential=private',base),'https://foreign.example/[REDACTED_PATH]?_redacted=1');
- assert.equal(sanitizeLocation('/api/v1/market/sales?limit=1',base),'https://thecardapi.com/api/v1/market/sales?limit=1');
+ assert.equal(sanitizeLocation('/api/v1/market/sales?limit=1',base),'https://www.thecardapi.com/api/v1/market/sales?limit=1');
  for(const v of [undefined,['a','b'],'javascript:alert(1)','https://example.com/\r\nsecret'])assert.equal(sanitizeLocation(v,base),null);
 });
 test('inspection consumes one GET at most and returns status and sanitized Location only',async()=>{
@@ -113,4 +113,9 @@ test('workflow selects inspection command only for new phrase while retaining th
  const y=fs.readFileSync('.github/workflows/vision-benchmark.yml','utf8');const job=y.split('\n  the-card-api-sales:')[1].split('\n  cardsight-access:')[0];
  assert.ok(job.includes(REDIRECT_APPROVAL));assert.match(job,/node scripts\/the-card-api\/verify.mjs inspect-redirect/);
  assert.equal((job.match(/secrets\./g)||[]).length,1);
+});
+
+test('canonical endpoint is fixed to verified www hostname; apex is rejected before transport',()=>{
+ assert.equal(ENDPOINT,'https://www.thecardapi.com/api/v1/market/sales');
+ assert.throws(()=>requestOnce(new URL('https://thecardapi.com/api/v1/market/sales'),'mock'),/endpoint_rejected/);
 });

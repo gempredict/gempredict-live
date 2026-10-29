@@ -5,7 +5,7 @@ import path from 'node:path';
 import {fileURLToPath} from 'node:url';
 export const APPROVAL='AUTHORIZE_THE_CARD_API_MAX_2_GETS_50_ROWS';
 export const REDIRECT_APPROVAL='AUTHORIZE_THE_CARD_API_ONE_GET_REDIRECT_HEADERS_ONLY';
-export const ENDPOINT='https://thecardapi.com/api/v1/market/sales';
+export const ENDPOINT='https://www.thecardapi.com/api/v1/market/sales';
 export const EXACT='2026 "Pikachu ex" "30th Celebration" "149/128" (SIR,"special illustration rare")';
 export const BROAD='"Pikachu ex"';
 export function approvedContext(e,approval=APPROVAL){

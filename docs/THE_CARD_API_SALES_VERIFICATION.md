@@ -8,7 +8,7 @@ No live API requests were executed while preparing this change.
 Source: https://www.thecardapi.com/docs — Authentication, GET /sales,
 Response schema, Best Offer price states, and Rate limits.
 
-The sales REST endpoint is `https://thecardapi.com/api/v1/market/sales`.
+The configured sales REST endpoint is `https://www.thecardapi.com/api/v1/market/sales`.
 Authentication is the `x-market-api-key` request header, using the existing
 `THE_CARD_API_KEY` repository secret. Catalog documentation also mentions
 `x-api-key`; this diagnostic uses the sales-specific authentication section.
@@ -96,7 +96,7 @@ A separate inspection mode now requires exactly
 with **mode=dry-run** and the same restoration branch, owner ID and environment
 approval. Use a fresh **Run workflow**, not a rerun of the failed job.
 
-This mode makes at most one authenticated GET to the existing apex endpoint,
+This mode makes at most one authenticated GET to the configured endpoint,
 using the exact public search with limit=1. It immediately destroys the response
 at the headers for every HTTP status, never reads a response body, never follows
 Location, never retries, and never forwards the key. Diagnostic output contains
@@ -109,8 +109,20 @@ only q/limit/page/sort values identical to this public request are retained.
 Other query parameters are replaced by a `_redacted=1` marker, without their
 names or values. Invalid Location values become null. API key values are also
 redacted from final output. No Location is treated as an approved destination.
-The canonical endpoint will be reviewed only after the owner shares this result.
+The owner subsequently verified the 307 destination as the official www hostname,
+with unchanged path and query; the configured endpoint now uses www directly.
 
 Offline verification for this change: 16 sales/redirect boundary tests and
 13 existing CardSight tests passed; script syntax check passed. No live request
 was executed during implementation.
+
+## Canonical hostname correction
+
+Based on the owner-authorized redirect inspection, the endpoint now uses
+`https://www.thecardapi.com/api/v1/market/sales` directly. The x-market-api-key
+header, two-GET/50-row sales limit, no-redirect/no-retry transport and existing
+authorization controls are unchanged. Use the original sales authorization
+phrase `AUTHORIZE_THE_CARD_API_MAX_2_GETS_50_ROWS`, mode `dry-run`, and the
+restoration branch for one fresh owner-dispatched sales run.
+Offline verification: 17 sales/redirect tests and 13 CardSight tests passed,
+plus syntax check and credential-free dry-run. No live API requests executed.
