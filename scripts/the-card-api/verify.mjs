@@ -4,6 +4,7 @@ import fs from 'node:fs';
 import path from 'node:path';
 import {fileURLToPath} from 'node:url';
 export const APPROVAL='AUTHORIZE_THE_CARD_API_MAX_2_GETS_50_ROWS';
+export const BROAD_SCHEMA_APPROVAL='AUTHORIZE_THE_CARD_API_ONE_GET_BROAD_SCHEMA_ONLY';
 export const SCHEMA_APPROVAL='AUTHORIZE_THE_CARD_API_ONE_GET_SCHEMA_ONLY';
 export const REDIRECT_APPROVAL='AUTHORIZE_THE_CARD_API_ONE_GET_REDIRECT_HEADERS_ONLY';
 export const ENDPOINT='https://www.thecardapi.com/api/v1/market/sales';
@@ -143,18 +144,35 @@ export function schemaDiagnostic(body){
  const first=Array.isArray(body?.data)&&body.data.length?body.data[0]:undefined;
  return {topLevelType:jsonType(body),topLevelFields:fieldTypes(body),envelope,returnedArrayLength:Array.isArray(body?.data)?body.data.length:null,firstRecordType:jsonType(first),firstRecordFields:fieldTypes(first),failedRequirement};
 }
-export async function inspectSchema(key,{request=requestOnce}={}){
+export function paginationDiagnostic(p){
+ const object=p!==null&&typeof p==='object'&&!Array.isArray(p);
+ const has=name=>object&&Object.hasOwn(p,name);
+ const field=name=>({exists:has(name),type:has(name)?jsonType(p[name]):'missing'});
+ const numbers={};
+ for(const name of ['total','page','limit','pages'])numbers[name]={...field(name),reportedValue:has(name)&&Number.isSafeInteger(p[name])&&p[name]>=0?p[name]:null};
+ return {type:jsonType(p),fields:fieldTypes(p),...numbers,
+  hasMore:{...field('has_more'),reportedValue:has('has_more')&&typeof p.has_more==='boolean'?p.has_more:null},
+  nextCursor:{...field('next_cursor'),nonEmpty:has('next_cursor')&&typeof p.next_cursor==='string'?p.next_cursor.length>0:null},
+  completeness:'not_independently_established'};
+}
+export async function inspectSchema(key,{request=requestOnce,broader=false}={}){
  if(!key)return {failedRequirement:'credential missing; no request made'};
- const url=new URL(ENDPOINT);url.search=new URLSearchParams({q:EXACT,limit:'25',page:'1',sort:'date_desc'}).toString();
+ const url=new URL(ENDPOINT);url.search=new URLSearchParams({q:broader?BROAD:EXACT,limit:'25',page:'1',sort:'date_desc'}).toString();
  try{
   const result=await request(url,key);
   if(result?.error||result?.status!==200)return {failedRequirement:'request must return HTTP 200 with parseable bounded JSON'};
-  return schemaDiagnostic(result.body);
+  return broader?{...schemaDiagnostic(result.body),pagination:paginationDiagnostic(result.body?.pagination)}:schemaDiagnostic(result.body);
  }catch{return {failedRequirement:'request failed; no response inspected'};}
 }
 export function redact(output,key){if(key)for(const value of new Set([key,encodeURIComponent(key)]))output=output.split(value).join('[REDACTED]');return output;}
 async function main(){
  if(process.argv[2]==='dry-run'){console.log(JSON.stringify({status:'DRY_RUN_NO_REQUESTS',endpoint:ENDPOINT,authentication:'x-market-api-key header',queries:[EXACT,BROAD],maximumRequests:2,maximumReturnedRows:50}));return;}
+ if(process.argv[2]==='inspect-broad-schema'){
+  claimRun(process.env,BROAD_SCHEMA_APPROVAL);
+  const key=process.env.THE_CARD_API_KEY;
+  console.log(redact(JSON.stringify(await inspectSchema(key,{broader:true})),key));
+  return;
+ }
  if(process.argv[2]==='inspect-schema'){
   claimRun(process.env,SCHEMA_APPROVAL);
   const key=process.env.THE_CARD_API_KEY;

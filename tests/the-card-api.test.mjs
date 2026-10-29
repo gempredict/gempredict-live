@@ -181,3 +181,29 @@ test('empty exact result missing has_more allows only the planned broader GET; m
  }
  let calls=0;const malformed=empty();malformed.pagination.has_more='no';const r=await verify('mock',{request:async()=>{calls++;return {status:200,body:malformed};}});assert.equal(calls,1);assert.equal(r.status,'schema_unrecognized');
 });
+
+import {BROAD_SCHEMA_APPROVAL,paginationDiagnostic} from '../scripts/the-card-api/verify.mjs';
+test('broader schema authorization is unique and preserves owner/branch/first-attempt admission',()=>{
+ assert.ok(![APPROVAL,SCHEMA_APPROVAL,REDIRECT_APPROVAL].includes(BROAD_SCHEMA_APPROVAL));
+ approvedContext({...context(),CARD_APPROVAL:BROAD_SCHEMA_APPROVAL},BROAD_SCHEMA_APPROVAL);
+ assert.throws(()=>approvedContext(context(),BROAD_SCHEMA_APPROVAL));
+ for(const change of [{GITHUB_REF:'refs/heads/main'},{GITHUB_ACTOR_ID:'999'},{GITHUB_RUN_ATTEMPT:'2'}])assert.throws(()=>approvedContext({...context(),CARD_APPROVAL:BROAD_SCHEMA_APPROVAL,...change},BROAD_SCHEMA_APPROVAL));
+ const y=fs.readFileSync('.github/workflows/vision-benchmark.yml','utf8');assert.ok(y.includes(BROAD_SCHEMA_APPROVAL));assert.match(y,/node scripts\/the-card-api\/verify.mjs inspect-broad-schema/);
+});
+test('broader schema uses only the broad query, once, without returning sensitive values or accepting sales',async()=>{
+ let calls=0;const b=body([row({title:'PRIVATE TITLE',price:87654.32,seller:'PRIVATE SELLER',listing_url:'https://private.example/secret'})]);delete b.pagination.has_more;b.pagination.next_cursor='PRIVATE CURSOR';
+ const d=await inspectSchema('mock',{broader:true,request:async(u,key)=>{calls++;assert.equal(u.origin+u.pathname,ENDPOINT);assert.equal(u.searchParams.get('q'),BROAD);assert.equal(u.searchParams.get('limit'),'25');assert.equal(u.searchParams.has('cursor'),false);return {status:200,body:b};}});
+ assert.equal(calls,1);assert.equal(d.returnedArrayLength,1);assert.equal(d.failedRequirement,'pagination.has_more must be boolean');assert.equal(d.pagination.nextCursor.nonEmpty,true);assert.equal(d.pagination.hasMore.reportedValue,null);assert.equal(d.pagination.completeness,'not_independently_established');
+ assert.doesNotMatch(JSON.stringify(d),/PRIVATE|87654|https:|finalPrice|acceptedForValuation/);
+});
+test('pagination diagnostics expose structure and bounded counters without inferring unknown completeness',()=>{
+ for(const p of [undefined,null,[],{}, {has_more:null,next_cursor:null},{has_more:'PRIVATE',next_cursor:'PRIVATE',total:'PRIVATE'},{has_more:false,next_cursor:'',total:0,page:1,limit:25,pages:0}]){
+  const r=paginationDiagnostic(p);assert.equal(r.completeness,'not_independently_established');assert.doesNotMatch(JSON.stringify(r),/PRIVATE/);
+ }
+ assert.equal(paginationDiagnostic({}).hasMore.reportedValue,null);assert.equal(paginationDiagnostic({has_more:false}).hasMore.reportedValue,false);
+});
+test('broader schema failures never retry, fall back to exact, or leak provider errors',async()=>{
+ for(const response of [{status:307},{status:429},{status:200,body:{}},{error:'PRIVATE'}]){
+  let calls=0;const d=await inspectSchema('mock',{broader:true,request:async u=>{calls++;assert.equal(u.searchParams.get('q'),BROAD);return response;}});assert.equal(calls,1);assert.doesNotMatch(JSON.stringify(d),/PRIVATE/);
+ }
+});

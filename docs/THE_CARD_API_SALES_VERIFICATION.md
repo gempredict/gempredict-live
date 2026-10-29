@@ -198,3 +198,30 @@ For the next owner-run sales test, use a fresh dispatch of Private vision
 benchmark, branch restore/phase1-identity-market-matching, mode dry-run,
 confirmation AUTHORIZE_THE_CARD_API_MAX_2_GETS_50_ROWS. Existing owner ID and
 vision-benchmark environment approval requirements remain in force.
+
+## Broader-query schema-only inspection
+
+For the owner-reported broader-query HTTP 200/schema mismatch, use a fresh
+Private vision benchmark dispatch on restore/phase1-identity-market-matching,
+mode dry-run, confirmation
+`AUTHORIZE_THE_CARD_API_ONE_GET_BROAD_SCHEMA_ONLY`.
+The existing owner ID, protected environment and first-attempt checks apply.
+
+This separately authorized mode makes one GET only: q="Pikachu ex", page=1,
+limit=25, sort=date_desc, at the fixed www endpoint with the existing header
+secret. It never makes the exact query, follows a cursor or redirect, retries,
+or accepts sales for valuation. The existing sales validator is unchanged.
+
+Output uses the established structure-only schema report, including returned
+array length, first-record field names/types and exact failed requirement.
+Pagination additionally reports field names/types, safe nonnegative integer
+counters (total/page/limit/pages) when actually provided, the actual boolean
+has_more or null if unavailable, and cursor presence/type/nonempty state only.
+Cursor contents and all record values are withheld. Completeness remains
+not_independently_established, even when the provider reports has_more=false;
+missing metadata never establishes completeness. Unknown names are masked.
+No titles, price values, seller information, source URLs or credentials are
+printed. A new phrase cannot authorize any other diagnostic mode.
+
+Offline verification: 28 Card API tests and 13 CardSight tests passed, along
+with syntax and credential-free dry-run checks. No live request was executed.
