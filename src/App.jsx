@@ -311,7 +311,7 @@ function ImageAnalysisCard({ data, report }) {
 
       <div style={{ padding: "1.1rem 1.25rem" }}>
         <p>AI photo observations are not physical inspection. Suspected defects are unconfirmed; an unassessable area is not evidence of mint condition.</p>
-        {data.visualObservations?.length > 0 && <details data-testid="observation-support"><summary>Observation locations and support</summary><ul>{data.visualObservations.map((finding,index)=><li key={index}>{finding.attribute}: {finding.code.replace(/_/g,' ')} — {finding.certainty || 'unconfirmed'}; {finding.evidence ? `${finding.evidence.side}, region ${finding.evidence.region.join(', ')}, cue ${finding.evidence.cue}, model support ${finding.evidence.confidence}` : 'no qualified localized support'}</li>)}</ul></details>}
+        {data.visualObservations?.length > 0 && <details data-testid="observation-support"><summary>Observation locations and support</summary><p>Model support is the model’s self-reported observation confidence, not a calibrated grading probability or proof of condition.</p><ul>{data.visualObservations.map((finding,index)=><li key={index}>{finding.attribute}: {finding.code === 'no_defect_observed' ? 'no visible defect reported' : finding.code.replace(/_/g,' ')} — {finding.certainty || 'unconfirmed'}; {finding.evidence ? `${finding.evidence.side}, region ${finding.evidence.region.join(', ')}, cue ${finding.evidence.cue}, model support ${finding.evidence.confidence}` : 'no qualified localized support'}</li>)}</ul></details>}
         {/* Image summary */}
         <p style={{ fontSize: "0.875rem", color: C.inkMid, lineHeight: 1.7, marginBottom: "1rem", fontStyle: "italic" }}>
           {data.imageSummary}
@@ -339,7 +339,7 @@ function ImageAnalysisCard({ data, report }) {
               <div key={attr.key} style={{ background: C.cream, border: "1px solid " + C.border, borderRadius: 12, padding: "0.85rem 0.9rem" }}>
                 <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "0.35rem" }}>
                   <span style={{ fontSize: "0.7rem", fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.06em", color: C.inkSoft }}>{attr.label}</span>
-                  <RatingPill rating={rating} label={data.conditionAssessments?.[attr.key]?.state === "suspected_defect" ? "Suspected — unconfirmed" : rating === "unassessed" ? "Unassessable" : undefined} />
+                  <RatingPill rating={rating} label={data.conditionAssessments?.[attr.key]?.state === "no_defect_observed" ? "No visible defect observed" : data.conditionAssessments?.[attr.key]?.state === "suspected_defect" ? "Suspected — unconfirmed" : rating === "unassessed" ? "Unassessable" : undefined} />
                 </div>
                 <p style={{ fontSize: "0.78rem", color: C.inkMid, lineHeight: 1.55, margin: 0 }}>{attr.note || "—"}</p>
               </div>

@@ -175,3 +175,50 @@ test('high confidence alone cannot turn a broad damage region into localized evi
   assert.equal(result[attribute],null);assert.equal(result.conditionAssessments[attribute].state,'unassessable');
  }
 });
+
+import {conditionObservationText} from '../lib/visualEvidence.mjs';
+import {hostedConditionSummary} from './helpers/hostedConditionSummary.mjs';
+test('real hosted excerpt: negative observations never become damage allegations',()=>{
+ assert.equal(hostedConditionSummary.observations[1].modelSupport,.82);
+ for(const finding of hostedConditionSummary.observations.filter(f=>f.code==='no_defect_observed')){
+  assert.match(conditionObservationText(finding),/model reported no visible defect/);
+  assert.doesNotMatch(conditionObservationText(finding),/Possible .*no defect|suspected defect|Visible .*whitening/);
+ }
+ const out=conditionPresentation({visualObservations:hostedConditionSummary.observations},{});
+ for(const attribute of ['surface','corners','edges','centering'])assert.equal(out.conditionAssessments[attribute].state,'unassessable');
+ assert.equal(out.estimatedGrade,null);assert.equal(out.worthGrading,null);
+});
+test('synthetic evidence boundaries keep clean, suspected damage and insufficient evidence separate',()=>{
+ for(const confidence of [.82,.72,.70]){
+  const clean=supportedObservation('surface','no_defect_observed');clean.evidence.confidence=confidence;
+  for(const imageLimitations of [[],['sleeve'],['glare']]){
+   const out=conditionPresentation({visualObservations:[clean],imageLimitations},{});
+   assert.equal(out.conditionAssessments.surface.state,confidence>=.8&&!imageLimitations.length?'no_defect_observed':'unassessable');
+   assert.equal(out.surface,null);assert.equal(out.estimatedGrade,null);
+   assert.doesNotMatch(out.surfaceNote,/Possible|suspected defect/);
+  }
+ }
+ const scratch=supportedObservation('surface','scratches',{certainty:'suspected'});
+ assert.equal(conditionPresentation({visualObservations:[scratch]},{}).conditionAssessments.surface.state,'suspected_defect');
+ scratch.evidence.region=[0,0,1,1];
+ assert.equal(conditionPresentation({visualObservations:[scratch]},{}).conditionAssessments.surface.state,'unassessable');
+ const noMeasure=supportedObservation('centering','off_center');delete noMeasure.evidence.measurement;
+ assert.equal(conditionPresentation({visualObservations:[noMeasure]},{}).conditionAssessments.centering.state,'unassessable');
+});
+test('negative findings remain safe across duplicate, conflict and saved-report re-normalization',()=>{
+ const clean=supportedObservation('surface','no_defect_observed');
+ const scratch=supportedObservation('surface','scratches');
+ const first=conditionPresentation({visualObservations:[clean,scratch]},{});
+ assert.doesNotMatch(first.surfaceNote,/Possible surface no defect/);
+ assert.equal(first.visualObservations.find(f=>f.code==='no_defect_observed').certainty,'unassessable');
+ assert.notEqual(first.conditionAssessments.surface.state,'no_defect_observed');
+ const second=conditionPresentation(first,{});
+ assert.doesNotMatch(second.surfaceNote,/Possible surface no defect/);assert.equal(second.surface,null);
+});
+
+test('clean observations never become grade limiters, damage ratings or gem risk factors',()=>{
+ const out=conditionPresentation({visualObservations:['surface','corners','edges'].map(attribute=>supportedObservation(attribute,'no_defect_observed'))},{});
+ assert.deepEqual(out.gemRiskFactors,[]);assert.doesNotMatch(out.primaryLimiter,/documented area/);
+ assert.equal(out.worthGrading,null);assert.equal(out.estimatedGrade,null);
+ for(const attribute of ['surface','corners','edges']){assert.equal(out[attribute],null);assert.equal(out.conditionAssessments[attribute].state,'no_defect_observed');}
+});

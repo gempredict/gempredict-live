@@ -1,3 +1,4 @@
+import {hostedConditionSummary} from './helpers/hostedConditionSummary.mjs';
 // Rendered contract regressions with mocked vision/catalog/market transports.
 // These assertions do not prove physical-card or model accuracy.
 import assert from 'node:assert/strict';import {createRequire} from 'node:module';import {spawn} from 'node:child_process';import {setTimeout as delay} from 'node:timers/promises';
@@ -61,6 +62,32 @@ try{
   assert.match(body,/Physical printing.*unverified/);assert.match(body,/Valuation and grading ROI withheld/);
   assert.doesNotMatch(body,/Grade It|Skip It/);await page.close();
   console.log('PASS mocked local-identity rendered report: '+(supported?'verified printed identity':'specific set/language confirmation'));
+ }
+ // Primary owner-reported excerpt has no invented regions; synthetic qualified
+ // geometry separately exercises the unchanged confidence boundary in the UI.
+ for(const qualifiedGeometry of [false,true]){
+  const visualObservations=hostedConditionSummary.observations.map(f=>{
+   if(!qualifiedGeometry||f.code!=='no_defect_observed')return {...f};
+   const finding=supportedObservation(f.attribute,f.code);finding.evidence.confidence=f.modelSupport;return finding;
+  });
+  const base=liveReportScenario();
+  const result=await runPipeline({...base,vision:{...base.vision,visualObservations,imageLimitations:[],identityReadings:readings},market:[]});
+  const page=await browser.newPage();
+  await page.route('**/*',r=>r.request().url().startsWith('http://127.0.0.1:3100')?r.continue():r.abort());
+  await page.addInitScript(report=>localStorage.setItem('gp_saved_reports',JSON.stringify([report])),result.report);
+  await page.goto('http://127.0.0.1:3100',{waitUntil:'domcontentloaded'});await page.getByRole('button',{name:'Load',exact:true}).click();
+  let body=await page.locator('body').innerText();
+  assert.doesNotMatch(body,/Possible (surface|corners|edges) no defect|Suspected — unconfirmed/);
+  assert.match(body,/model reported no visible defect/);
+  if(qualifiedGeometry)assert.equal(await page.getByText('No visible defect observed',{exact:true}).count(),1);
+  assert.equal(result.report.imageAnalysis.conditionAssessments.centering.state,'unassessable');
+  for(const attribute of ['corners','edges'])assert.equal(result.report.imageAnalysis.conditionAssessments[attribute].state,'unassessable');
+  assert.equal(result.report.atlas,null);assert.equal(result.report.imageAnalysis.estimatedGrade,null);
+  await page.getByTestId('observation-support').locator('summary').click();
+  assert.match(await page.getByTestId('observation-support').innerText(),/not a calibrated grading probability/);
+  await page.reload({waitUntil:'domcontentloaded'});await page.getByRole('button',{name:'Load',exact:true}).click();
+  body=await page.locator('body').innerText();assert.doesNotMatch(body,/Possible (surface|corners|edges) no defect/);
+  await page.close();console.log('PASS clean-observation semantics: '+(qualifiedGeometry?'synthetic qualified evidence':'owner-reported hosted excerpt; missing evidence preserved'));
  }
  const codecFile='tests/fixtures/mobile/example.heic';
  const spec={path:codecFile,sha256:hash(readFileSync(codecFile))};
