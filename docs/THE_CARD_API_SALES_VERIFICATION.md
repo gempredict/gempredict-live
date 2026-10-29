@@ -1,0 +1,89 @@
+# Milestone 1C: owner-run The Card API sales diagnostic
+
+Prepared against restoration head `9c8f9a53e926a0c7cecd8ff34522f901259b5980`.
+No live API requests were executed while preparing this change.
+
+## Documented contract (checked 2026-10-29)
+
+Source: https://www.thecardapi.com/docs — Authentication, GET /sales,
+Response schema, Best Offer price states, and Rate limits.
+
+The sales REST endpoint is `https://thecardapi.com/api/v1/market/sales`.
+Authentication is the `x-market-api-key` request header, using the existing
+`THE_CARD_API_KEY` repository secret. Catalog documentation also mentions
+`x-api-key`; this diagnostic uses the sales-specific authentication section.
+Do not paste the secret into workflow inputs or logs.
+
+The response envelope has `data`, `pagination`, and `meta`. This diagnostic
+checks the bounded data array, page/limit/total/has_more, and the sale fields
+it consumes: id, platform, title, listing_type, sale_date, sold_at, price,
+original_price, currency, price_confirmed. It stops on incompatible schema.
+Only positive confirmed amounts with valid nonfuture completion dates are
+reported as final prices. `fixed_price` here describes a sold listing, unlike
+an active asking-price feed. `best_offer` is reported separately, including
+completed observations with unknown accepted consideration. `original_price`
+always remains a separate asking-price field; it never fills a missing final
+price. Currency remains explicit; no conversion or valuation is performed.
+
+Exact query: `2026 "Pikachu ex" "30th Celebration" "149/128" (SIR,"special illustration rare")`.
+Only if the first response has no exact dated title candidate, one broader
+query, `"Pikachu ex"`, is permitted. Each requests page 1, limit 25, sort
+`date_desc`. Neither pagination nor a second API, catalog, quota, health,
+listing-detail or authentication probe is allowed. Errors stop immediately.
+Native HTTPS has no retries and does not follow redirects. A redirect can
+therefore fail safely rather than silently consume another request.
+
+The target is 2026 Pokémon 30th Celebration Pikachu ex #149/128 SIR.
+Returned variants lacking complete title evidence, or with conflicting
+structured identity or variant labels, are explicitly unmatched. Even full
+title candidates require owner review of the printing, language and source.
+Provider observations do not independently prove settlement. Source eBay links
+are canonicalized; other URLs and unknown provider fields are omitted.
+
+Maximum: two GETs and 50 returned sales rows. The documented allowance is
+row-based; the key's current plan/lookback and remaining allowance apply.
+No purchases, plan upgrades, AI calls or monetary billing-cap claim are made.
+No exact result on these pages does not establish global absence of sales.
+
+## Browser authorization — owner only
+
+1. Open https://github.com/gempredict/gempredict-live/actions/workflows/vision-benchmark.yml
+   (the existing **Private vision benchmark** workflow).
+2. Click **Run workflow** and select branch
+   **restore/phase1-identity-market-matching**. Check it contains the delivered
+   commit before dispatch; do not select main.
+3. Set **mode** to **dry-run**.
+4. Set **confirmation** to exactly
+   **AUTHORIZE_THE_CARD_API_MAX_2_GETS_50_ROWS**.
+5. Click **Run workflow** using the account whose numeric actor ID matches the
+   existing **VISION_BENCH_OWNER_ID** Actions variable. The account running this
+   workflow must be that owner; another account's dispatch is skipped.
+6. If the existing **vision-benchmark** environment requires approval, review
+   and approve only the **The Card API sales verification** job on that branch.
+   Existing environment protection and allowed-branch rules remain in force.
+7. Read the job's sanitized JSON output and run summary. Confirm revision,
+   request count, result categories, exact candidates and coverage limits.
+   No raw response artifact is uploaded. Do not rerun failed jobs: attempt 2+
+   is blocked. A fresh dispatch is a separate authorization and can consume
+   another allowance; review the first result before deciding.
+
+The ordinary credential-free dry-run prerequisite still runs. With these exact
+inputs the paid vision job and CardSight job are skipped. The vision live-enable
+variable is not needed for this separate read-only sales job and should not be
+changed. Only this job's final step receives THE_CARD_API_KEY. It has read-only
+repository permissions, SHA-pinned actions, a 3-minute timeout, an exclusive
+per-run sentinel, and shares the existing noncancelling concurrency group.
+Main, Vercel Production and scanner/application files are not modified.
+
+## Offline checks
+
+Run from the restoration checkout:
+
+    node --test tests/the-card-api.test.mjs tests/cardsight-access.test.mjs
+    node scripts/the-card-api/verify.mjs dry-run
+
+These tests use synthetic fixtures and mocked HTTPS only. The 11 new tests and
+13 existing CardSight tests passed locally. The existing vision suites could
+not load because this runtime's preinstalled dependency tree lacks a resolvable
+`sharp` package; dependency installation is also unavailable through its failed
+shell proxy. Their existing GitHub Actions prerequisite is retained unchanged.
