@@ -35,12 +35,13 @@ export function validateSchema(body){
  const require=(ok,requirement)=>{if(!ok)throw Error('schema_unrecognized: '+requirement);};
  require(Array.isArray(body?.data),'data must be an array');
  require(body.data.length<=25,'data length must be at most 25');
- require(!!p,'pagination must exist and be non-null');
+ require(!!p&&typeof p==='object'&&!Array.isArray(p),'pagination must exist and be non-null');
  require(Number.isInteger(p.total),'pagination.total must be an integer');
  require(p.total>=body.data.length,'pagination.total must be at least data length');
  require(p.page===1,'pagination.page must equal 1');
  require(p.limit===25,'pagination.limit must equal 25');
- require(typeof p.has_more==='boolean','pagination.has_more must be boolean');
+ // Observed empty pages may omit has_more. Absence is unknown, never false.
+ require((body.data.length===0&&!Object.hasOwn(p,'has_more'))||typeof p.has_more==='boolean','pagination.has_more must be boolean');
  require(!!body.meta&&typeof body.meta==='object','meta must exist and be a non-null object');
  for(const r of body.data){
   require(!!r,'each record must be non-null');
@@ -64,7 +65,7 @@ export function summarize(body,now=Date.now()){
   const kind=!dated?'unverified_completion':r.listing_type==='best_offer'?(confirmed?'accepted_offer_confirmed_amount':'accepted_offer_amount_unknown'):confirmed?'completed_sale_confirmed_amount':'completed_sale_amount_unconfirmed';
   return {id:text(r.id),platform:text(r.platform),title:text(r.title),identity:exactCandidate(r)?'exact_title_candidate':'unmatched_variant_or_insufficient_identity',kind,listingType:r.listing_type,saleDate:dated?r.sale_date:null,finalPrice:confirmed?r.price:null,originalAskingPrice:r.original_price,currency:r.currency,sourceUrl:listingUrl(r.listing_url)};
  });
- return {returned:rows.length,total:p.total,hasMore:p.has_more,exactResults:rows.filter(r=>r.identity==='exact_title_candidate'&&r.kind!=='unverified_completion').length,confirmedExactSales:rows.filter(r=>r.identity==='exact_title_candidate'&&r.finalPrice!==null).length,rows};
+ return {returned:rows.length,total:p.total,hasMore:Object.hasOwn(p,'has_more')?p.has_more:null,exactResults:rows.filter(r=>r.identity==='exact_title_candidate'&&r.kind!=='unverified_completion').length,confirmedExactSales:rows.filter(r=>r.identity==='exact_title_candidate'&&r.finalPrice!==null).length,rows};
 }
 // Native HTTPS has no retry or redirect logic; bound each response and total time.
 export function requestOnce(url,key,{headersOnly=false}={}){
@@ -96,7 +97,7 @@ export async function verify(key,{request=requestOnce,now=Date.now()}={}){
   try{entry.result=summarize(result.body,now);}catch{return {...report,status:'schema_unrecognized'};}
   if(entry.result.exactResults>0)break;
  }
- return {...report,status:'sales_response_observed',limitations:['Provider-reported completed observations; title candidates require owner review of variant, language and source listing.','Accepted offers without confirmed final amounts retain asks separately; asks never become sale prices.','One page per query; plan lookback and pagination limit coverage. No exact match is not proof of no sales.','No price aggregation, scanner integration, AI calls, purchases, upgrades or subscription changes.']};
+ return {...report,status:'sales_response_observed',limitations:['Provider-reported completed observations; title candidates require owner review of variant, language and source listing.','Accepted offers without confirmed final amounts retain asks separately; asks never become sale prices.','One page per query; plan lookback and pagination limit coverage. hasMore=null means not reported, not complete. No exact match is not proof of no sales.','No price aggregation, scanner integration, AI calls, purchases, upgrades or subscription changes.']};
 }
 export function claimRun(e,approval=APPROVAL){approvedContext(e,approval);fs.closeSync(fs.openSync(path.join(e.RUNNER_TEMP,`the-card-api-${e.GITHUB_RUN_ID}.attempted`),'wx',0o600));}
 // Report known public route/query values only; never echo unknown URL components.

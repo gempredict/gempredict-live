@@ -165,3 +165,36 @@ sales and diagnostic modes. Identity, dated-completion and confirmed-price
 processing remains unchanged; asks never fill final-price gaps. Offline checks:
 21 sales/diagnostic tests plus 13 CardSight tests passed, syntax check and
 credential-free dry-run passed. No live requests executed during implementation.
+
+## Empty-result pagination compatibility
+
+The owner-authorized schema diagnostic returned an empty data array and stopped
+at the has_more requirement after the total/page/limit checks passed. The official
+sales docs (https://www.thecardapi.com/docs, rechecked 2026-10-29) show has_more in
+a populated example, but do not define a separate empty-result example.
+
+Only an absent has_more on an otherwise valid empty data page is now tolerated.
+It is represented in the diagnostic summary as hasMore=null (not reported /
+unknown), never as false or evidence of completeness. Explicit nonboolean
+has_more values still fail. Pagination must remain an object with a nonnegative
+integer total, requested page 1 and limit 25. Missing required pagination fields
+still fail. Pages with actual sale records still require boolean has_more and
+all existing record checks. Response objects are not mutated or filled in.
+
+An empty exact-card page therefore permits the existing single broader Pikachu
+ex search. Neither result completeness nor global absence is inferred from an
+empty page. There are still at most two GETs and 50 returned rows, without
+pagination requests, retries or redirects. Sale identity, completion dates,
+price confirmation, provenance and grading treatment are unchanged; no records
+are automatically accepted for valuation.
+
+Offline tests use a synthetic fixture reproducing the established empty-response
+shape, not invented captured numeric values. They cover absent/invalid pagination,
+unknown completeness, unchanged nonempty record requirements, and the two-request
+broader-search decision. All 24 Card API tests and 13 CardSight tests passed,
+plus syntax and credential-free dry-run checks. No live API requests were made.
+
+For the next owner-run sales test, use a fresh dispatch of Private vision
+benchmark, branch restore/phase1-identity-market-matching, mode dry-run,
+confirmation AUTHORIZE_THE_CARD_API_MAX_2_GETS_50_ROWS. Existing owner ID and
+vision-benchmark environment approval requirements remain in force.

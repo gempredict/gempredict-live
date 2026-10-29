@@ -154,3 +154,30 @@ test('schema mode is separately authorized, consumes at most one GET and never b
  let calls=0;await inspectSchema('',{request:async()=>{calls++;}});assert.equal(calls,0);
  const y=fs.readFileSync('.github/workflows/vision-benchmark.yml','utf8');assert.ok(y.includes(SCHEMA_APPROVAL));assert.match(y,/node scripts\/the-card-api\/verify.mjs inspect-schema/);
 });
+
+test('observed empty-results shape may omit has_more without inferring completeness or mutating response',()=>{
+ // Reconstruct only the shape established by the owner log and prior successful
+ // validators; numeric values below are synthetic, not claimed captured values.
+ const empty={data:[],pagination:{total:0,page:1,limit:25},meta:{}};
+ const before=JSON.stringify(empty);const r=summarize(empty,now);
+ assert.equal(r.returned,0);assert.equal(r.exactResults,0);assert.equal(r.hasMore,null);
+ assert.equal(Object.hasOwn(empty.pagination,'has_more'),false);assert.equal(JSON.stringify(empty),before);
+ assert.equal(schemaDiagnostic(empty).failedRequirement,null);
+ // Even reported totals above zero do not turn an empty page into completeness.
+ const partial=structuredClone(empty);partial.pagination.total=20;assert.equal(summarize(partial,now).hasMore,null);
+});
+test('empty-results exception rejects malformed pagination and never applies to actual sale rows',()=>{
+ const empty=()=>({data:[],pagination:{total:0,page:1,limit:25},meta:{}});
+ for(const p of [undefined,null,[],0,'private',{}, {total:-1,page:1,limit:25},{total:'0',page:1,limit:25},{total:0,page:2,limit:25},{total:0,page:1,limit:50}])assert.throws(()=>summarize({...empty(),pagination:p},now));
+ for(const bad of [null,'false',0,{},[]]){const b=empty();b.pagination.has_more=bad;assert.throws(()=>summarize(b,now));}
+ for(const field of ['total','page','limit']){const b=empty();delete b.pagination[field];assert.throws(()=>summarize(b,now));}
+ const populated=body([row()]);delete populated.pagination.has_more;assert.throws(()=>summarize(populated,now),/has_more/);
+});
+test('empty exact result missing has_more allows only the planned broader GET; malformed page stops',async()=>{
+ const empty=()=>({data:[],pagination:{total:0,page:1,limit:25},meta:{}});
+ for(const second of [empty(),body([row()])]){
+  let calls=0;const r=await verify('mock',{now,request:async u=>{calls++;assert.equal(u.searchParams.get('q'),calls===1?EXACT:BROAD);assert.equal(u.searchParams.get('limit'),'25');return {status:200,body:calls===1?empty():second};}});
+  assert.equal(calls,2);assert.equal(r.maximumRequests,2);assert.equal(r.maximumReturnedRows,50);assert.equal(r.requests[0].result.hasMore,null);assert.equal(r.status,'sales_response_observed');
+ }
+ let calls=0;const malformed=empty();malformed.pagination.has_more='no';const r=await verify('mock',{request:async()=>{calls++;return {status:200,body:malformed};}});assert.equal(calls,1);assert.equal(r.status,'schema_unrecognized');
+});
