@@ -124,7 +124,7 @@ jobs:
     needs: dry-run
     if: >-
       inputs.mode == 'dry-run' &&
-      (inputs.confirmation == 'AUTHORIZE_THE_CARD_API_MAX_2_GETS_50_ROWS' || inputs.confirmation == 'AUTHORIZE_THE_CARD_API_ONE_GET_REDIRECT_HEADERS_ONLY') &&
+      (inputs.confirmation == 'AUTHORIZE_THE_CARD_API_MAX_2_GETS_50_ROWS' || inputs.confirmation == 'AUTHORIZE_THE_CARD_API_ONE_GET_REDIRECT_HEADERS_ONLY' || inputs.confirmation == 'AUTHORIZE_THE_CARD_API_ONE_GET_SCHEMA_ONLY') &&
       github.repository == 'gempredict/gempredict-live' &&
       github.ref == 'refs/heads/restore/phase1-identity-market-matching' &&
       github.run_attempt == 1 &&
@@ -153,6 +153,8 @@ jobs:
         run: |
           if [ "$CARD_APPROVAL" = 'AUTHORIZE_THE_CARD_API_ONE_GET_REDIRECT_HEADERS_ONLY' ]; then
             node scripts/the-card-api/verify.mjs inspect-redirect
+          elif [ "$CARD_APPROVAL" = 'AUTHORIZE_THE_CARD_API_ONE_GET_SCHEMA_ONLY' ]; then
+            node scripts/the-card-api/verify.mjs inspect-schema
           else
             node scripts/the-card-api/verify.mjs live
           fi

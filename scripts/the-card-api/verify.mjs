@@ -4,6 +4,7 @@ import fs from 'node:fs';
 import path from 'node:path';
 import {fileURLToPath} from 'node:url';
 export const APPROVAL='AUTHORIZE_THE_CARD_API_MAX_2_GETS_50_ROWS';
+export const SCHEMA_APPROVAL='AUTHORIZE_THE_CARD_API_ONE_GET_SCHEMA_ONLY';
 export const REDIRECT_APPROVAL='AUTHORIZE_THE_CARD_API_ONE_GET_REDIRECT_HEADERS_ONLY';
 export const ENDPOINT='https://www.thecardapi.com/api/v1/market/sales';
 export const EXACT='2026 "Pikachu ex" "30th Celebration" "149/128" (SIR,"special illustration rare")';
@@ -29,11 +30,35 @@ export function exactCandidate(r){
  if(r.card_set!=null&&norm(r.card_set).replace(/^2026/,'').replace(/^pokemon/,'')!=='30thcelebration')return false;
  return true;
 }
-export function summarize(body,now=Date.now()){
+export function validateSchema(body){
  const p=body?.pagination;
- if(!Array.isArray(body?.data)||body.data.length>25||!p||!Number.isInteger(p.total)||p.total<body.data.length||p.page!==1||p.limit!==25||typeof p.has_more!=='boolean'||!body.meta||typeof body.meta!=='object')throw Error('schema_unrecognized');
+ const require=(ok,requirement)=>{if(!ok)throw Error('schema_unrecognized: '+requirement);};
+ require(Array.isArray(body?.data),'data must be an array');
+ require(body.data.length<=25,'data length must be at most 25');
+ require(!!p,'pagination must exist and be non-null');
+ require(Number.isInteger(p.total),'pagination.total must be an integer');
+ require(p.total>=body.data.length,'pagination.total must be at least data length');
+ require(p.page===1,'pagination.page must equal 1');
+ require(p.limit===25,'pagination.limit must equal 25');
+ require(typeof p.has_more==='boolean','pagination.has_more must be boolean');
+ require(!!body.meta&&typeof body.meta==='object','meta must exist and be a non-null object');
+ for(const r of body.data){
+  require(!!r,'each record must be non-null');
+  for(const field of ['id','platform','title'])require(typeof r[field]==='string',field+' must be string');
+  require(r.title.length<=2000,'title length must be at most 2000');
+  require(['auction','fixed_price','best_offer'].includes(r.listing_type),'listing_type must be auction, fixed_price or best_offer');
+  require(typeof r.price_confirmed==='boolean','price_confirmed must be boolean');
+  require(money(r.price),'price must be null or a finite number from 0 to below 1000000000');
+  require(money(r.original_price),'original_price must be null or a finite number from 0 to below 1000000000');
+  require(/^[A-Z]{3}$/.test(r.currency),'currency must match three uppercase letters');
+  require(typeof r.sale_date==='string','sale_date must be string');
+  require(typeof r.sold_at==='string','sold_at must be string');
+ }
+}
+export function summarize(body,now=Date.now()){
+ validateSchema(body);
+ const p=body.pagination;
  const rows=body.data.map(r=>{
-  if(!r||typeof r.id!=='string'||typeof r.platform!=='string'||typeof r.title!=='string'||r.title.length>2000||!['auction','fixed_price','best_offer'].includes(r.listing_type)||typeof r.price_confirmed!=='boolean'||!money(r.price)||!money(r.original_price)||! /^[A-Z]{3}$/.test(r.currency)||typeof r.sale_date!=='string'||typeof r.sold_at!=='string')throw Error('schema_unrecognized');
   const dated=date(r.sale_date,now)&&/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(?:\.\d+)?Z$/.test(r.sold_at)&&Number.isFinite(Date.parse(r.sold_at))&&Date.parse(r.sold_at)<=now&&r.sold_at.slice(0,10)===r.sale_date;
   const confirmed=dated&&r.price_confirmed&&r.price!==null&&r.price>0;
   const kind=!dated?'unverified_completion':r.listing_type==='best_offer'?(confirmed?'accepted_offer_confirmed_amount':'accepted_offer_amount_unknown'):confirmed?'completed_sale_confirmed_amount':'completed_sale_amount_unconfirmed';
@@ -99,9 +124,42 @@ export async function inspectRedirect(key,{request=requestOnce}={}){
   return {httpStatus:Number.isInteger(result?.httpStatus)?result.httpStatus:null,location:sanitizeLocation(result?.location,url)};
  }catch{return {httpStatus:null,location:null};}
 }
+const jsonType=v=>v===undefined?'missing':v===null?'null':Array.isArray(v)?'array':typeof v;
+// Provider key names are untrusted too. Emit known schema names only.
+const knownNames=new Set('data pagination meta total page limit pages has_more next_cursor coverage_date_from coverage_date_to platforms_covered generated_at id platform listing_type title sale_date sold_at price original_price currency price_confirmed bids image_url thumbnail_url listing_url cert condition grade grader grading_company has_autograph_grade has_grade_qualifier label grade_qualifier autograph_grade player manufacturer card_set card_number year season league sport team features print_run shipping_price category'.split(' '));
+function fieldTypes(v){
+ if(v===null||typeof v!=='object'||Array.isArray(v))return [];
+ return Object.keys(v).slice(0,64).map((key,i)=>({name:knownNames.has(key)?key:'[unknown_field_'+i+']',type:jsonType(v[key])}));
+}
+export function schemaDiagnostic(body){
+ let failedRequirement=null;
+ try{validateSchema(body);}catch(e){failedRequirement=e.message.startsWith('schema_unrecognized: ')?e.message.slice(21):'validator could not evaluate the response';}
+ const envelope={};
+ for(const name of ['data','pagination','meta']){
+  const exists=body!==null&&typeof body==='object'&&Object.hasOwn(body,name);
+  envelope[name]={exists,type:exists?jsonType(body[name]):'missing'};
+ }
+ const first=Array.isArray(body?.data)&&body.data.length?body.data[0]:undefined;
+ return {topLevelType:jsonType(body),topLevelFields:fieldTypes(body),envelope,returnedArrayLength:Array.isArray(body?.data)?body.data.length:null,firstRecordType:jsonType(first),firstRecordFields:fieldTypes(first),failedRequirement};
+}
+export async function inspectSchema(key,{request=requestOnce}={}){
+ if(!key)return {failedRequirement:'credential missing; no request made'};
+ const url=new URL(ENDPOINT);url.search=new URLSearchParams({q:EXACT,limit:'25',page:'1',sort:'date_desc'}).toString();
+ try{
+  const result=await request(url,key);
+  if(result?.error||result?.status!==200)return {failedRequirement:'request must return HTTP 200 with parseable bounded JSON'};
+  return schemaDiagnostic(result.body);
+ }catch{return {failedRequirement:'request failed; no response inspected'};}
+}
 export function redact(output,key){if(key)for(const value of new Set([key,encodeURIComponent(key)]))output=output.split(value).join('[REDACTED]');return output;}
 async function main(){
  if(process.argv[2]==='dry-run'){console.log(JSON.stringify({status:'DRY_RUN_NO_REQUESTS',endpoint:ENDPOINT,authentication:'x-market-api-key header',queries:[EXACT,BROAD],maximumRequests:2,maximumReturnedRows:50}));return;}
+ if(process.argv[2]==='inspect-schema'){
+  claimRun(process.env,SCHEMA_APPROVAL);
+  const key=process.env.THE_CARD_API_KEY;
+  console.log(redact(JSON.stringify(await inspectSchema(key)),key));
+  return;
+ }
  if(process.argv[2]==='inspect-redirect'){
   claimRun(process.env,REDIRECT_APPROVAL);
   const key=process.env.THE_CARD_API_KEY;

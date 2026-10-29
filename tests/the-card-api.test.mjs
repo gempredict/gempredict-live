@@ -119,3 +119,38 @@ test('canonical endpoint is fixed to verified www hostname; apex is rejected bef
  assert.equal(ENDPOINT,'https://www.thecardapi.com/api/v1/market/sales');
  assert.throws(()=>requestOnce(new URL('https://thecardapi.com/api/v1/market/sales'),'mock'),/endpoint_rejected/);
 });
+
+import {SCHEMA_APPROVAL,validateSchema,schemaDiagnostic,inspectSchema} from '../scripts/the-card-api/verify.mjs';
+test('schema diagnostic reports structure and exact requirement, never response values or unsafe field names',()=>{
+ const b=body([row({price_confirmed:undefined,seller:'PRIVATE SELLER',api_key:'PRIVATE KEY','PRIVATE TITLE AS KEY':99})]);
+ const d=schemaDiagnostic(b);
+ assert.equal(d.failedRequirement,'price_confirmed must be boolean');assert.equal(d.topLevelType,'object');assert.equal(d.returnedArrayLength,1);
+ assert.deepEqual(d.envelope.data,{exists:true,type:'array'});assert.ok(d.firstRecordFields.some(f=>f.name==='price'&&f.type==='number'));
+ assert.doesNotMatch(JSON.stringify(d),/PRIVATE|2026 Pokémon|ebay-123|https:|originalAskingPrice|80|100/);
+ assert.equal(schemaDiagnostic(null).failedRequirement,'data must be an array');
+ assert.equal(schemaDiagnostic(body([])).failedRequirement,null);
+ const x=body([]);delete x.meta;assert.equal(schemaDiagnostic(x).failedRequirement,'meta must exist and be a non-null object');assert.deepEqual(schemaDiagnostic(x).envelope.meta,{exists:false,type:'missing'});
+});
+test('shared validator identifies each existing envelope and record constraint without relaxing it',()=>{
+ const cases=[['data must be an array',b=>{b.data={};}],['data length must be at most 25',b=>{b.data=Array.from({length:26},()=>row());}],['pagination must exist and be non-null',b=>{b.pagination=null;}],['pagination.total must be an integer',b=>{b.pagination.total='1';}],['pagination.total must be at least data length',b=>{b.pagination.total=0;}],['pagination.page must equal 1',b=>{b.pagination.page=2;}],['pagination.limit must equal 25',b=>{b.pagination.limit=1;}],['pagination.has_more must be boolean',b=>{delete b.pagination.has_more;}],['meta must exist and be a non-null object',b=>{delete b.meta;}]];
+ for(const [reason,mutate] of cases){const b=body([row()]);mutate(b);assert.equal(schemaDiagnostic(b).failedRequirement,reason);assert.throws(()=>summarize(b,now));}
+ for(const field of ['id','platform','title','listing_type','price_confirmed','price','original_price','currency','sale_date','sold_at']){const b=body([row()]);delete b.data[0][field];assert.ok(schemaDiagnostic(b).failedRequirement.startsWith(field));assert.throws(()=>summarize(b,now));}
+ const later=body([row(),row({price_confirmed:null})]);assert.equal(schemaDiagnostic(later).failedRequirement,'price_confirmed must be boolean');
+ validateSchema(body([row({listing_type:'best_offer',price:null,price_confirmed:false})]));
+ assert.equal(summarize(body([row({listing_type:'best_offer',price:null,price_confirmed:false})]),now).rows[0].finalPrice,null);
+});
+test('schema type reports handle scalars, arrays, null, empty data and bounded malicious object keys',()=>{
+ for(const v of [null,[],1,'PRIVATE',true]){const d=schemaDiagnostic(v);assert.equal(d.returnedArrayLength,null);assert.deepEqual(d.topLevelFields,[]);assert.doesNotMatch(JSON.stringify(d),/PRIVATE/);}
+ const b=body([null]);assert.equal(schemaDiagnostic(b).firstRecordType,'null');assert.equal(schemaDiagnostic(b).failedRequirement,'each record must be non-null');
+ assert.equal(schemaDiagnostic(body([])).firstRecordType,'missing');
+ const hostile=Object.fromEntries(Array.from({length:100},(_,i)=>['PRIVATE_'+i,'PRIVATE_VALUE']));assert.equal(schemaDiagnostic(hostile).topLevelFields.length,64);assert.doesNotMatch(JSON.stringify(schemaDiagnostic(hostile)),/PRIVATE/);
+});
+test('schema mode is separately authorized, consumes at most one GET and never broadens on schema or request failure',async()=>{
+ approvedContext({...context(),CARD_APPROVAL:SCHEMA_APPROVAL},SCHEMA_APPROVAL);
+ assert.throws(()=>approvedContext(context(),SCHEMA_APPROVAL));assert.throws(()=>approvedContext({...context(),CARD_APPROVAL:SCHEMA_APPROVAL}));
+ for(const response of [{status:200,body:body([row()])},{status:200,body:{}},{status:307},{status:429},{error:'PRIVATE'}]){
+  let calls=0;const d=await inspectSchema('mock',{request:async(u,key)=>{calls++;assert.equal(u.origin+u.pathname,ENDPOINT);assert.equal(u.searchParams.get('q'),EXACT);assert.equal(u.searchParams.get('limit'),'25');return response;}});assert.equal(calls,1);assert.doesNotMatch(JSON.stringify(d),/PRIVATE|Pikachu|https:/);
+ }
+ let calls=0;await inspectSchema('',{request:async()=>{calls++;}});assert.equal(calls,0);
+ const y=fs.readFileSync('.github/workflows/vision-benchmark.yml','utf8');assert.ok(y.includes(SCHEMA_APPROVAL));assert.match(y,/node scripts\/the-card-api\/verify.mjs inspect-schema/);
+});

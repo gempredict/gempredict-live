@@ -126,3 +126,42 @@ phrase `AUTHORIZE_THE_CARD_API_MAX_2_GETS_50_ROWS`, mode `dry-run`, and the
 restoration branch for one fresh owner-dispatched sales run.
 Offline verification: 17 sales/redirect tests and 13 CardSight tests passed,
 plus syntax check and credential-free dry-run. No live API requests executed.
+
+## One-request schema-only diagnostic
+
+The owner reported HTTP 200 / schema_unrecognized at revision
+`d14ec22a671115f555d9c0c60ccc188de6c8749d`. The response values were not logged;
+the cause is not yet established. The official documentation (rechecked
+2026-10-29, https://www.thecardapi.com/docs, Response schema and Best Offer price
+states) still describes data/pagination/meta and price_confirmed. Its pagination
+example includes total, page, limit and has_more. No undocumented defaults or
+missing fields are synthesized in this change.
+
+For one schema diagnostic, use the existing Private vision benchmark workflow:
+branch `restore/phase1-identity-market-matching`, mode `dry-run`, confirmation
+`AUTHORIZE_THE_CARD_API_ONE_GET_SCHEMA_ONLY`. Dispatch a fresh run as the
+configured owner, and approve the existing vision-benchmark environment if
+required. The sales and redirect authorization phrases cannot authorize this
+mode. Owner, branch, first-attempt and exclusive per-run sentinel checks remain.
+
+This mode requests only the first exact-search page (25-row limit), once.
+There is no broader search, pagination, retry or redirect following. It uses
+the existing x-market-api-key header only at the fixed www endpoint. The normal
+sales mode retains its two-request/50-row maximum.
+
+Live diagnostic output contains only top-level JSON type and field names/types,
+presence/types of data/pagination/meta, returned data array length, first-record
+type and field names/types, and the first failed validator requirement (null if
+none). Field descriptions are bounded to 64 entries. Documented field names are
+retained; unknown names are replaced with numbered unknown_field placeholders,
+since arbitrary JSON keys could themselves contain credentials or private data.
+No field values, titles, seller details, prices, URLs or raw responses are
+printed. Credential redaction still applies. Request/JSON failures produce only
+a fixed failure requirement, never provider errors. The diagnostic does not
+claim successful sales validation or valuation.
+
+The existing validator predicates were extracted into named checks shared by
+sales and diagnostic modes. Identity, dated-completion and confirmed-price
+processing remains unchanged; asks never fill final-price gaps. Offline checks:
+21 sales/diagnostic tests plus 13 CardSight tests passed, syntax check and
+credential-free dry-run passed. No live requests executed during implementation.
