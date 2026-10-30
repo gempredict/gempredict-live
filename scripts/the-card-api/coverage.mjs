@@ -4,7 +4,7 @@ import {fileURLToPath} from 'node:url';
 import {ENDPOINT,claimRun,requestOnce,validateSchema,pageAvailability,redact} from './verify.mjs';
 import {adaptTheCardApi} from '../../lib/providers/theCardApiAdapter.mjs';
 import {catalogNameKey,catalogLanguageKey,catalogVariantKey} from '../../lib/catalogNormalization.mjs';
-import {validEvidenceDate} from '../../lib/completedSales.mjs';
+import {completionDateCheck} from '../../lib/providers/theCardApiDates.mjs';
 export const COVERAGE_APPROVAL='AUTHORIZE_THE_CARD_API_BROAD_THREE_SEARCHES_75_ROWS';
 export const CASES=Object.freeze([
  Object.freeze({id:'A',category:'high_volume_pokemon',subject:'Charizard ex',year:'2023',brandSet:'Scarlet & Violet 151',cardNumber:'006/165',language:'English',rarity:'Double Rare',parallel:'Holo',aliases:Object.freeze(['SV: Scarlet & Violet 151','Scarlet & Violet 151','Scarlet and Violet 151']),q:'"Charizard ex"',filters:Object.freeze({})}),
@@ -14,19 +14,21 @@ export const CASES=Object.freeze([
 const isDay=(v,now)=>typeof v==='string'&&/^\d{4}-\d{2}-\d{2}$/.test(v)&&Number.isFinite(Date.parse(v))&&new Date(v).toISOString().slice(0,10)===v&&Date.parse(v)<=now;
 const number=v=>typeof v==='string'?v.replace(/^#\s*/,'').replace(/\s/g,'').toLowerCase():'';
 const positive=v=>typeof v==='number'&&Number.isFinite(v)&&v>0;
-const actualTimestamp=(v,now)=>typeof v==='string'&&/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(?:\.\d{1,9})?(?:Z|[+-]\d{2}:\d{2})$/.test(v)&&validEvidenceDate(v,now);
 export function candidateMatch(r,c){
  const t=r.title||'',key=catalogNameKey(t);
  const subject=catalogNameKey(c.subject);
  const structuredNames=[r.card_name,r.player].filter(v=>typeof v==='string'&&v.trim());
  const titleName=catalogNameKey(t.split(/\s+-\s+/)[0]);
- if((titleName!==subject&&!structuredNames.some(v=>catalogNameKey(v)===subject))||!key.includes(subject)||!t.includes(c.cardNumber))return false;
+ if((titleName!==subject&&!structuredNames.some(v=>catalogNameKey(v)===subject))||!key.includes(subject))return false;
  if(/\b(?:mega|dark|light|team rocket)\b/i.test(t))return false;
  const fractions=t.match(/\b\d+\s*\/\s*\d+\b/g)||[];
- if(!fractions.length||fractions.some(v=>number(v)!==number(c.cardNumber)))return false;
+ if((!fractions.length&&number(r.card_number)!==number(c.cardNumber))||fractions.some(v=>number(v)!==number(c.cardNumber)))return false;
  if(r.card_number!=null&&number(r.card_number)!==number(c.cardNumber))return false;
  if(r.card_set!=null&&!c.aliases.map(catalogNameKey).includes(catalogNameKey(r.card_set)))return false;
- if(!c.aliases.some(alias=>key.includes(catalogNameKey(alias))))return false;
+ if(!c.aliases.some(alias=>key.includes(catalogNameKey(alias)))&&!c.aliases.map(catalogNameKey).includes(catalogNameKey(r.card_set)))return false;
+ // A structured set cannot conceal a contradictory marketplace title segment.
+ const segments=t.split(/\s+-\s+/);
+ if(segments.length>=4&&!c.aliases.map(catalogNameKey).includes(catalogNameKey(segments[2])))return false;
  if(r.year!=null&&String(r.year)!==c.year)return false;
  if([r.card_name,r.player].some(v=>v!=null&&catalogNameKey(v)!==catalogNameKey(c.subject)))return false;
  if(r.variant?.ambiguous||r.variant?.unrecognized)return false;
@@ -61,10 +63,13 @@ function sourceKind(value){
 function poolSummary(rows,now){
  const grades=Object.fromEntries(['raw','PSA 9','PSA 10','unknown'].map(g=>[g,{count:0,independentlyVerified:0,providerStructured:0,inferred:0}]));
  const dates=[],timestamps=[],byDate={},currencies={},gradeBasisCounts={},gradeFieldSupport={gradePresent:0,graderPresent:0,booleanQualifierFlagPresent:0},sources={available:0,missing:0,publicCatalogRoutes:0,publicListingRoutes:0,unreviewedOrUnsafe:0};
+ const dateFailureReasons={},identityFieldSupport=Object.fromEntries(['card_name','player','card_set','card_number','language','rarity','printing','product_id','quantity'].map(k=>[k,{present:0,missing:0,null:0}]));
  let confirmed=0,unconfirmed=0,offersConfirmed=0,offersUnknown=0,originalAsks=0,invalidDates=0,duplicateProviderIds=0;const ids=new Set();
  for(const r of rows){
   if(typeof r.currency==='string'&&/^[A-Z]{3}$/.test(r.currency))currencies[r.currency]=(currencies[r.currency]||0)+1;
-  const valid=isDay(r.sale_date,now)&&actualTimestamp(r.sold_at,now)&&r.sale_date===r.sold_at.slice(0,10);
+  const dateCheck=completionDateCheck(r,now),valid=dateCheck.valid;
+  if(!valid)dateFailureReasons[dateCheck.reason]=(dateFailureReasons[dateCheck.reason]||0)+1;
+  for(const [field,counts] of Object.entries(identityFieldSupport)){if(!Object.hasOwn(r,field))counts.missing++;else if(r[field]===null)counts.null++;else counts.present++;}
   if(valid){dates.push(r.sale_date);timestamps.push(r.sold_at);byDate[r.sale_date]=(byDate[r.sale_date]||0)+1;}else invalidDates++;
   const price=valid&&r.price_confirmed===true&&positive(r.price)&&/^[A-Z]{3}$/.test(r.currency);
   if(price)confirmed++;else unconfirmed++;
@@ -75,7 +80,7 @@ function poolSummary(rows,now){
   const source=sourceKind(r.listing_url);if(source==='missing')sources.missing++;else{sources.available++;if(source==='public_catalog_route_not_transaction')sources.publicCatalogRoutes++;else if(source==='public_listing_route_not_settlement')sources.publicListingRoutes++;else sources.unreviewedOrUnsafe++;}
   if(ids.has(r.id))duplicateProviderIds++;else ids.add(r.id);
  }
- dates.sort();timestamps.sort((a,b)=>Date.parse(a)-Date.parse(b));return {returned:rows.length,currencies,gradeBasisCounts,gradeFieldSupport,saleDateRange:dates.length?{oldest:dates[0],newest:dates.at(-1)}:null,saleTimestampRange:timestamps.length?{oldest:timestamps[0],newest:timestamps.at(-1)}:null,observationsBySaleDate:byDate,invalidCompletionDates:invalidDates,prices:{providerConfirmed:confirmed,unconfirmed,confirmedAcceptedOffers:offersConfirmed,acceptedOffersAmountUnknown:offersUnknown,originalAskingPricePresent:originalAsks},grades,sources,deduplication:{distinctProviderIds:ids.size,repeatedProviderIds:duplicateProviderIds,independentSourceTransactions:'not_established'}};
+ dates.sort();timestamps.sort((a,b)=>Date.parse(a)-Date.parse(b));return {returned:rows.length,dateFailureReasons,identityFieldSupport,currencies,gradeBasisCounts,gradeFieldSupport,saleDateRange:dates.length?{oldest:dates[0],newest:dates.at(-1)}:null,saleTimestampRange:timestamps.length?{oldest:timestamps[0],newest:timestamps.at(-1)}:null,observationsBySaleDate:byDate,invalidCompletionDates:invalidDates,prices:{providerConfirmed:confirmed,unconfirmed,confirmedAcceptedOffers:offersConfirmed,acceptedOffersAmountUnknown:offersUnknown,originalAskingPricePresent:originalAsks},grades,sources,deduplication:{distinctProviderIds:ids.size,repeatedProviderIds:duplicateProviderIds,independentSourceTransactions:'not_established'}};
 }
 export function summarizeCoverage(body,c,now){
  validateSchema(body);
