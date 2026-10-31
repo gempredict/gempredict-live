@@ -317,6 +317,14 @@ function ImageAnalysisCard({ data, report }) {
           {data.imageSummary}
         </p>
 
+        {/* Qualitative photo outlook is independent of identity/financial valuation. */}
+        {data.conditionOutlook && (
+          <div data-testid="condition-outlook" style={{ background: C.cream, border: "1px solid " + C.border, borderRadius: 12, padding: "0.9rem 1rem", marginBottom: "1rem" }}>
+            <div style={labelSt}>Photo Condition Outlook · Experimental</div>
+            <strong style={{ display: "block", marginBottom: "0.35rem" }}>{data.conditionOutlook.label}</strong>
+            <p style={{ fontSize: "0.82rem", color: C.inkMid, lineHeight: 1.55, margin: 0 }}>{data.conditionOutlook.reason}</p>
+          </div>
+        )}
         {/* Worth grading verdict from image */}
         <div style={{ background: worthBg, border: "1px solid " + worthBorder, borderRadius: 10, padding: "0.7rem 1rem", marginBottom: "1rem", display: "flex", alignItems: "flex-start", gap: "0.6rem" }}>
           <span style={{ fontSize: "0.85rem", color: worthColor, fontWeight: 800, flexShrink: 0 }}>
