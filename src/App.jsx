@@ -206,7 +206,7 @@ function ImageAnalysisCard({ data, report }) {
         </div>
         <div style={{ display: "flex", alignItems: "center", gap: "0.6rem" }}>
           <span style={{ fontSize: "0.72rem", color: "rgba(255,255,255,0.4)" }}>Est. Grade:</span>
-          <span style={{ fontSize: "0.82rem", fontWeight: 700, color: C.gold }}>{trusted ? data.estimatedGrade || "—" : "Projection withheld"}</span>
+          <span style={{ fontSize: "0.82rem", fontWeight: 700, color: C.gold }}>{data.estimatedGrade || "Not estimated"}</span>
         </div>
       </div>
 
@@ -324,7 +324,7 @@ function ImageAnalysisCard({ data, report }) {
           </span>
           <div>
             <div style={{ fontSize: "0.7rem", fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.07em", color: worthColor, marginBottom: "0.2rem" }}>
-              {trusted ? "Visual condition observations" : "Grading recommendation withheld"}
+              {"Visual condition observations"}
             </div>
             <div style={{ fontSize: "0.84rem", color: C.inkMid }}>{data.worthGradingReason}</div>
           </div>
@@ -351,13 +351,13 @@ function ImageAnalysisCard({ data, report }) {
     Grade Ceiling
   </div>
   <div style={{ fontSize: "0.9rem", fontWeight: 700, color: C.ink }}>
-    {trusted ? data.gradeCeiling || data.estimatedGrade || "Unknown" : "Withheld"}
+    {data.gradeCeiling || data.estimatedGrade || "Not established from photos"}
   </div>
 </div>
 
 <div style={{ background: "#fff7ed", border: "1px solid #fed7aa", borderRadius: 10, padding: "0.8rem 1rem", marginBottom: "1rem" }}>
   <div style={{ fontSize: "0.65rem", fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.08em", color: "#c2410c", marginBottom: "0.35rem" }}>
-    {trusted ? "Primary Grade Limiter" : "Visible condition limiter"}
+    {"Visible condition limiter"}
   </div>
   <div style={{ fontSize: "0.84rem", color: C.inkMid, lineHeight: 1.6 }}>
     {data.primaryLimiter || "No major limiter identified from the uploaded image."}
@@ -369,12 +369,12 @@ function ImageAnalysisCard({ data, report }) {
     Confidence Level
   </div>
   <div style={{ fontSize: "0.9rem", fontWeight: 700, color: C.ink }}>
-    {trusted ? data.confidenceLevel || "Grade confidence not established" : "Grade confidence withheld"}
+    {data.confidenceLevel || "Not established from photos"}
   </div>
 </div>
         <div style={{ background: "#fefce8", border: "1px solid #fde68a", borderRadius: 10, padding: "0.8rem 1rem", marginBottom: "1rem" }}>
   <div style={{ fontSize: "0.65rem", fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.08em", color: "#a16207", marginBottom: "0.35rem" }}>
-    {trusted ? "Major Grade Cap" : "Visible condition limits"}
+    {"Visible condition limits"}
   </div>
   <div style={{ fontSize: "0.84rem", color: C.inkMid, lineHeight: 1.6 }}>
     {data.majorGradeCap || data.primaryLimiter || "No major grade cap identified."}
@@ -386,11 +386,11 @@ function ImageAnalysisCard({ data, report }) {
   </div>
 
   <div style={{ fontSize: "0.9rem", fontWeight: 700, color: C.ink, marginBottom: "0.35rem" }}>
-    {trusted ? data.mostLikelyGradeRange || "Uncertain" : "Grade projection withheld"}
+    {data.mostLikelyGradeRange || "Not established from photos"}
   </div>
 
   <div style={{ fontSize: "0.84rem", color: C.inkMid, lineHeight: 1.6 }}>
-    {trusted ? data.psa10Upside : null}
+    {data.psa10Upside || null}
   </div>
 </div>
 
@@ -425,7 +425,7 @@ function ImageAnalysisCard({ data, report }) {
           <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "0.45rem" }}>
             <span style={{ fontSize: "0.72rem", fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.05em", color: C.inkSoft }}>{"Visual observations only"}</span>
             <span style={{ fontFamily: "'Playfair Display', serif", fontSize: "1.3rem", fontWeight: 700, color: overallR.color }}>
-              {trusted && data.overallScore != null ? data.overallScore + " / 10" : "Withheld"}
+              {data.overallScore != null ? data.overallScore + " / 10" : "Not scored"}
             </span>
           </div>
           {data.overallScore != null && (
