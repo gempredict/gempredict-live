@@ -25,3 +25,17 @@ test('glare cannot produce confident clean outlook',()=>{
 test('absence of evidence is not a positive grading prediction',()=>{
  assert.equal(qualitativeConditionOutlook({}).status,'insufficient_evidence');
 });
+
+test('glare does not erase localized corner evidence, but outlook stays cautious',()=>{
+ const analysis={inspectedSides:['front','back'],imageLimitations:['glare'],visualObservations:[observation('corners','whitening','localized_color_loss')]};
+ const result=conditionPresentation(analysis);
+ assert.equal(result.visualObservations[0].certainty,'confirmed');
+ assert.equal(result.conditionOutlook.status,'visible_concerns');
+});
+test('whole-card clean claim is not accepted as localized evidence',()=>{
+ const claim=observation('corners','no_defect_observed','clear_inspected_area');
+ claim.evidence.region=[0,0,1,1];
+ const result=conditionPresentation({inspectedSides:['front','back'],visualObservations:[claim]});
+ assert.equal(result.visualObservations[0].certainty,'unassessable');
+ assert.equal(result.corners,null);
+});
