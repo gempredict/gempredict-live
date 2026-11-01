@@ -14,6 +14,7 @@
 import atlasOrchestrator from "../../lib/atlasOrchestrator";
 
 import calculateIdentityConfidence from "../../lib/calculateIdentityConfidence";
+import { assessIdentityEvidence } from "../../lib/identityEvidence";
 
 import buildSearchCandidates from "../../lib/buildSearchCandidates";
 
@@ -927,6 +928,7 @@ console.log("[Atlas Identity Debug]", {
 
 const atlasIdentityConfidence =
   calculateIdentityConfidence(imageAnalysis || {});
+const identityEvidence = assessIdentityEvidence(imageAnalysis, { cardName, cardSet });
 
     const prediction = await fetchPrediction(
       effectiveCardName,
@@ -1030,6 +1032,7 @@ const atlas = atlasOrchestrator({
   atlas,
   atlasIdentityConfidence,
   canonicalCard,
+  identityEvidence,
   hasImageAnalysis: imageAnalysis !== null,
   remaining: rateCheck.remaining,
   emailSaved,
