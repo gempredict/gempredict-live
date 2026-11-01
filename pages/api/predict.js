@@ -237,8 +237,18 @@ function normaliseImageAnalysis(raw, inspectedSides = ['front']) {
   const clean = value => typeof value === 'string' && value.trim() ? value.trim().slice(0,400) : null;
   const source = { ...raw, inspectedSides,
     imageLimitations: [...(Array.isArray(raw.imageLimitations) ? raw.imageLimitations : []), ...(!inspectedSides.includes('back') ? ['back_not_visible'] : [])] };
-  const safe = conditionPresentation(source, { identityVerified: false, trusted: false });
-  return { ...safe,
+  const safe = conditionPresentation(source, { identityVerified: false });
+  const rawObservations = Array.isArray(raw.visualObservations) ? raw.visualObservations : [];
+  const retained = safe.visualObservations || [];
+  const evidenceDiagnostics = {
+    received: rawObservations.length,
+    retained: retained.length,
+    confirmed: retained.filter(item => item.certainty === 'confirmed').length,
+    suspected: retained.filter(item => item.certainty === 'suspected').length,
+    unassessable: retained.filter(item => item.certainty === 'unassessable').length,
+    modelRatings: ['centering','corners','edges','surface'].filter(key => ['excellent','good','fair','poor'].includes(raw[key])).length,
+  };
+  return { ...safe, evidenceDiagnostics,
     ...Object.fromEntries(['identifiedLanguage','identifiedYear','identifiedBrandSet','identifiedSubject','identifiedCardNumber','identifiedParallel','identifiedRarity'].map(field=>[field,clean(raw[field])])),
     identifiedAutoOrRelic: clean(raw.identifiedAutoOrRelic) || 'unknown',
     identityConfidence: Math.min(100,Math.max(0,safeInt(raw.identityConfidence,0))),
