@@ -163,7 +163,7 @@ function ImageAnalysisCard({ data, report }) {
   const trusted = isValuationTrusted(report);
 
   function RatingPill({ rating, label }) {
-    const r = RATING_COLORS[rating] || RATING_COLORS.fair;
+    const r = RATING_COLORS[rating] || { color: C.inkSoft, bg: C.cream, label: "Unassessed" };
     return (
       <span style={{ display: "inline-block", fontSize: "0.65rem", fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.06em", color: r.color, background: r.bg, padding: "0.15rem 0.5rem", borderRadius: 100 }}>
         {label || r.label}
@@ -215,7 +215,7 @@ function ImageAnalysisCard({ data, report }) {
           <div style={labelSt}>{catalogBacked ? "Catalog-supported identity" : "Current identity — verification pending"}</div>
           <strong>{catalogBacked ? [canonical.year, canonical.brandSet, canonical.subject, canonical.parallel, canonical.cardNumber && `#${canonical.cardNumber}`, canonical.language].filter(Boolean).join(" · ") : "Card identity is unverified. Confirm the printed identifiers."}</strong>
           {corrected && <p>The independent catalog corrected the initial AI interpretation below.</p>}
-          <p style={{ fontSize: "0.78rem" }}>{trusted ? "Identity and version checks passed with matching market evidence." : isMarketAnalysisAvailable(report) ? "Identity and version verified. Pricing is provisional; grading recommendations are withheld." : "Pricing and grading recommendations remain withheld until all verification checks pass."}</p>
+          <p style={{ fontSize: "0.78rem" }}>{trusted ? "Identity and version checks passed with matching market evidence." : isMarketAnalysisAvailable(report) ? "Identity and version verified. Pricing is provisional; grading recommendations are withheld." : "Financial recommendation unavailable. Photo observations are reported separately when supported."}</p>
         </div>
       )}
             {/* Initial photo interpretation retained as provenance, not truth. */}
@@ -342,7 +342,7 @@ function ImageAnalysisCard({ data, report }) {
         <div className="gp-vision-grid" style={{ marginBottom: "1rem" }}>
           {attributes.map(function(attr) {
             const rating = data[attr.key] || "unassessed";
-            const rc = RATING_COLORS[rating] || RATING_COLORS.fair;
+
             return (
               <div key={attr.key} style={{ background: C.cream, border: "1px solid " + C.border, borderRadius: 12, padding: "0.85rem 0.9rem" }}>
                 <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "0.35rem" }}>
