@@ -926,7 +926,7 @@ console.log("[Atlas Identity Debug]", {
 });
 
 const atlasIdentityConfidence =
-  calculateIdentityConfidence(imageAnalysis);
+  calculateIdentityConfidence(imageAnalysis || {});
 
     const prediction = await fetchPrediction(
       effectiveCardName,
