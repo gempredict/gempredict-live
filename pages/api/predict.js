@@ -879,6 +879,16 @@ if (hasTypedCardName && looksLikeJunk(cardName)) {
       });
     }
 
+    // A photo upload must never result in a fabricated generic-card valuation.
+    // Retain the original full report behavior whenever vision actually succeeds.
+    if (imageBuffer && !imageAnalysis) {
+      console.error("[GemPredict] Photo scan stopped: no usable image-analysis result");
+      return res.status(422).json({
+        error: "Photo analysis could not be completed. No card valuation was generated. Please try again later or use clearer front and back photos.",
+        code: "PHOTO_ANALYSIS_UNAVAILABLE",
+      });
+    }
+
     const identifiedCardName = imageAnalysis
       ? [
           imageAnalysis.identifiedYear,
