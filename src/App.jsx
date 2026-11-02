@@ -144,6 +144,45 @@ const eyebrowSt = { fontSize: "0.7rem", fontWeight: 700, letterSpacing: "0.12em"
 const sectionH2St = { fontFamily: "'Playfair Display', serif", fontSize: "clamp(1.8rem, 3vw, 2.4rem)", fontWeight: 900, letterSpacing: "-0.02em", lineHeight: 1.1, marginBottom: "0.75rem" };
 
 // ─── Image Analysis Result component ─────────────────────────────────────────
+function IdentityReviewCard({ report }) {
+  const catalog = report.catalogCrossCheck;
+  const [review, setReview] = useState("pending");
+  const [correction, setCorrection] = useState("");
+  if (!catalog || !report.imageAnalysis) return null;
+  const name = [catalog.catalogSet, catalog.catalogName,
+    report.canonicalCard?.cardNumber ? "#" + report.canonicalCard.cardNumber : ""].filter(Boolean).join(" ");
+  const conflicts = catalog.conflicts || [];
+  return (
+    <div style={{ marginTop:"0.8rem", padding:"1rem", background:C.cream, border:"1px solid "+C.border, borderRadius:12 }}>
+      <div style={{ fontSize:"0.74rem", fontWeight:800, color:C.ink, marginBottom:"0.5rem" }}>Review Card Identity</div>
+      <p style={{ fontSize:"0.82rem", color:C.inkMid, marginBottom:"0.6rem" }}>
+        Catalog candidate: <strong>{name || "No unique catalog match"}</strong>
+      </p>
+      <p style={{ fontSize:"0.74rem", color:C.inkSoft, marginBottom:"0.6rem" }}>
+        {conflicts.length ? "Catalog conflict: "+conflicts.join(", ")+". " : ""}
+        Confirm the photographed card, set, number and exact artwork/printing before sold-price valuation.
+        This review does not verify authenticity or automatically unlock sold comps.
+      </p>
+      {review==="pending" ? (
+        <div style={{ display:"flex", gap:"0.5rem", flexWrap:"wrap" }}>
+          <button type="button" disabled={!catalog.catalogId} onClick={()=>setReview("user_confirmed")} style={{ background:C.ink, color:"#fff", border:0, borderRadius:8, padding:"0.55rem 0.9rem", cursor:"pointer" }}>This is my card</button>
+          <button type="button" onClick={()=>setReview("needs_correction")} style={{ border:"1px solid "+C.border, background:"#fff", borderRadius:8, padding:"0.55rem 0.9rem", cursor:"pointer" }}>Wrong card / variation</button>
+        </div>
+      ) : review==="user_confirmed" ? (
+        <p style={{ fontSize:"0.76rem", color:C.inkMid }}>Identity marked as user-confirmed for this report only. Sold lookup remains blocked pending secure server-side verification.</p>
+      ) : (
+        <div>
+          <label style={{ display:"block", fontSize:"0.74rem", color:C.inkMid }}>Correct card name, set, number or variation</label>
+          <input aria-label="Correct card identity" value={correction} onChange={e=>setCorrection(e.target.value)} maxLength={180} placeholder="Enter the correct printed identity" style={{ boxSizing:"border-box", marginTop:"0.3rem", padding:"0.6rem", width:"100%", border:"1px solid "+C.border, borderRadius:8 }}/>
+          <p style={{ fontSize:"0.72rem", color:C.inkSoft, marginTop:"0.4rem" }}>
+            Correction noted locally only. The existing valuation is not recalculated; rerun identification after the corrected identity is verified.
+          </p>
+        </div>
+      )}
+    </div>
+  );
+}
+
 function ImageAnalysisCard({ data }) {
   if (!data) return null;
 
@@ -1202,6 +1241,8 @@ const emailRef    = useRef(null);
   marketData: data.marketData || null,
   imageAnalysis: data.imageAnalysis || null,
   canonicalCard: data.canonicalCard || null,
+  catalogCrossCheck: data.catalogCrossCheck || null,
+  soldIdentityGate: data.soldIdentityGate || null,
 };
 
   return [newReport, ...prev].slice(0, 5);
@@ -1720,7 +1761,10 @@ if (data.imageAnalysis) setImageAnalysis(data.imageAnalysis);
       />
 
       {r.imageAnalysis && (
-        <ImageAnalysisCard data={r.imageAnalysis} />
+        <>
+          <IdentityReviewCard report={r} />
+          <ImageAnalysisCard data={r.imageAnalysis} />
+        </>
       )}
     </div>
   );
