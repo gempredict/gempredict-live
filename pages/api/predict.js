@@ -15,6 +15,8 @@ import atlasOrchestrator from "../../lib/atlasOrchestrator";
 
 import calculateIdentityConfidence from "../../lib/calculateIdentityConfidence";
 import { assessIdentityEvidence } from "../../lib/identityEvidence";
+import { findTcgdexCandidates } from "../../lib/tcgdexCatalog.mjs";
+import { crossCheckIdentity, fetchFullTcgdexCard } from "../../lib/tcgdexCrossCheck.mjs";
 
 import buildSearchCandidates from "../../lib/buildSearchCandidates";
 
@@ -930,6 +932,39 @@ const atlasIdentityConfidence =
   calculateIdentityConfidence(imageAnalysis || {});
 const identityEvidence = assessIdentityEvidence(imageAnalysis, { cardName, cardSet });
 
+// Read-only diagnostic: no changes to title, pricing, scoring or photo grading.
+let catalogCrossCheck = { status: "not_checked", verified: false };
+if (imageAnalysis && cardType === "pokemon") {
+  const observed = {
+    subject: imageAnalysis.identifiedSubject,
+    cardNumber: imageAnalysis.identifiedCardNumber,
+    set: imageAnalysis.identifiedBrandSet,
+  };
+  try {
+    const result = await findTcgdexCandidates(observed);
+    const candidates = result.candidates || [];
+    if (candidates.length === 1 && candidates[0].id) {
+      const fullCard = await fetchFullTcgdexCard(candidates[0].id);
+      catalogCrossCheck = {
+        ...crossCheckIdentity(imageAnalysis, fullCard),
+        provider: "TCGdex",
+        candidateCount: candidates.length,
+      };
+    } else {
+      catalogCrossCheck = {
+        status: result.status || "needs_review",
+        verified: false,
+        provider: "TCGdex",
+        candidateCount: candidates.length,
+        note: "No unique catalog candidate was established. Report title remains unchanged.",
+      };
+    }
+  } catch {
+    catalogCrossCheck = { status: "catalog_unavailable", verified: false, provider: "TCGdex" };
+  }
+}
+
+
     const prediction = await fetchPrediction(
       effectiveCardName,
       cardType,
@@ -1033,6 +1068,7 @@ const atlas = atlasOrchestrator({
   atlasIdentityConfidence,
   canonicalCard,
   identityEvidence,
+  catalogCrossCheck,
   hasImageAnalysis: imageAnalysis !== null,
   remaining: rateCheck.remaining,
   emailSaved,
