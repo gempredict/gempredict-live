@@ -891,7 +891,7 @@ const displayMeta =
       {data.marketData?.rejectedItems?.length>0 && <details style={{marginTop:"0.4rem",fontStyle:"normal"}}>
         <summary style={{cursor:"pointer"}}>Rejected listing examples</summary>
         {data.marketData.rejectedItems.slice(0,5).map((item,i)=><div key={item.itemId||i} style={{fontSize:"0.65rem",marginTop:5}}>{item.title} — {(item.rejectionReasons||[]).join(", ")}</div>)}
-      </details>
+      </details>}
       {data.marketData?.rawComparableItems?.length > 0 && (
   <div style={{ marginTop: "0.85rem", borderTop: "1px solid " + C.border, paddingTop: "0.75rem" }}>
     <div style={{ fontSize: "0.65rem", fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.08em", color: C.inkSoft, marginBottom: "0.55rem" }}>
