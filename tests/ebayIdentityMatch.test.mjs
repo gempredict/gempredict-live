@@ -1,0 +1,10 @@
+import test from "node:test";
+import assert from "node:assert/strict";
+import {matchListing} from "../lib/ebayIdentityMatch.mjs";
+const id={player:"Sample Athlete",year:"2024",set:"Prizm",cardNumber:"101",parallel:"Silver",autoOrRelic:"none"};
+test("accepts exact sports card listing",()=>{const x=matchListing("2024 Prizm Sample Athlete Silver #101",id);assert.equal(x.accepted,true);});
+test("rejects wrong player and card number",()=>{const x=matchListing("2024 Prizm Other Athlete Silver #102",id);assert.ok(x.rejectionReasons.includes("wrong_player"));assert.ok(x.rejectionReasons.includes("wrong_or_missing_card_number"));});
+test("rejects mismatched parallel",()=>{const x=matchListing("2024 Prizm Sample Athlete Gold #101",id);assert.ok(x.rejectionReasons.includes("parallel_not_matched"));});
+test("rejects graded, lots and unrequested autograph",()=>{for(const t of ["2024 Prizm Sample Athlete Silver #101 PSA 10","2024 Prizm Sample Athlete Silver #101 lot of 3","2024 Prizm Sample Athlete Silver #101 auto"]){assert.equal(matchListing(t,id).accepted,false);}});
+test("does not give arbitrary bonus to 248 purple shock or optic",()=>{const x=matchListing("2024 Optic Sample Athlete Purple Shock #248",id);assert.equal(x.accepted,false);});
+test("does not accept uncertain unmatched parallels as base",()=>{const x=matchListing("2024 Prizm Sample Athlete Green #101",{...id,parallel:""});assert.equal(x.accepted,false);});
