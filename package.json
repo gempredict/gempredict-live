@@ -7,7 +7,7 @@
     "build": "npm run test:sold && next build",
     "start": "next start",
     "lint": "next lint",
-    "test:sold": "node --test tests/soldCompsFilter.test.mjs tests/soldIdentityGate.test.mjs"
+    "test:sold": "node --test tests/soldCompsFilter.test.mjs tests/soldIdentityGate.test.mjs tests/identityReviewToken.test.mjs"
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^0.27.0",
