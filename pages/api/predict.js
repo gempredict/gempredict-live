@@ -693,7 +693,7 @@ const backMime = backImageMimeType &&
   "Be strict, specific, and internally consistent. Avoid canned language.";
 
   const message = await anthropic.messages.create({
-    model: "claude-sonnet-4-6", max_tokens: 1000,
+    model: "claude-sonnet-4-6", max_tokens: 2400,
     messages: [{
       role: "user",
       content: [
@@ -729,10 +729,22 @@ const backMime = backImageMimeType &&
   });
 
   const text = (message.content || []).map(function(b) { return b.type === "text" ? b.text : ""; }).join("").trim();
-  if (!text) return null;
+  if (!text) {
+    console.error("[GemPredict] Vision returned empty text", { stopReason: message.stop_reason || "unknown" });
+    return null;
+  }
   const parsed = extractJSON(text);
-  if (!parsed) return null;
-  return normaliseImageAnalysis(parsed);
+  if (!parsed) {
+    console.error("[GemPredict] Vision JSON parse failed", {
+      stopReason: message.stop_reason || "unknown",
+      textLength: text.length,
+      outputTokens: message.usage?.output_tokens ?? null,
+    });
+    return null;
+  }
+  const normalized = normaliseImageAnalysis(parsed);
+  if (!normalized) console.error("[GemPredict] Vision normalization failed", { stopReason: message.stop_reason || "unknown" });
+  return normalized;
 }
 
 // ─── Main handler ─────────────────────────────────────────────────────────────
