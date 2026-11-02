@@ -17,6 +17,7 @@ import calculateIdentityConfidence from "../../lib/calculateIdentityConfidence";
 import { assessIdentityEvidence } from "../../lib/identityEvidence";
 import { findTcgdexCandidates } from "../../lib/tcgdexCatalog.mjs";
 import { crossCheckIdentity, fetchFullTcgdexCard } from "../../lib/tcgdexCrossCheck.mjs";
+import { assessSoldIdentityGate } from "../../lib/soldIdentityGate.mjs";
 import { assessArtworkSimilarity } from "../../lib/artworkSimilarity.mjs";
 
 import buildSearchCandidates from "../../lib/buildSearchCandidates";
@@ -1006,6 +1007,14 @@ if (imageAnalysis && cardType === "pokemon") {
 }
 
 
+const soldIdentityGate = assessSoldIdentityGate({
+  cardType,
+  crossCheck: catalogCrossCheck,
+  artwork: catalogCrossCheck.artwork,
+  photoIdentity: { subject: imageAnalysis?.identifiedSubject, number: imageAnalysis?.identifiedCardNumber,
+    set: imageAnalysis?.identifiedBrandSet, printingConfirmed: false }
+});
+
 // Prefer independently sourced catalog name and set over contradictory model set guesses.
 // Still provisional: artwork and printing are NOT verified.
 if (catalogTitleCandidate) {
@@ -1138,6 +1147,7 @@ const atlas = atlasOrchestrator({
   canonicalCard,
   identityEvidence,
   catalogCrossCheck,
+  soldIdentityGate,
   hasImageAnalysis: imageAnalysis !== null,
   remaining: rateCheck.remaining,
   emailSaved,
