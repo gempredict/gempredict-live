@@ -1103,41 +1103,31 @@ const atlas = atlasOrchestrator({
           return q && arr.indexOf(q) === i;
         });
   
-    for (const q of marketQueries) {
-      const marketUrl =
-        `${baseUrl}/api/ebay-search?q=` + encodeURIComponent(q);
-  
-      const marketRes = await fetch(marketUrl);
-      const marketJson = await marketRes.json();
-  
-      if (
-        marketRes.ok &&
-        marketJson.success &&
-        marketJson.marketSummary &&
-        (marketJson.marketSummary.rawComparableCount || 0) > 0
-      ) {
-        marketData = Object.assign({}, marketJson, {
-          queryUsed: q,
-          queryAttempts: marketQueries,
-        });
-        break;
+    const lookupIdentity = {
+      year: imageAnalysis?.identifiedYear || "",
+      brand: imageAnalysis?.identifiedManufacturer || "",
+      set: catalogTitleCandidate?.set?.name || imageAnalysis?.identifiedBrandSet || "",
+      player: imageAnalysis?.identifiedSubject || "",
+      cardNumber: imageAnalysis?.identifiedCardNumber || "",
+      parallel: imageAnalysis?.identifiedParallel || "",
+      autoOrRelic: imageAnalysis?.identifiedAutoOrRelic || "",
+    };
+    const attempts = [];
+    // Bounded progressively broader discovery; acceptance remains identity-strict.
+    for (const q of marketQueries.slice(0, 6)) {
+      const params = new URLSearchParams({q});
+      for (const [k,v] of Object.entries(lookupIdentity)) if(v)params.set(k,v);
+      const response = await fetch(baseUrl + "/api/ebay-search?" + params.toString());
+      if (!response.ok) continue;
+      const candidate = await response.json();
+      if (!candidate.success) continue;
+      attempts.push({query:q,found:candidate.count||0,accepted:candidate.marketSummary?.rawComparableCount||0,rejected:candidate.marketSummary?.rejectedCount||0});
+      if (!marketData || (candidate.marketSummary?.rawComparableCount||0) > (marketData.marketSummary?.rawComparableCount||0)) {
+        marketData = {...candidate,queryUsed:q};
       }
+      if ((marketData?.marketSummary?.rawComparableCount||0)>=5)break;
     }
-  
-    if (!marketData && marketQueries.length > 0) {
-      const fallbackUrl =
-        `${baseUrl}/api/ebay-search?q=` + encodeURIComponent(marketQueries[0]);
-
-      const fallbackRes = await fetch(fallbackUrl);
-      const fallbackJson = await fallbackRes.json();
-
-      if (fallbackRes.ok && fallbackJson.success) {
-        marketData = Object.assign({}, fallbackJson, {
-          queryUsed: marketQueries[0],
-          queryAttempts: marketQueries,
-        });
-      }
-    }
+    if(marketData)marketData.queryAttempts=attempts;
   } catch (marketErr) {
   marketData = {
     success: false,
