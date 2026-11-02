@@ -19,6 +19,7 @@ import { findTcgdexCandidates } from "../../lib/tcgdexCatalog.mjs";
 import { crossCheckIdentity, fetchFullTcgdexCard } from "../../lib/tcgdexCrossCheck.mjs";
 import { assessSoldIdentityGate } from "../../lib/soldIdentityGate.mjs";
 import { canonicalIdentityV2, emptyGraderScenarios } from "../../lib/canonicalIdentityV2.mjs";
+import { auditSportsIdentity } from "../../lib/sportsIdentityAudit.mjs";
 import { issueIdentityReviewToken } from "../../lib/identityReviewToken.mjs";
 import { assessArtworkSimilarity } from "../../lib/artworkSimilarity.mjs";
 
@@ -365,6 +366,10 @@ else if (hasObviousStructuralDamage && !saysNoStructuralDamage) {
   return {  
     // Card identity
     identifiedYear: raw.identifiedYear != null ? safeStr(raw.identifiedYear, null) : null,
+    identifiedManufacturer: raw.identifiedManufacturer != null ? safeStr(raw.identifiedManufacturer, null) : null,
+    identifiedSport: raw.identifiedSport != null ? safeStr(raw.identifiedSport, null) : null,
+    identifiedTeam: raw.identifiedTeam != null ? safeStr(raw.identifiedTeam, null) : null,
+    identifiedSerialNumber: raw.identifiedSerialNumber != null ? safeStr(raw.identifiedSerialNumber, null) : null,
     identifiedBrandSet: raw.identifiedBrandSet != null ? safeStr(raw.identifiedBrandSet, null) : null,
     identifiedSubject: raw.identifiedSubject != null ? safeStr(raw.identifiedSubject, null) : null,
     identifiedCardNumber: raw.identifiedCardNumber != null ? safeStr(raw.identifiedCardNumber, null) : null,
@@ -1148,11 +1153,13 @@ const atlas = atlasOrchestrator({
       catalog: catalogCrossCheck,
     });
     const graderScenariosV2 = emptyGraderScenarios();
+    const sportsIdentityAudit = cardType === "sports" ? auditSportsIdentity(imageAnalysis || {}, "base") : null;
 
     return res.status(200).json({
   success: true,
   identityV2,
   graderScenariosV2,
+  sportsIdentityAudit,
   prediction,
   marketData,
   imageAnalysis,
