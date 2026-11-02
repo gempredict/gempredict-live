@@ -880,6 +880,18 @@ const displayMeta =
 
     <div style={{ fontSize: "0.7rem", color: C.inkSoft, marginTop: "0.65rem", fontStyle: "italic" }}>
       Active eBay asking prices, not completed sales or verified fair market value. Grading economics below are provisional estimates.
+      <div style={{marginTop:"0.5rem",fontStyle:"normal"}}>
+        eBay matching: {data.marketData?.count ?? 0} returned · {marketSummary.rawComparableCount ?? 0} accepted · {marketSummary.rejectedCount ?? 0} rejected.
+        {!marketSummary.evidenceSufficient && <strong> Insufficient exact-card listings for a reliable asking-price estimate.</strong>}
+      </div>
+      {data.marketData?.queryAttempts?.length>0 && <details style={{marginTop:"0.4rem",fontStyle:"normal"}}>
+        <summary style={{cursor:"pointer"}}>Search coverage ({data.marketData.queryAttempts.length} queries)</summary>
+        {data.marketData.queryAttempts.map((attempt,i)=><div key={i} style={{fontSize:"0.65rem",marginTop:4}}>{attempt.query}: {attempt.found} found, {attempt.accepted} accepted, {attempt.rejected} rejected</div>)}
+      </details>}
+      {data.marketData?.rejectedItems?.length>0 && <details style={{marginTop:"0.4rem",fontStyle:"normal"}}>
+        <summary style={{cursor:"pointer"}}>Rejected listing examples</summary>
+        {data.marketData.rejectedItems.slice(0,5).map((item,i)=><div key={item.itemId||i} style={{fontSize:"0.65rem",marginTop:5}}>{item.title} — {(item.rejectionReasons||[]).join(", ")}</div>)}
+      </details>
       {data.marketData?.rawComparableItems?.length > 0 && (
   <div style={{ marginTop: "0.85rem", borderTop: "1px solid " + C.border, paddingTop: "0.75rem" }}>
     <div style={{ fontSize: "0.65rem", fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.08em", color: C.inkSoft, marginBottom: "0.55rem" }}>
