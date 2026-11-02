@@ -18,6 +18,7 @@ import { assessIdentityEvidence } from "../../lib/identityEvidence";
 import { findTcgdexCandidates } from "../../lib/tcgdexCatalog.mjs";
 import { crossCheckIdentity, fetchFullTcgdexCard } from "../../lib/tcgdexCrossCheck.mjs";
 import { assessSoldIdentityGate } from "../../lib/soldIdentityGate.mjs";
+import { canonicalIdentityV2, emptyGraderScenarios } from "../../lib/canonicalIdentityV2.mjs";
 import { issueIdentityReviewToken } from "../../lib/identityReviewToken.mjs";
 import { assessArtworkSimilarity } from "../../lib/artworkSimilarity.mjs";
 
@@ -1139,8 +1140,19 @@ const atlas = atlasOrchestrator({
   };
 }
 
+    // Shared identity and grader contracts: read-only diagnostics during migration.
+    // No changes to existing report titles, scores, lookups or economics.
+    const identityV2 = canonicalIdentityV2({
+      category: cardType === "pokemon" ? "pokemon" : (cardType === "sports" ? "sports" : "unknown"),
+      vision: imageAnalysis || {},
+      catalog: catalogCrossCheck,
+    });
+    const graderScenariosV2 = emptyGraderScenarios();
+
     return res.status(200).json({
   success: true,
+  identityV2,
+  graderScenariosV2,
   prediction,
   marketData,
   imageAnalysis,
