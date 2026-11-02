@@ -535,23 +535,21 @@ function EmptyState() {
 
 function ResultCard({ data, index, onSave, isSaved }) {
   const gpScore = buildGemPredictScore(data);
+  const unifiedScore = gpScore?.score ?? null;
   const verdict  = VERDICTS[data.verdict] || VERDICTS.maybe;
   const profit   = typeof data.gradingUpside === "number" ? data.gradingUpside : 0;
   const marketSummary = data.marketData && data.marketData.marketSummary
   ? data.marketData.marketSummary
   : null;
   const displayTitle =
-  data.canonicalCard?.displayName || data.cardTitle;
+  data.catalogCrossCheck?.catalogName && data.catalogCrossCheck?.catalogSet && data.canonicalCard?.cardNumber
+    ? [data.catalogCrossCheck.catalogSet, data.catalogCrossCheck.catalogName, "#" + data.canonicalCard.cardNumber].join(" ")
+    : (data.canonicalCard?.displayName || data.cardTitle);
 
 const displayMeta =
-  data.canonicalCard
-    ? [
-        data.canonicalCard.year,
-        data.canonicalCard.brandSet,
-        data.canonicalCard.parallel,
-        data.canonicalCard.cardNumber ? "#" + data.canonicalCard.cardNumber : null,
-      ].filter(Boolean).join(" · ")
-    : data.cardMeta;
+  data.catalogCrossCheck?.catalogName
+    ? "TCGdex catalog candidate · Artwork / printing not verified"
+    : (data.cardMeta || "Identity provisional");
   const barPct   = Math.min(100, Math.max(4, (Math.abs(profit) / Math.max(data.psa10Value || 1, 1)) * 100));
   const bullets  = getVerdictBullets(data);
   const useCase  = VERDICT_USE_CASE[data.verdict] || VERDICT_USE_CASE.maybe;
@@ -682,7 +680,7 @@ const displayMeta =
 >
   SHOULD YOU GRADE THIS?
 </div>
-{data.gemPredictScore != null && (
+{unifiedScore != null && (
   <div
     style={{
       display: "inline-block",
@@ -713,7 +711,7 @@ const displayMeta =
         lineHeight: 1.1,
       }}
     >
-      {data.gemPredictScore}/99
+      {unifiedScore}/100
     </div>
     <div
   style={{
@@ -724,11 +722,11 @@ const displayMeta =
     maxWidth: 260,
   }}
 >
-  {data.gemPredictScore >= 85
+  {unifiedScore >= 85
     ? "🟢 Strong Grade Candidate"
-    : data.gemPredictScore >= 70
+    : unifiedScore >= 70
     ? "🟡 Good Candidate"
-    : data.gemPredictScore >= 55
+    : unifiedScore >= 55
     ? "🟠 Consider It"
     : "🔴 Keep Raw"}
 </div>
@@ -1034,7 +1032,7 @@ const displayMeta =
   </div>
 
   <div style={{ fontSize: "0.7rem", color: C.inkSoft, marginTop: "0.6rem", fontStyle: "italic" }}>
-    Provisional modeled economics, not sold-comp verified. Expected value weighs PSA 10 odds against PSA 9 value, modeled raw value, and current grading cost.
+    Provisional modeled economics, not sold-comp verified. PSA 10 and PSA 9 estimates have not been validated against exact-card sold transactions. The current calculation excludes outcomes below PSA 9 and selling expenses.
   </div>
 </div>        
         {/* Best use case */}
