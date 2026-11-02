@@ -147,38 +147,68 @@ const sectionH2St = { fontFamily: "'Playfair Display', serif", fontSize: "clamp(
 function IdentityReviewCard({ report }) {
   const catalog = report.catalogCrossCheck;
   const [review, setReview] = useState("pending");
-  const [correction, setCorrection] = useState("");
+  const [catalogId, setCatalogId] = useState("");
+  const [number, setNumber] = useState("");
+  const [busy, setBusy] = useState(false);
+  const [message, setMessage] = useState("");
+  const [reviewed, setReviewed] = useState(null);
   if (!catalog || !report.imageAnalysis) return null;
   const name = [catalog.catalogSet, catalog.catalogName,
     report.canonicalCard?.cardNumber ? "#" + report.canonicalCard.cardNumber : ""].filter(Boolean).join(" ");
   const conflicts = catalog.conflicts || [];
+  async function submit(action) {
+    if (!report.identityReviewToken) { setMessage("Secure review is unavailable for this scan. Please scan again."); return; }
+    setBusy(true);setMessage("");
+    try {
+      const response = await fetch("/api/identity-review",{method:"POST",headers:{"Content-Type":"application/json"},
+        body:JSON.stringify({token:report.identityReviewToken,action,
+          catalogId:action==="correct"?catalogId.trim():undefined,
+          confirmedNumber:action==="correct"?number.trim():undefined})});
+      const result = await response.json();
+      if (!response.ok) {setMessage(result.message||result.error||result.reason||"Identity review failed.");return;}
+      setReviewed(result);
+      setReview("complete");
+    } catch {setMessage("Unable to reach identity verification service.");}
+    finally {setBusy(false);}
+  }
   return (
-    <div style={{ marginTop:"0.8rem", padding:"1rem", background:C.cream, border:"1px solid "+C.border, borderRadius:12 }}>
-      <div style={{ fontSize:"0.74rem", fontWeight:800, color:C.ink, marginBottom:"0.5rem" }}>Review Card Identity</div>
-      <p style={{ fontSize:"0.82rem", color:C.inkMid, marginBottom:"0.6rem" }}>
-        Catalog candidate: <strong>{name || "No unique catalog match"}</strong>
-      </p>
-      <p style={{ fontSize:"0.74rem", color:C.inkSoft, marginBottom:"0.6rem" }}>
-        {conflicts.length ? "Catalog conflict: "+conflicts.join(", ")+". " : ""}
-        Confirm the photographed card, set, number and exact artwork/printing before sold-price valuation.
-        This review does not verify authenticity or automatically unlock sold comps.
+    <div style={{marginTop:"0.8rem",padding:"1rem",background:C.cream,border:"1px solid "+C.border,borderRadius:12}}>
+      <div style={{fontSize:"0.74rem",fontWeight:800,color:C.ink,marginBottom:"0.5rem"}}>Review Card Identity</div>
+      <p style={{fontSize:"0.82rem",color:C.inkMid,marginBottom:"0.6rem"}}>Catalog candidate: <strong>{name||"No unique catalog match"}</strong></p>
+      <p style={{fontSize:"0.74rem",color:C.inkSoft,marginBottom:"0.6rem"}}>
+        {conflicts.length?"AI/catalog conflict: "+conflicts.join(", ")+". ":""}
+        Confirm your exact card or correct the catalog selection. This review will not automatically change the grading report or unlock sold prices.
       </p>
       {review==="pending" ? (
-        <div style={{ display:"flex", gap:"0.5rem", flexWrap:"wrap" }}>
-          <button type="button" disabled={!catalog.catalogId} onClick={()=>setReview("user_confirmed")} style={{ background:C.ink, color:"#fff", border:0, borderRadius:8, padding:"0.55rem 0.9rem", cursor:"pointer" }}>This is my card</button>
-          <button type="button" onClick={()=>setReview("needs_correction")} style={{ border:"1px solid "+C.border, background:"#fff", borderRadius:8, padding:"0.55rem 0.9rem", cursor:"pointer" }}>Wrong card / variation</button>
+        <div style={{display:"flex",gap:"0.5rem",flexWrap:"wrap"}}>
+          <button type="button" disabled={busy||!catalog.catalogId||conflicts.length>0} onClick={()=>submit("confirm")}
+            style={{background:C.ink,color:"#fff",border:0,borderRadius:8,padding:"0.55rem 0.9rem",cursor:"pointer"}}>This is my card</button>
+          <button type="button" disabled={busy} onClick={()=>{setCatalogId(catalog.catalogId||"");setNumber(report.canonicalCard?.cardNumber||"");setReview("correct");}}
+            style={{border:"1px solid "+C.border,background:"#fff",borderRadius:8,padding:"0.55rem 0.9rem",cursor:"pointer"}}>Wrong card / variation</button>
         </div>
-      ) : review==="user_confirmed" ? (
-        <p style={{ fontSize:"0.76rem", color:C.inkMid }}>Identity marked as user-confirmed for this report only. Sold lookup remains blocked pending secure server-side verification.</p>
+      ) : review==="correct" ? (
+        <div style={{display:"grid",gap:"0.55rem"}}>
+          <label style={{fontSize:"0.74rem",color:C.inkMid}}>TCGdex catalog ID
+            <input aria-label="TCGdex catalog ID" value={catalogId} onChange={e=>setCatalogId(e.target.value)} maxLength={65}
+              placeholder="e.g. 30th-149" style={{display:"block",boxSizing:"border-box",marginTop:"0.2rem",padding:"0.6rem",width:"100%",border:"1px solid "+C.border,borderRadius:8}}/>
+          </label>
+          <label style={{fontSize:"0.74rem",color:C.inkMid}}>Full printed card number
+            <input aria-label="Full printed card number" value={number} onChange={e=>setNumber(e.target.value)} maxLength={10}
+              placeholder="e.g. 149/128" style={{display:"block",boxSizing:"border-box",marginTop:"0.2rem",padding:"0.6rem",width:"100%",border:"1px solid "+C.border,borderRadius:8}}/>
+          </label>
+          <div style={{display:"flex",gap:"0.5rem"}}>
+            <button type="button" disabled={busy||!catalogId.trim()||!number.trim()} onClick={()=>submit("correct")}
+              style={{background:C.ink,color:"#fff",border:0,borderRadius:8,padding:"0.55rem 0.9rem"}}>{busy?"Checking…":"Verify correction"}</button>
+            <button type="button" disabled={busy} onClick={()=>setReview("pending")} style={{background:"transparent",border:"1px solid "+C.border,borderRadius:8,padding:"0.55rem 0.9rem"}}>Back</button>
+          </div>
+        </div>
       ) : (
-        <div>
-          <label style={{ display:"block", fontSize:"0.74rem", color:C.inkMid }}>Correct card name, set, number or variation</label>
-          <input aria-label="Correct card identity" value={correction} onChange={e=>setCorrection(e.target.value)} maxLength={180} placeholder="Enter the correct printed identity" style={{ boxSizing:"border-box", marginTop:"0.3rem", padding:"0.6rem", width:"100%", border:"1px solid "+C.border, borderRadius:8 }}/>
-          <p style={{ fontSize:"0.72rem", color:C.inkSoft, marginTop:"0.4rem" }}>
-            Correction noted locally only. The existing valuation is not recalculated; rerun identification after the corrected identity is verified.
-          </p>
-        </div>
+        <p style={{fontSize:"0.76rem",color:C.inkMid}}>
+          Server-reviewed: <strong>{reviewed?.identity?.set} {reviewed?.identity?.subject} #{reviewed?.identity?.number}</strong>.
+          Artwork/printing remain unverified. Sold-comp lookup remains blocked.
+        </p>
       )}
+      {message&&<p role="alert" style={{fontSize:"0.75rem",color:C.red,marginTop:"0.55rem"}}>{message}</p>}
     </div>
   );
 }
@@ -1243,6 +1273,7 @@ const emailRef    = useRef(null);
   canonicalCard: data.canonicalCard || null,
   catalogCrossCheck: data.catalogCrossCheck || null,
   soldIdentityGate: data.soldIdentityGate || null,
+  identityReviewToken: data.identityReviewToken || null,
 };
 
   return [newReport, ...prev].slice(0, 5);
