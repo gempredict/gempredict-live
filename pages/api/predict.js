@@ -1153,7 +1153,7 @@ const atlas = atlasOrchestrator({
       catalog: catalogCrossCheck,
     });
     const graderScenariosV2 = emptyGraderScenarios();
-    const sportsIdentityAudit = cardType === "sports" ? auditSportsIdentity(imageAnalysis || {}, "base") : null;
+    const sportsIdentityAudit = cardType === "sports" ? auditSportsIdentity(imageAnalysis || {}, "unspecified") : null;
 
     return res.status(200).json({
   success: true,
