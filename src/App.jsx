@@ -774,14 +774,14 @@ const displayMeta =
 
     <div style={{ display: "grid", gridTemplateColumns: "repeat(2,1fr)", gap: "0.65rem", textAlign: "center" }}>
       <div>
-        <div style={{ fontSize: "0.62rem", color: C.inkSoft }}>GemPredict Fair Market Value™</div>
+        <div style={{ fontSize: "0.62rem", color: C.inkSoft }}>Median Asking Price</div>
         <div style={{ fontFamily: "'Playfair Display', serif", fontSize: "1.25rem", fontWeight: 700, color: C.ink }}>
           {marketSummary.rawMedian != null ? "$" + safeMoney(marketSummary.rawMedian) : "—"}
         </div>
       </div>
       <div>
   <div style={{ fontSize: "0.62rem", color: C.inkSoft }}>
-    Typical Range
+    Asking Price Range
   </div>
   <div style={{ fontFamily: "'Playfair Display', serif", fontSize: "1.05rem", fontWeight: 700, color: C.ink }}>
     {marketSummary.rawTypicalRangeLow != null &&
@@ -804,7 +804,7 @@ const displayMeta =
       </div>
 
       <div>
-        <div style={{ fontSize: "0.62rem", color: C.inkSoft }}>Market Confidence</div>
+        <div style={{ fontSize: "0.62rem", color: C.inkSoft }}>Listing Match Score</div>
         <div style={{ fontFamily: "'Playfair Display', serif", fontSize: "1.25rem", fontWeight: 700, color: C.green }}>
           {marketSummary.marketConfidence != null ? marketSummary.marketConfidence + "%" : "—"}
         </div>
@@ -812,7 +812,7 @@ const displayMeta =
     </div>
 
     <div style={{ fontSize: "0.7rem", color: C.inkSoft, marginTop: "0.65rem", fontStyle: "italic" }}>
-      Based on live eBay comparable listings filtered by GemPredict Market Engine.
+      Active eBay asking prices, not completed sales or verified fair market value. Grading economics below are provisional estimates.
       {data.marketData?.rawComparableItems?.length > 0 && (
   <div style={{ marginTop: "0.85rem", borderTop: "1px solid " + C.border, paddingTop: "0.75rem" }}>
     <div style={{ fontSize: "0.65rem", fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.08em", color: C.inkSoft, marginBottom: "0.55rem" }}>
@@ -913,10 +913,8 @@ const displayMeta =
         <div className="gp-value-grid" style={{ marginBottom: "0.9rem" }}>
           {[
             {
-  label: data.marketData?.marketSummary?.rawMedian != null ? "Live Raw Market" : "Raw Value",
-  val: data.marketData?.marketSummary?.rawMedian != null
-    ? data.marketData.marketSummary.rawMedian
-    : data.rawValue,
+  label: "Raw Value (Modeled)",
+  val: data.rawValue,
   featured: false
 },
             { label: "PSA 9 Value", val: data.psa9Value,  featured: false },
@@ -945,7 +943,7 @@ const displayMeta =
     <div style={{ display: "flex", justifyContent: "space-between" }}>
   <span>Current Raw Value</span>
   <strong style={{ color: C.red }}>
-    {"-$" + safeMoney(data.marketData?.marketSummary?.rawMedian ?? data.rawValue ?? 0)}
+    {"-$" + safeMoney(data.rawValue ?? 0)}
   </strong>
 </div>
 
@@ -967,7 +965,7 @@ const displayMeta =
   </div>
 
   <div style={{ fontSize: "0.7rem", color: C.inkSoft, marginTop: "0.6rem", fontStyle: "italic" }}>
-    Expected value weighs PSA 10 odds against PSA 9 value, raw value, and current grading cost.
+    Provisional modeled economics, not sold-comp verified. Expected value weighs PSA 10 odds against PSA 9 value, modeled raw value, and current grading cost.
   </div>
 </div>        
         {/* Best use case */}
@@ -1919,7 +1917,7 @@ if (data.imageAnalysis) setImageAnalysis(data.imageAnalysis);
 )}
 {r.marketData?.marketSummary?.rawMedian != null && (
   <span style={{ fontSize: "0.72rem", color: C.green, fontWeight: 700 }}>
-    FMV ${safeMoney(r.marketData.marketSummary.rawMedian)}
+    Ask ${safeMoney(r.marketData.marketSummary.rawMedian)}
   </span>
 )}
                           {r.gradingUpside != null && <span style={{ fontSize: "0.72rem", color: r.gradingUpside >= 0 ? C.green : C.red, fontWeight: 600 }}>{r.gradingUpside >= 0 ? "+$" : "-$"}{safeMoney(Math.abs(r.gradingUpside))}</span>}
@@ -1986,7 +1984,7 @@ if (data.imageAnalysis) setImageAnalysis(data.imageAnalysis);
     <div>✅ Image Analysis</div>
     <div>✅ Saved Reports</div>
     <div>✅ What To Grade Next</div>
-    <div>✅ Market Confidence Engine</div>
+    <div>✅ Listing Match Score Engine</div>
   </div>
 
   <div
