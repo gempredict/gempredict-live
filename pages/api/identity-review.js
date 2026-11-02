@@ -12,7 +12,6 @@ export default async function handler(req,res){
  if(action==="confirm"&&(scan.conflicts?.length||!scan.catalogId))return res.status(409).json({status:"blocked",reason:"catalog_conflict",message:"Choose a corrected catalog identity before confirming."});
  const id=action==="confirm"?scan.catalogId:catalogId;
  if(typeof id!=="string"||!/^[a-z0-9-]{2,65}$/i.test(id))return res.status(400).json({error:"A valid TCGdex catalog ID is required."});
- if(action==="correct"&&id===scan.catalogId)return res.status(400).json({error:"Choose a different catalog record for correction."});
  const card=await fetchFullTcgdexCard(id);
  if(!card?.id||!card?.name||!card?.set?.name||!card?.localId)return res.status(422).json({status:"blocked",reason:"catalog_unavailable"});
  // Re-evaluate scan identity server side; browser text is untrusted.
