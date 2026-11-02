@@ -1,3 +1,4 @@
+import { matchListing } from "../../lib/ebayIdentityMatch.mjs";
 function getMedian(nums) {
   if (!nums.length) return null;
   const sorted = nums.slice().sort(function(a, b) {
@@ -183,13 +184,15 @@ const q = typeof req.query.q === "string" && req.query.q.trim()
         const title = item.title || "";
         const listingType = getListingType(title, item.condition);
 
-        const match = scoreListing(title, q);
+        const match = matchListing(title, identity, item.condition);
 
 return {
   title,
   matchScore: match.score,
-  matchReasons: match.reasons,
-  listingType,
+  matchReasons: match.matchReasons,
+  rejectionReasons: match.rejectionReasons,
+  listingType: match.listingType,
+  accepted: match.accepted,
   price: item.price
     ? {
         value: item.price.value,
@@ -209,9 +212,11 @@ return {
 
     const rawComparableItems = items.filter(function(item) {
       return item.listingType === "raw" &&
-        item.matchScore >= 60 &&
+        item.accepted &&
         typeof item.priceValue === "number";
     });
+
+    const rejectedItems = items.filter(function(item) { return !item.accepted; });
 
     const gradedItems = items.filter(function(item) {
       return item.listingType === "graded";
@@ -278,6 +283,8 @@ marketConfidence = Math.max(1, Math.min(99, marketConfidence));
       count: items.length,
       marketSummary: {
         rawComparableCount: rawComparableItems.length,
+        rejectedCount: rejectedItems.length,
+        evidenceSufficient: rawComparableItems.length >= 3,
         rawUsedCount: filteredRawPrices.length,
 rawOutlierCount: rawPrices.length - filteredRawPrices.length,
         gradedCount: gradedItems.length,
@@ -294,6 +301,7 @@ rawTypicalRangeHigh: roundMoney(rawTypicalRangeHigh),
 averageMatchScore: Math.round(avgMatchScore),
       },
       rawComparableItems,
+      rejectedItems,
       gradedItems,
       excludedItems,
       items,
