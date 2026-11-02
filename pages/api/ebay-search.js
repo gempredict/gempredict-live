@@ -93,6 +93,7 @@ export default async function handler(req, res) {
   cardName: typeof req.query.cardName === "string" ? req.query.cardName.trim() : null,
   cardNumber: typeof req.query.cardNumber === "string" ? req.query.cardNumber.trim() : null,
   parallel: typeof req.query.parallel === "string" ? req.query.parallel.trim() : null,
+  autoOrRelic: typeof req.query.autoOrRelic === "string" ? req.query.autoOrRelic.trim() : null,
 };
 
 const structuredQuery = [
@@ -255,7 +256,7 @@ const rawLowest = filteredRawPrices.length ? Math.min.apply(null, filteredRawPri
 const rawHighest = filteredRawPrices.length ? Math.max.apply(null, filteredRawPrices) : null;
 const rawMedian = getMedian(filteredRawPrices);
 
-let marketConfidence = 50;
+let marketConfidence = rawComparableItems.length >= 3 ? 50 : 0;
 
 if (filteredRawPrices.length >= 5) marketConfidence += 10;
 if (filteredRawPrices.length >= 10) marketConfidence += 10;
@@ -271,7 +272,7 @@ const avgMatchScore =
 if (avgMatchScore >= 120) marketConfidence += 10;
 if (avgMatchScore >= 150) marketConfidence += 10;
 
-marketConfidence = Math.max(1, Math.min(99, marketConfidence));
+marketConfidence = Math.max(0, Math.min(99, marketConfidence));
 
 
     return res.status(200).json({
