@@ -1014,6 +1014,20 @@ if (catalogTitleCandidate) {
   effectiveCardName = [c.set?.name, c.name, "#" + fullNumber].filter(Boolean).join(" ");
   effectiveCardSet = c.set.name;
   canonicalCard = { ...(canonicalCard || {}), subject: c.name, brandSet: c.set.name, cardNumber: fullNumber, displayName: effectiveCardName, catalogId: c.id, catalogStatus: "provisional" };
+  // Keep both visible reports consistent with the selected catalog candidate.
+  // Preserve the model's original claims for audit; this is NOT artwork verification.
+  catalogCrossCheck.originalImageIdentity = {
+    identifiedBrandSet: imageAnalysis?.identifiedBrandSet || null,
+    identifiedYear: imageAnalysis?.identifiedYear || null,
+    identifiedParallel: imageAnalysis?.identifiedParallel || null,
+    identityNotes: imageAnalysis?.identityNotes || null,
+  };
+  if (imageAnalysis) {
+    imageAnalysis.identifiedBrandSet = c.set.name;
+    imageAnalysis.identifiedSubject = c.name;
+    imageAnalysis.identifiedCardNumber = fullNumber;
+    imageAnalysis.identityNotes = "Catalog candidate: " + c.set.name + " " + c.name + " #" + fullNumber + ". Artwork and exact printing remain unverified.";
+  }
   catalogCrossCheck.titleSource = "TCGdex provisional";
 }
 
