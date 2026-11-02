@@ -917,12 +917,12 @@ if (hasTypedCardName && looksLikeJunk(cardName)) {
     const hasUserCardName =
   cardName && cardName.trim() && cardName.trim() !== "Unknown card from image";
 
-const effectiveCardName =
+let effectiveCardName =
   hasUserCardName
     ? cardName.trim()
     : identifiedCardName || "Unknown card from image";
 
-    const effectiveCardSet =
+    let effectiveCardSet =
       cardSet && cardSet.trim()
         ? cardSet.trim()
         : [
@@ -933,7 +933,7 @@ const effectiveCardName =
             .join(" ")
             .trim();
 
-    const canonicalCard = buildCanonicalCardFromImageAnalysis(
+    let canonicalCard = buildCanonicalCardFromImageAnalysis(
   imageAnalysis,
   cardName,
   cardSet
@@ -963,6 +963,7 @@ const identityEvidence = assessIdentityEvidence(imageAnalysis, { cardName, cardS
 
 // Read-only diagnostic: no changes to title, pricing, scoring or photo grading.
 let catalogCrossCheck = { status: "not_checked", verified: false };
+let catalogTitleCandidate = null;
 if (imageAnalysis && cardType === "pokemon") {
   const observed = {
     subject: imageAnalysis.identifiedSubject,
@@ -979,6 +980,9 @@ if (imageAnalysis && cardType === "pokemon") {
         provider: "TCGdex",
         candidateCount: candidates.length,
       };
+      if (fullCard && catalogCrossCheck.agreements?.includes("subject") && catalogCrossCheck.agreements?.includes("collectorNumber") && fullCard.set?.name) {
+        catalogTitleCandidate = fullCard;
+      }
     } else {
       catalogCrossCheck = {
         status: result.status || "needs_review",
@@ -994,6 +998,17 @@ if (imageAnalysis && cardType === "pokemon") {
 }
 
 
+// Prefer independently sourced catalog name and set over contradictory model set guesses.
+// Still provisional: artwork and printing are NOT verified.
+if (catalogTitleCandidate) {
+  const c = catalogTitleCandidate;
+  const fullNumber = imageAnalysis?.identifiedCardNumber || c.localId;
+  effectiveCardName = [c.set?.name, c.name, "#" + fullNumber].filter(Boolean).join(" ");
+  effectiveCardSet = c.set.name;
+  canonicalCard = { ...(canonicalCard || {}), subject: c.name, brandSet: c.set.name, cardNumber: fullNumber, displayName: effectiveCardName, catalogId: c.id, catalogStatus: "provisional" };
+  catalogCrossCheck.titleSource = "TCGdex provisional";
+}
+
     const prediction = await fetchPrediction(
       effectiveCardName,
       cardType,
@@ -1001,10 +1016,13 @@ if (imageAnalysis && cardType === "pokemon") {
       condition
     );
 
-    if (imageAnalysis && !hasUserCardName && identifiedCardName) {
-  prediction.cardTitle = identifiedCardName;
-  prediction.cardMeta = effectiveCardSet || prediction.cardMeta;
-}
+    if (catalogTitleCandidate) {
+      prediction.cardTitle = effectiveCardName;
+      prediction.cardMeta = effectiveCardSet + " — Catalog candidate; artwork/printing not verified";
+    } else if (imageAnalysis && !hasUserCardName && identifiedCardName) {
+      prediction.cardTitle = identifiedCardName;
+      prediction.cardMeta = effectiveCardSet || prediction.cardMeta;
+    }
 
 const atlas = atlasOrchestrator({
   imageAnalysis,
@@ -1030,7 +1048,7 @@ const atlas = atlasOrchestrator({
       process.env.NEXT_PUBLIC_SITE_URL || "https://gempredict-live.vercel.app";
   
       const marketQueries = [
-        ...buildSearchCandidates(imageAnalysis || {}),
+        ...buildSearchCandidates(catalogTitleCandidate ? { ...imageAnalysis, identifiedSubject: catalogTitleCandidate.name, identifiedBrandSet: catalogTitleCandidate.set.name } : (imageAnalysis || {})),
         buildMarketQueryFromCanonicalCard(canonicalCard),
         effectiveCardName,
         prediction.cardTitle,
