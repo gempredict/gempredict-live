@@ -18,6 +18,7 @@ import { assessIdentityEvidence } from "../../lib/identityEvidence";
 import { findTcgdexCandidates } from "../../lib/tcgdexCatalog.mjs";
 import { crossCheckIdentity, fetchFullTcgdexCard } from "../../lib/tcgdexCrossCheck.mjs";
 import { assessSoldIdentityGate } from "../../lib/soldIdentityGate.mjs";
+import { issueIdentityReviewToken } from "../../lib/identityReviewToken.mjs";
 import { assessArtworkSimilarity } from "../../lib/artworkSimilarity.mjs";
 
 import buildSearchCandidates from "../../lib/buildSearchCandidates";
@@ -1007,6 +1008,7 @@ if (imageAnalysis && cardType === "pokemon") {
 }
 
 
+const identityReviewToken = imageBuffer ? issueIdentityReviewToken({catalogId:catalogCrossCheck.catalogId, subject:imageAnalysis?.identifiedSubject, number:imageAnalysis?.identifiedCardNumber, set:imageAnalysis?.identifiedBrandSet, conflicts:catalogCrossCheck.conflicts||[],imageAnalyzed:Boolean(imageAnalysis)}) : null;
 const soldIdentityGate = assessSoldIdentityGate({
   cardType,
   crossCheck: catalogCrossCheck,
@@ -1148,6 +1150,7 @@ const atlas = atlasOrchestrator({
   identityEvidence,
   catalogCrossCheck,
   soldIdentityGate,
+  identityReviewToken,
   hasImageAnalysis: imageAnalysis !== null,
   remaining: rateCheck.remaining,
   emailSaved,
