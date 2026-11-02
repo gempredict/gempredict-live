@@ -485,14 +485,14 @@ try {
 const marketContext =
   preLiveRawMarket != null
     ? "\n\nLIVE MARKET DATA:\n" +
-      "- Current GemPredict Fair Market Value: $" + preLiveRawMarket + "\n" +
-      "- Use this as the raw card value baseline.\n" +
-      "- Do not refer to a different raw value in the analysis or action.\n"
+      "- Median active eBay asking price: $" + preLiveRawMarket + "\n" +
+      "- This is NOT a sold price or verified fair market value.\n" +
+      "- Do not treat this ask median as an authoritative valuation baseline.\n"
     : "";
   
   const prompt =
   "IMPORTANT MARKET RULES:\n" +
-"- If live market data is available, treat it as the authoritative raw market value.\n" +
+"- Active eBay listing prices are asking prices, NOT verified completed sales or authoritative market value.\n" +
 "- Never estimate a PSA 10 value that is less than the raw market value unless there is an explicit and compelling reason.\n" +
 "- In normal markets the relationship should generally be:\n" +
 "  PSA10 >= PSA9 >= Raw.\n" +
