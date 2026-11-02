@@ -17,6 +17,7 @@ import calculateIdentityConfidence from "../../lib/calculateIdentityConfidence";
 import { assessIdentityEvidence } from "../../lib/identityEvidence";
 import { findTcgdexCandidates } from "../../lib/tcgdexCatalog.mjs";
 import { crossCheckIdentity, fetchFullTcgdexCard } from "../../lib/tcgdexCrossCheck.mjs";
+import { assessArtworkSimilarity } from "../../lib/artworkSimilarity.mjs";
 
 import buildSearchCandidates from "../../lib/buildSearchCandidates";
 
@@ -980,6 +981,13 @@ if (imageAnalysis && cardType === "pokemon") {
         provider: "TCGdex",
         candidateCount: candidates.length,
       };
+      // Compare photo pixels against catalog art without an additional AI call.
+      // Diagnostic only: never declare a card verified from perceptual similarity.
+      if (imageBuffer && fullCard?.image) {
+        catalogCrossCheck.artwork = await assessArtworkSimilarity(imageBuffer, fullCard.image);
+      } else {
+        catalogCrossCheck.artwork = { status: "inconclusive", verified: false, reason: "reference_or_photo_missing" };
+      }
       if (fullCard && catalogCrossCheck.agreements?.includes("subject") && catalogCrossCheck.agreements?.includes("collectorNumber") && fullCard.set?.name) {
         catalogTitleCandidate = fullCard;
       }
