@@ -539,14 +539,21 @@ marketContext +
     "Be realistic. Most raw cards do not get PSA 10. Standard grading fees are approximately $80. Factor that into all ROI calculations and recommendations.";
 
   const message = await anthropic.messages.create({
-    model: "claude-sonnet-4-6", max_tokens: 1000,
+    model: "claude-sonnet-4-6", max_tokens: 1800,
     messages: [{ role: "user", content: prompt }],
   });
 
   const text = (message.content || []).map(function(b) { return b.type === "text" ? b.text : ""; }).join("").trim();
   if (!text)   throw new Error("EMPTY_RESPONSE");
   const parsed = extractJSON(text);
-  if (!parsed) throw new Error("PARSE_FAILED");
+  if (!parsed) {
+    console.error("[GemPredict] Prediction JSON parse failed", {
+      stopReason: message.stop_reason || "unknown",
+      textLength: text.length,
+      contentBlocks: (message.content || []).length,
+    });
+    throw new Error("PARSE_FAILED");
+  }
   const result = normaliseCard(parsed);
   if (!result) throw new Error("NORMALISE_FAILED");
   return result;
