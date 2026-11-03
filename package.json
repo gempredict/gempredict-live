@@ -4,11 +4,12 @@
   "private": true,
   "scripts": {
     "dev": "next dev",
-    "build": "npm run test:sold && npm run test:mobile && npm run test:reconciliation && next build",
+    "build": "npm run test:sold && npm run test:mobile && npm run test:reconciliation && npm run test:pokemon && next build && node scripts/check-tcgdex-packaging.mjs",
     "start": "next start",
     "lint": "next lint",
     "test:sold": "node --test tests/soldCompsFilter.test.mjs tests/soldIdentityGate.test.mjs tests/identityReviewToken.test.mjs tests/canonicalIdentityV2.test.mjs tests/sportsIdentityAudit.test.mjs tests/ebayIdentityMatch.test.mjs",
     "test:mobile": "node --test tests/mobile-reconciliation.test.mjs",
+    "test:pokemon": "node --test tests/pokemon-restoration.test.mjs tests/*identity*.test.mjs tests/*provenance*.test.mjs tests/*variant*.test.mjs tests/tcgdex-*.test.mjs tests/structured-listing-evidence.test.mjs",
     "test:reconciliation": "node --test tests/reconciliation-handler.test.mjs"
   },
   "dependencies": {
@@ -20,7 +21,8 @@
     "react-dom": "^18.3.0",
     "formidable": "^3.5.1",
     "sharp": "0.35.5",
-    "heic-to": "1.6.6"
+    "heic-to": "1.6.6",
+    "https-proxy-agent": "^7.0.6"
   },
   "devDependencies": {
     "eslint": "^8.57.0",

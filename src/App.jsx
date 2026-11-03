@@ -1,3 +1,4 @@
+import {identitySummary} from '../lib/pokemonReportIdentity.mjs';
 import { protectFinancialReport, reportFromResponse, protectedCopySummary, WITHHELD_MESSAGE } from "../lib/financialSafety.mjs";
 // src/App.jsx — GemPredict main component
 import { useState, useRef, useEffect } from "react";
@@ -216,7 +217,7 @@ function ImageAnalysisCard({ data }) {
   if (!data) return null;
 
   function RatingPill({ rating, label }) {
-    const r = RATING_COLORS[rating] || RATING_COLORS.fair;
+    const r = RATING_COLORS[rating] || (rating==="unassessed"?{color:C.inkSoft,bg:C.cream,label:"Unassessed"}:RATING_COLORS.fair);
     return (
       <span style={{ display: "inline-block", fontSize: "0.65rem", fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.06em", color: r.color, background: r.bg, padding: "0.15rem 0.5rem", borderRadius: 100 }}>
         {label || r.label}
@@ -288,7 +289,7 @@ function ImageAnalysisCard({ data }) {
               marginBottom: "0.55rem",
             }}
           >
-            Card Identification
+            {data.identityObservationOnly?'Original AI Identity Observation — Unverified':'Card Identification'}
           </div>
 
           <div style={{ fontSize: "0.95rem", fontWeight: 800, color: C.ink }}>
@@ -327,14 +328,14 @@ function ImageAnalysisCard({ data }) {
               style={{
                 fontSize: "0.68rem",
                 fontWeight: 700,
-                color: (data.identityConfidence || 0) >= 85 ? C.green : (data.identityConfidence || 0) >= 60 ? C.amber : C.red,
-                background: (data.identityConfidence || 0) >= 85 ? C.greenLight : (data.identityConfidence || 0) >= 60 ? C.goldLight : C.redLight,
+                color: data.identityObservationOnly ? C.inkSoft : (data.identityConfidence || 0) >= 85 ? C.green : (data.identityConfidence || 0) >= 60 ? C.amber : C.red,
+                background: data.identityObservationOnly ? C.cream : (data.identityConfidence || 0) >= 85 ? C.greenLight : (data.identityConfidence || 0) >= 60 ? C.goldLight : C.redLight,
                 border: "1px solid " + ((data.identityConfidence || 0) >= 85 ? "#86efac" : (data.identityConfidence || 0) >= 60 ? C.gold : "#fca5a5"),
                 borderRadius: 100,
                 padding: "0.15rem 0.55rem",
               }}
             >
-              {(data.identityConfidence || 0) >= 85
+              {data.identityObservationOnly ? "Model observation confidence" : (data.identityConfidence || 0) >= 85
                 ? "High Confidence"
                 : (data.identityConfidence || 0) >= 60
                 ? "Moderate Confidence"
@@ -380,7 +381,7 @@ function ImageAnalysisCard({ data }) {
         {/* 4 attribute ratings */}
         <div className="gp-vision-grid" style={{ marginBottom: "1rem" }}>
           {attributes.map(function(attr) {
-            const rating = data[attr.key] || "fair";
+            const rating = data[attr.key] || (data.identityObservationOnly?"unassessed":"fair");
             const rc = RATING_COLORS[rating] || RATING_COLORS.fair;
             return (
               <div key={attr.key} style={{ background: C.cream, border: "1px solid " + C.border, borderRadius: 12, padding: "0.85rem 0.9rem" }}>
@@ -541,7 +542,7 @@ function ResultCard({ data, index, onSave, isSaved }) {
   const marketSummary = data.marketData && data.marketData.marketSummary
   ? data.marketData.marketSummary
   : null;
-  const displayTitle =
+  const displayTitle = data.pokemonIdentityStatus ? data.canonicalCard?.displayName || data.cardTitle :
   data.catalogCrossCheck?.catalogName && data.catalogCrossCheck?.catalogSet && data.canonicalCard?.cardNumber
     ? [data.catalogCrossCheck.catalogSet, data.catalogCrossCheck.catalogName, "#" + data.canonicalCard.cardNumber].join(" ")
     : (data.canonicalCard?.displayName || data.cardTitle);
@@ -585,11 +586,11 @@ const displayMeta =
 </div>
 {data.canonicalCard?.confidence != null && (
   <div style={{ fontSize: "0.68rem", color: C.inkSoft, marginTop: "0.3rem", fontWeight: 700 }}>
-    Identity unverified · model-reported observation confidence {data.canonicalCard.confidence}%
+    {data.pokemonIdentityStatus?.catalogVerified?'Catalog-supported identity':'Identity unverified'} · model-reported observation confidence {data.canonicalCard.confidence}%
   </div>
 )}
           <div style={{ fontSize: "0.68rem", color: C.inkSoft, marginTop: "0.35rem", fontStyle: "italic" }}>
-            Unverified identity proposal; valuation and grading recommendations withheld.
+            {data.pokemonIdentityStatus ? identitySummary(data) : 'Unverified identity proposal; valuation and grading recommendations withheld.'}
           </div>
         </div>
         <div style={{ textAlign: "center", flexShrink: 0 }}>

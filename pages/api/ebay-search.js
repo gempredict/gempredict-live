@@ -1,3 +1,5 @@
+import {expandVariantAliases,matchesVariantValuation} from '../../lib/variantVerification.mjs';
+import {scoreListing as scorePokemonListing,getListingType as pokemonListingType,readMarketIdentity as readPokemonIdentity} from '../../lib/pokemonListingMatch.mjs';
 import { matchListing, identityComplete } from "../../lib/ebayIdentityMatch.mjs";
 function getMedian(nums) {
   if (!nums.length) return null;
@@ -84,7 +86,7 @@ function getListingType(title, condition) {
 
 export default async function handler(req, res) {
   try {
-    const identity = {
+    let identity = {
   game: typeof req.query.game === "string" ? req.query.game.trim() : null,
   year: typeof req.query.year === "string" ? req.query.year.trim() : null,
   brand: typeof req.query.brand === "string" ? req.query.brand.trim() : null,
@@ -97,6 +99,8 @@ export default async function handler(req, res) {
   autoOrRelic: typeof req.query.autoOrRelic === "string" ? req.query.autoOrRelic.trim() : null,
 };
 
+const pokemon=req.query.game==='pokemon';
+if(pokemon)identity=readPokemonIdentity(req.query);
 const structuredQuery = [
   identity.year,
   identity.set || identity.brand,
@@ -188,7 +192,9 @@ const q = typeof req.query.q === "string" && req.query.q.trim()
         const title = item.title || "";
         const listingType = getListingType(title, item.condition);
 
-        const match = matchListing(title, identity, item.condition);
+        const candidate=pokemon?scorePokemonListing(expandVariantAliases(title),q,identity,item):null;
+        if(candidate?.comparable&&!matchesVariantValuation({...item,title:expandVariantAliases(title)},{subject:identity.player||identity.cardName,year:identity.year,brandSet:identity.set,cardNumber:identity.cardNumber,parallel:identity.parallel,language:identity.language,autoOrRelic:identity.autoOrRelic,printRun:identity.printRun,...(identity.variantIdentity?{variant:JSON.parse(identity.variantIdentity)}:{})}))Object.assign(candidate,{comparable:false,score:0,reasons:[...candidate.reasons,'Variant valuation mismatch']});
+        const match = pokemon?{matchScore:candidate.score,matchReasons:candidate.reasons,rejectionReasons:candidate.comparable?[]:candidate.reasons,accepted:candidate.comparable,listingType:pokemonListingType(title,item.condition,item)}:matchListing(title, identity, item.condition);
 
 return {
   title,
@@ -205,6 +211,7 @@ return {
     : null,
   priceValue: Number.isFinite(priceValue) ? priceValue : null,
   condition: item.condition || null,
+  ...(pokemon?{localizedAspects:item.localizedAspects||[]}:{}),
   itemWebUrl: item.itemWebUrl || null,
   image: item.image && item.image.imageUrl ? item.image.imageUrl : null,
   itemId: item.itemId || null,
@@ -227,7 +234,7 @@ return {
     });
 
     const excludedItems = items.filter(function(item) {
-      return item.listingType === "excluded";
+      return item.listingType === "excluded" || pokemon&&!item.accepted;
     });
 
    const rawPrices = rawComparableItems

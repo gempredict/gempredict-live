@@ -1,3 +1,7 @@
+import {conditionPresentation} from '../../lib/visualEvidence.mjs';
+import {buildVisionPrompt} from '../../lib/pokemonVisionPrompt.mjs';
+import {resolvePokemonIdentity} from '../../lib/pokemonIdentityPipeline.mjs';
+import {readIdentityReadings} from '../../lib/visionIdentityEvidence.mjs';
 // pages/api/predict.js
 // GemPredict — Card grading prediction API route
 //
@@ -282,7 +286,7 @@ gemPredictScore,
 }
 
 // Validate and normalise image analysis response from Claude Vision
-function normaliseImageAnalysis(raw) {
+function normaliseImageAnalysis(raw,inspectedSides=['front'],cardType=null) {
   if (!raw || typeof raw !== "object") return null;
 
   function safeStr(val, fallback) {
@@ -344,6 +348,7 @@ else if (hasObviousStructuralDamage && !saysNoStructuralDamage) {
 }  
   return {  
     // Card identity
+    ...(cardType==='pokemon'?{identifiedRarity:raw.identifiedRarity!=null?safeStr(raw.identifiedRarity,null):null,identityReadings:readIdentityReadings(raw.identityReadings).filter(r=>inspectedSides.includes(r.side))}:{}),
     identifiedLanguage: raw.identifiedLanguage != null ? safeStr(raw.identifiedLanguage,null) : null,
     identifiedFranchise: raw.identifiedFranchise != null ? safeStr(raw.identifiedFranchise,null) : null,
     identifiedYear: raw.identifiedYear != null ? safeStr(raw.identifiedYear, null) : null,
@@ -414,6 +419,7 @@ gemRiskFactors:
     : [],
 
 minorConcerns: safeStr(raw.minorConcerns, "No additional visible concerns identified."),
+    ...(cardType==='pokemon'?conditionPresentation({...raw,inspectedSides,imageLimitations:[...(Array.isArray(raw.imageLimitations)?raw.imageLimitations:[]),...(!inspectedSides.includes('back')?['back_not_visible']:[])]}):{}),
   };
 }
 // ─── Anthropic client ─────────────────────────────────────────────────────────
@@ -667,7 +673,7 @@ const backMime = backImageMimeType &&
 
   {
     type: "text",
-    text: imagePrompt +
+    text: (cardType==='pokemon'?buildVisionPrompt({cardName,typeLabel,hasBack:!!backBase64}):imagePrompt) +
       (backBase64
         ? "\n\nBoth front and back images are provided. Evaluate both sides when assessing confidence, corners, edges, whitening, and grading risk."
         : "\n\nOnly the front image is provided. Missing back image should reduce confidence where appropriate."),
@@ -690,7 +696,7 @@ const backMime = backImageMimeType &&
     });
     return null;
   }
-  const normalized = normaliseImageAnalysis(parsed);
+  const normalized = normaliseImageAnalysis(parsed,backImageBuffer?['front','back']:['front'],cardType);
   if (!normalized) console.error("[GemPredict] Vision normalization failed", { stopReason: message.stop_reason || "unknown" });
   return normalized;
 }
@@ -908,51 +914,19 @@ const atlasIdentityConfidence =
   calculateIdentityConfidence(imageAnalysis || {});
 const identityEvidence = assessIdentityEvidence(imageAnalysis, { cardName, cardSet });
 
-// Read-only diagnostic: no changes to title, pricing, scoring or photo grading.
-let catalogCrossCheck = { status: "not_checked", verified: false };
-let catalogTitleCandidate = null;
-if (imageAnalysis && cardType === "pokemon") {
-  const observed = {
-    subject: imageAnalysis.identifiedSubject,
-    cardNumber: imageAnalysis.identifiedCardNumber,
-    set: imageAnalysis.identifiedBrandSet,
-  };
-  try {
-    const result = await findTcgdexCandidates(observed);
-    const candidates = result.candidates || [];
-    if (candidates.length === 1 && candidates[0].id) {
-      const fullCard = await fetchFullTcgdexCard(candidates[0].id);
-      catalogCrossCheck = {
-        ...crossCheckIdentity(imageAnalysis, fullCard),
-        provider: "TCGdex",
-        candidateCount: candidates.length,
-      };
-      // Compare photo pixels against catalog art without an additional AI call.
-      // Diagnostic only: never declare a card verified from perceptual similarity.
-      if (imageBuffer && fullCard?.image) {
-        catalogCrossCheck.artwork = await assessArtworkSimilarity(imageBuffer, fullCard.image);
-      } else {
-        catalogCrossCheck.artwork = { status: "inconclusive", verified: false, reason: "reference_or_photo_missing" };
-      }
-      if (fullCard && catalogCrossCheck.agreements?.includes("subject") && catalogCrossCheck.agreements?.includes("collectorNumber") && fullCard.set?.name) {
-        catalogTitleCandidate = fullCard;
-      }
-    } else {
-      catalogCrossCheck = {
-        status: result.status || "needs_review",
-        verified: false,
-        provider: "TCGdex",
-        candidateCount: candidates.length,
-        note: "No unique catalog candidate was established. Report title remains unchanged.",
-      };
-    }
-  } catch {
-    catalogCrossCheck = { status: "catalog_unavailable", verified: false, provider: "TCGdex" };
-  }
+// Pokémon uses the independent October pipeline; sports retains its current path.
+let pokemonIdentity=null;
+let catalogCrossCheck={status:'not_checked',verified:false};
+let catalogTitleCandidate=null;
+if(imageAnalysis&&cardType==='pokemon'){
+ pokemonIdentity=await resolvePokemonIdentity(imageAnalysis,fields,{fetchImpl:fetch,clientId:process.env.EBAY_PROD_CLIENT_ID,clientSecret:process.env.EBAY_PROD_CLIENT_SECRET});
+ canonicalCard=pokemonIdentity.canonicalCard;
+ catalogCrossCheck=pokemonIdentity.catalogCrossCheck;
+ effectiveCardName=canonicalCard?.displayName||effectiveCardName;
+ effectiveCardSet=canonicalCard?.brandSet||effectiveCardSet;
 }
 
-
-const identityReviewToken = imageBuffer ? issueIdentityReviewToken({catalogId:catalogCrossCheck.catalogId, subject:imageAnalysis?.identifiedSubject, number:imageAnalysis?.identifiedCardNumber, set:imageAnalysis?.identifiedBrandSet, conflicts:catalogCrossCheck.conflicts||[],imageAnalyzed:Boolean(imageAnalysis)}) : null;
+const identityReviewToken = imageBuffer ? issueIdentityReviewToken({catalogId:catalogCrossCheck.catalogId, subject:pokemonIdentity?canonicalCard?.subject:imageAnalysis?.identifiedSubject, number:pokemonIdentity?canonicalCard?.cardNumber:imageAnalysis?.identifiedCardNumber, set:pokemonIdentity?canonicalCard?.brandSet:imageAnalysis?.identifiedBrandSet, conflicts:catalogCrossCheck.conflicts||[],imageAnalyzed:Boolean(imageAnalysis)}) : null;
 const soldIdentityGate = assessSoldIdentityGate({
   cardType,
   crossCheck: catalogCrossCheck,
@@ -960,31 +934,6 @@ const soldIdentityGate = assessSoldIdentityGate({
   photoIdentity: { subject: imageAnalysis?.identifiedSubject, number: imageAnalysis?.identifiedCardNumber,
     set: imageAnalysis?.identifiedBrandSet, printingConfirmed: false }
 });
-
-// Prefer independently sourced catalog name and set over contradictory model set guesses.
-// Still provisional: artwork and printing are NOT verified.
-if (catalogTitleCandidate) {
-  const c = catalogTitleCandidate;
-  const fullNumber = imageAnalysis?.identifiedCardNumber || c.localId;
-  effectiveCardName = [c.set?.name, c.name, "#" + fullNumber].filter(Boolean).join(" ");
-  effectiveCardSet = c.set.name;
-  canonicalCard = { ...(canonicalCard || {}), subject: c.name, brandSet: c.set.name, cardNumber: fullNumber, displayName: effectiveCardName, catalogId: c.id, catalogStatus: "provisional" };
-  // Keep both visible reports consistent with the selected catalog candidate.
-  // Preserve the model's original claims for audit; this is NOT artwork verification.
-  catalogCrossCheck.originalImageIdentity = {
-    identifiedBrandSet: imageAnalysis?.identifiedBrandSet || null,
-    identifiedYear: imageAnalysis?.identifiedYear || null,
-    identifiedParallel: imageAnalysis?.identifiedParallel || null,
-    identityNotes: imageAnalysis?.identityNotes || null,
-  };
-  if (imageAnalysis) {
-    imageAnalysis.identifiedBrandSet = c.set.name;
-    imageAnalysis.identifiedSubject = c.name;
-    imageAnalysis.identifiedCardNumber = fullNumber;
-    imageAnalysis.identityNotes = "Catalog candidate: " + c.set.name + " " + c.name + " #" + fullNumber + ". Artwork and exact printing remain unverified.";
-  }
-  catalogCrossCheck.titleSource = "TCGdex provisional";
-}
 
     const identityV2 = canonicalIdentityV2({category:cardType === 'pokemon' ? 'pokemon' : cardType === 'sports' ? 'sports' : 'unknown',vision:imageAnalysis||{},catalog:catalogCrossCheck});
     const sportsIdentityAudit = cardType === 'sports' ? auditSportsIdentity(imageAnalysis||{},'unspecified') : null;
@@ -996,7 +945,7 @@ if (catalogTitleCandidate) {
     if (catalogTitleCandidate) {
       prediction.cardTitle = effectiveCardName;
       prediction.cardMeta = effectiveCardSet + " — Catalog candidate; artwork/printing not verified";
-    } else if (imageAnalysis && !hasUserCardName && identifiedCardName) {
+    } else if (!pokemonIdentity && imageAnalysis && !hasUserCardName && identifiedCardName) {
       prediction.cardTitle = identifiedCardName;
       prediction.cardMeta = effectiveCardSet || prediction.cardMeta;
     }
@@ -1020,7 +969,7 @@ const atlas = null; // Financial recommendations require independent identity an
     const baseUrl = context.baseUrl;
   
       const marketQueries = [
-        ...buildSearchCandidates(catalogTitleCandidate ? { ...imageAnalysis, identifiedSubject: catalogTitleCandidate.name, identifiedBrandSet: catalogTitleCandidate.set.name } : (imageAnalysis || {})),
+        ...buildSearchCandidates(pokemonIdentity ? {...imageAnalysis,identifiedYear:canonicalCard.year,identifiedBrandSet:canonicalCard.brandSet,identifiedSubject:canonicalCard.subject,identifiedCardNumber:canonicalCard.cardNumber,identifiedParallel:canonicalCard.parallel} : catalogTitleCandidate ? { ...imageAnalysis, identifiedSubject: catalogTitleCandidate.name, identifiedBrandSet: catalogTitleCandidate.set.name } : (imageAnalysis || {})),
         buildMarketQueryFromCanonicalCard(canonicalCard),
         effectiveCardName,
         prediction.cardTitle,
@@ -1048,6 +997,10 @@ const atlas = null; // Financial recommendations require independent identity an
     const stamp=imageAnalysis?.identifiedSerialNumber?.match(/^\s*\d+\s*\/\s*(\d+)\s*$/);
     if(stamp)lookupIdentity.printRun=stamp[1];
     if(!identityComplete(lookupIdentity))throw new Error('identity_incomplete');
+    if(pokemonIdentity){
+      if(!pokemonIdentity.valuationIdentityGate.allowed)throw new Error('identity_incomplete');
+      Object.assign(lookupIdentity,{game:'pokemon',brand:'',language:canonicalCard.language||'',variantIdentity:JSON.stringify(canonicalCard.variant||{})});
+    }
     const attempts = [];
     // Bounded progressively broader discovery; acceptance remains identity-strict.
     for (const q of marketQueries.slice(0, 6)) {
@@ -1085,7 +1038,9 @@ const atlas = null; // Financial recommendations require independent identity an
   atlas,
   atlasIdentityConfidence,
   canonicalCard,
+  ...(process.env.NODE_ENV==='development'&&pokemonIdentity?{identityDiagnostics:{catalog:{...pokemonIdentity.identityVerification.catalog,diagnostics:pokemonIdentity.catalogDiagnostics}}}:{}),
   identityEvidence,
+  ...(pokemonIdentity?{identityVerification:pokemonIdentity.identityVerification,originalIdentityObservation:pokemonIdentity.originalIdentityObservation,originalCanonicalCard:pokemonIdentity.originalCanonicalCard,userIdentityConflicts:pokemonIdentity.userIdentityConflicts,variantVerification:pokemonIdentity.variantVerification,artworkStatus:pokemonIdentity.artworkStatus,physicalPrintingStatus:pokemonIdentity.physicalPrintingStatus,identityEvidenceItems:pokemonIdentity.identityEvidenceItems,identityEvidenceExclusions:pokemonIdentity.identityEvidenceExclusions,identityEvidenceSearch:pokemonIdentity.search,runtimeCatalogAssets:pokemonIdentity.runtimeCatalogAssets}:{}),
   catalogCrossCheck,
   soldIdentityGate,
   identityReviewToken,
