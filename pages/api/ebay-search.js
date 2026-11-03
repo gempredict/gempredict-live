@@ -1,4 +1,4 @@
-import { matchListing } from "../../lib/ebayIdentityMatch.mjs";
+import { matchListing, identityComplete } from "../../lib/ebayIdentityMatch.mjs";
 function getMedian(nums) {
   if (!nums.length) return null;
   const sorted = nums.slice().sort(function(a, b) {
@@ -93,12 +93,13 @@ export default async function handler(req, res) {
   cardName: typeof req.query.cardName === "string" ? req.query.cardName.trim() : null,
   cardNumber: typeof req.query.cardNumber === "string" ? req.query.cardNumber.trim() : null,
   parallel: typeof req.query.parallel === "string" ? req.query.parallel.trim() : null,
+  printRun: typeof req.query.printRun === "string" ? req.query.printRun.trim() : null,
   autoOrRelic: typeof req.query.autoOrRelic === "string" ? req.query.autoOrRelic.trim() : null,
 };
 
 const structuredQuery = [
   identity.year,
-  identity.brand || identity.set,
+  identity.set || identity.brand,
   identity.player || identity.cardName,
   identity.cardNumber,
   identity.parallel,
@@ -116,6 +117,8 @@ const q = typeof req.query.q === "string" && req.query.q.trim()
         error: "Missing search query. Use /api/ebay-search?q=2024%20Optic%20Jayden%20Daniels",
       });
     }
+
+    if (!identityComplete(identity)) return res.status(400).json({success:false,error:"Complete structured identity is required; query text alone cannot establish comparables."});
 
     const clientId = process.env.EBAY_PROD_CLIENT_ID;
     const clientSecret = process.env.EBAY_PROD_CLIENT_SECRET;
@@ -189,7 +192,7 @@ const q = typeof req.query.q === "string" && req.query.q.trim()
 
 return {
   title,
-  matchScore: match.score,
+  matchScore: match.matchScore,
   matchReasons: match.matchReasons,
   rejectionReasons: match.rejectionReasons,
   listingType: match.listingType,
@@ -280,6 +283,8 @@ marketConfidence = Math.max(0, Math.min(99, marketConfidence));
   environment: "production",
   query: q,
   identity,
+  discoveryOnly: true,
+  identityVerified: false,
       total: searchData.total || 0,
       count: items.length,
       marketSummary: {
@@ -293,6 +298,7 @@ rawOutlierCount: rawPrices.length - filteredRawPrices.length,
         rawLowest: roundMoney(rawLowest),
         rawHighest: roundMoney(rawHighest),
         rawMedian: roundMoney(rawMedian),
+        valuationTrusted: false,
         fairMarketValue: null, // Active asking listings cannot establish sale-based FMV.
         priceBasis: "active_asking_listings",
         soldComparableCount: 0,

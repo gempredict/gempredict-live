@@ -1,3 +1,4 @@
+import { protectFinancialReport, reportFromResponse, protectedCopySummary, WITHHELD_MESSAGE } from "../lib/financialSafety.mjs";
 // src/App.jsx — GemPredict main component
 import { useState, useRef, useEffect } from "react";
 import { track } from "@vercel/analytics/react";
@@ -25,12 +26,14 @@ const EXAMPLES = [
 ];
 
 const VERDICTS = {
+  withheld: {label:"Verification Required",bg:"#fffbeb",color:"#92400e",border:"#fde68a",explain:WITHHELD_MESSAGE},
   grade: { label: "Grade It",    bg: "#f0fdf4", color: "#15803d", border: "#86efac", explain: "Strong upside — the PSA 10 premium makes grading clearly worth it." },
   skip:  { label: "Skip It",     bg: "#fef2f2", color: "#b91c1c", border: "#fca5a5", explain: "Not worth grading — the cost likely exceeds the value gained." },
   maybe: { label: "Consider It", bg: "#fffbeb", color: "#b45309", border: "#fde68a", explain: "Borderline — grading upside depends heavily on card condition." },
 };
 
 const VERDICT_USE_CASE = {
+  withheld:"Confirm exact identity and independent market evidence before evaluating grading.",
   grade: "Best for submission or resale upside.",
   maybe: "Best for condition-sensitive cards — strong gem rate matters here.",
   skip:  "Best to sell raw, hold, or trade rather than submit.",
@@ -64,6 +67,7 @@ function lsSet(key, val) {
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 function safeMoney(val) {
+  if (val == null) return "—";
   const n = typeof val === "number" && isFinite(val) ? val : 0;
   try { return n.toLocaleString(); } catch { return String(n); }
 }
@@ -71,6 +75,7 @@ function isValidEmail(email) {
   return /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/.test((email || "").trim());
 }
 function getVerdictBullets(data) {
+  if(data.financialDecision?.actionable!==true)return [WITHHELD_MESSAGE];
   const upside = typeof data.gradingUpside === "number" ? data.gradingUpside : 0;
   const prob   = typeof data.psa10Probability === "number" ? data.psa10Probability : 50;
   const raw    = data.rawValue || 0;
@@ -93,15 +98,7 @@ function getVerdictBullets(data) {
   }
   return bullets.slice(0, 3);
 }
-function buildCopySummary(data) {
-  const v = VERDICTS[data.verdict] ? VERDICTS[data.verdict].label : data.verdict;
-  return "GemPredict Report — " + data.cardTitle +
-    " | Raw: $" + safeMoney(data.rawValue) +
-    " | PSA 9: $" + safeMoney(data.psa9Value) +
-    " | PSA 10: $" + safeMoney(data.psa10Value) +
-    " | Upside: " + (data.gradingUpside >= 0 ? "+$" : "-$") + safeMoney(Math.abs(data.gradingUpside || 0)) +
-    " | Verdict: " + v;
-}
+function buildCopySummary(data) { return protectedCopySummary(data); }
 
 // ─── CSS ──────────────────────────────────────────────────────────────────────
 const GLOBAL_CSS = `
@@ -536,6 +533,7 @@ function EmptyState() {
 }
 
 function ResultCard({ data, index, onSave, isSaved }) {
+  data = protectFinancialReport(data);
   const gpScore = buildGemPredictScore(data);
   const unifiedScore = gpScore?.score ?? null;
   const verdict  = VERDICTS[data.verdict] || VERDICTS.maybe;
@@ -586,12 +584,12 @@ const displayMeta =
   {displayMeta}
 </div>
 {data.canonicalCard?.confidence != null && (
-  <div style={{ fontSize: "0.68rem", color: C.green, marginTop: "0.3rem", fontWeight: 700 }}>
-    ✓ Card Identity {data.canonicalCard.confidence}% Confidence
+  <div style={{ fontSize: "0.68rem", color: C.inkSoft, marginTop: "0.3rem", fontWeight: 700 }}>
+    Identity unverified · model-reported observation confidence {data.canonicalCard.confidence}%
   </div>
 )}
           <div style={{ fontSize: "0.68rem", color: C.inkSoft, marginTop: "0.35rem", fontStyle: "italic" }}>
-            Market-based AI estimate using collector pricing patterns.
+            Unverified identity proposal; valuation and grading recommendations withheld.
           </div>
         </div>
         <div style={{ textAlign: "center", flexShrink: 0 }}>
@@ -633,7 +631,7 @@ const displayMeta =
       marginTop: ".5rem",
     }}
   >
-    {gpScore.score}
+    {gpScore?.score ?? "—"}
   </div>
 
   <div
@@ -643,8 +641,8 @@ const displayMeta =
       marginTop: ".5rem",
     }}
   >
-    {"★".repeat(gpScore.stars)}
-    {"☆".repeat(5 - gpScore.stars)}
+    {"★".repeat((gpScore?.stars || 0))}
+    {"☆".repeat(5 - (gpScore?.stars || 0))}
   </div>
 
   <div
@@ -654,7 +652,7 @@ const displayMeta =
       color: "#ddd",
     }}
   >
-    {gpScore.recommendation}
+    {gpScore?.recommendation || "Verification required before scoring"}
   </div>
 </div>
 
@@ -830,7 +828,7 @@ const displayMeta =
         color: profit >= 0 ? C.green : C.red,
       }}
     >
-      {(profit >= 0 ? "+$" : "-$") + safeMoney(Math.abs(profit))}
+      {data.gradingUpside == null ? "—" : (profit >= 0 ? "+$" : "-$") + safeMoney(Math.abs(profit))}
     </div>
   </div>
 </div>
@@ -838,7 +836,7 @@ const displayMeta =
         {marketSummary && (
   <div style={{ background: C.cream, border: "1px solid " + C.border, borderRadius: 12, padding: "0.9rem 1rem", marginBottom: "1rem" }}>
     <div style={{ fontSize: "0.65rem", fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.08em", color: C.inkSoft, marginBottom: "0.65rem" }}>
-     Listings Used
+     Candidate Asking Listings — Identity Unverified
     </div>
 
     <div style={{ display: "grid", gridTemplateColumns: "repeat(2,1fr)", gap: "0.65rem", textAlign: "center" }}>
@@ -881,7 +879,7 @@ const displayMeta =
     </div>
 
     <div style={{ fontSize: "0.7rem", color: C.inkSoft, marginTop: "0.65rem", fontStyle: "italic" }}>
-      Active eBay asking prices, not completed sales or verified fair market value. Grading economics below are provisional estimates.
+      Active eBay asking prices, not completed sales or verified fair market value. These candidate asking listings do not establish the exact physical card or authorize grading economics.
       <div style={{marginTop:"0.5rem",fontStyle:"normal"}}>
         eBay matching: {data.marketData?.count ?? 0} returned · {marketSummary.rawComparableCount ?? 0} accepted · {marketSummary.rejectedCount ?? 0} rejected.
         {!marketSummary.evidenceSufficient && <strong> Insufficient exact-card listings for a reliable asking-price estimate.</strong>}
@@ -897,7 +895,7 @@ const displayMeta =
       {data.marketData?.rawComparableItems?.length > 0 && (
   <div style={{ marginTop: "0.85rem", borderTop: "1px solid " + C.border, paddingTop: "0.75rem" }}>
     <div style={{ fontSize: "0.65rem", fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.08em", color: C.inkSoft, marginBottom: "0.55rem" }}>
-     Top Comparable Listings
+     Candidate Listings — Not Verified Comparables
     </div>
     <div>
   <div style={{ fontSize: "0.62rem", color: C.inkSoft }}>Outliers Removed</div>
@@ -931,9 +929,9 @@ const displayMeta =
 </a>
   <div style={{ fontSize: "0.64rem", color: C.inkSoft, marginTop: "0.25rem" }}>
     {item.matchScore >= 140
-  ? "High Confidence Match"
+  ? "Local candidate match"
   : item.matchScore >= 90
-  ? "Good Match"
+  ? "Local candidate match"
   : "Weak Match"}
   </div>
   {item.matchReasons && item.matchReasons.length > 0 && (
@@ -978,15 +976,15 @@ const displayMeta =
 
   <div style={{ display: "grid", gap: "0.4rem" }}>
     <div style={{ fontSize: "0.82rem", color: (data.expectedNetValue || 0) >= 0 ? C.green : C.red, fontWeight: 600 }}>
-  {(data.expectedNetValue || 0) >= 0 ? "✓" : "✕"} Expected net is {data.expectedNetValue != null ? ((data.expectedNetValue >= 0 ? "+$" : "-$") + safeMoney(Math.abs(data.expectedNetValue))) : "unknown"}
+  {data.expectedNetValue == null ? "—" : data.expectedNetValue >= 0 ? "✓" : "✕"} Expected net is {data.expectedNetValue != null ? ((data.expectedNetValue >= 0 ? "+$" : "-$") + safeMoney(Math.abs(data.expectedNetValue))) : "unknown"}
 </div>
 
     <div style={{ fontSize: "0.82rem", color: (data.psa10Probability || 0) >= 50 ? C.green : C.red, fontWeight: 600 }}>
-      {(data.psa10Probability || 0) >= 50 ? "✓" : "✕"} PSA 10 odds are {data.psa10Probability != null ? data.psa10Probability + "%" : "unknown"}
+      {data.psa10Probability == null ? "—" : data.psa10Probability >= 50 ? "✓" : "✕"} PSA 10 odds are {data.psa10Probability != null ? data.psa10Probability + "%" : "unknown"}
     </div>
 
     <div style={{ fontSize: "0.82rem", color: (profit || 0) >= 0 ? C.green : C.red, fontWeight: 600 }}>
-      {(profit || 0) >= 0 ? "✓" : "✕"} PSA 10 upside is {(profit >= 0 ? "+$" : "-$") + safeMoney(Math.abs(profit))}
+      {data.gradingUpside == null ? "—" : profit >= 0 ? "✓" : "✕"} PSA 10 upside is {data.gradingUpside == null ? "—" : (profit >= 0 ? "+$" : "-$") + safeMoney(Math.abs(profit))}
     </div>
   </div>
 </div>
@@ -1004,7 +1002,7 @@ const displayMeta =
             return (
               <div key={b.label} style={{ background: b.featured ? C.goldLight : C.cream, border: "1.5px solid " + (b.featured ? C.gold : C.border), borderRadius: 12, padding: "0.85rem 0.75rem", textAlign: "center" }}>
                 <div style={{ fontSize: "0.65rem", fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.06em", color: b.featured ? C.amber : C.inkSoft, marginBottom: "0.3rem" }}>{b.label}</div>
-                <div style={{ fontFamily: "'Playfair Display', serif", fontSize: "1.3rem", fontWeight: 700, color: b.featured ? C.amber : C.ink }}>{"$" + safeMoney(b.val)}</div>
+                <div style={{ fontFamily: "'Playfair Display', serif", fontSize: "1.3rem", fontWeight: 700, color: b.featured ? C.amber : C.ink }}>{b.val == null ? "—" : "$" + safeMoney(b.val)}</div>
               </div>
             );
           })}
@@ -1018,13 +1016,13 @@ const displayMeta =
   <div style={{ display: "grid", gap: "0.45rem", fontSize: "0.82rem", color: C.inkMid }}>
     <div style={{ display: "flex", justifyContent: "space-between" }}>
       <span>Expected Graded Value</span>
-      <strong style={{ color: C.ink }}>{"$" + safeMoney(data.expectedGradedValue || 0)}</strong>
+      <strong style={{ color: C.ink }}>{data.expectedGradedValue == null ? "—" : "$" + safeMoney(data.expectedGradedValue)}</strong>
     </div>
 
     <div style={{ display: "flex", justifyContent: "space-between" }}>
   <span>Current Raw Value</span>
   <strong style={{ color: C.red }}>
-    {"-$" + safeMoney(data.rawValue ?? 0)}
+    {data.rawValue == null ? "—" : "-$" + safeMoney(data.rawValue)}
   </strong>
 </div>
 
@@ -1046,7 +1044,7 @@ const displayMeta =
   </div>
 
   <div style={{ fontSize: "0.7rem", color: C.inkSoft, marginTop: "0.6rem", fontStyle: "italic" }}>
-    Provisional modeled economics, not sold-comp verified. PSA 10 and PSA 9 estimates have not been validated against exact-card sold transactions. The current calculation excludes outcomes below PSA 9 and selling expenses.
+    {WITHHELD_MESSAGE}
   </div>
 </div>        
         {/* Best use case */}
@@ -1159,7 +1157,8 @@ const emailRef    = useRef(null);
 
   useEffect(function() {
     setHistory(lsGet(LS_HISTORY) || []);
-    setSavedReports(lsGet(LS_SAVED) || []);
+    const stored = lsGet(LS_SAVED);
+    setSavedReports(Array.isArray(stored) ? stored.map(protectFinancialReport) : []);
   }, []);
 
   // Revoke object URLs on unmount to avoid memory leaks
@@ -1232,6 +1231,7 @@ const emailRef    = useRef(null);
   }
   function clearHistory() { lsSet(LS_HISTORY, []); setHistory([]); }
   function saveReport(data) {
+    data=protectFinancialReport(data);
     setSavedReports(function(prev) {
       const deduped = prev.filter(function(r) { return r.cardTitle !== data.cardTitle; });
       const next = [Object.assign({}, data, { savedAt: Date.now() }), ...deduped].slice(0, 10);
@@ -1285,20 +1285,12 @@ const emailRef    = useRef(null);
       if (!res.ok) { setError(data.error || "Something went wrong. Please try again."); setLoading(false); return; }
 
       setResults(function(prev) {
-  const newReport = {
-  ...data.prediction,
-  marketData: data.marketData || null,
-  imageAnalysis: data.imageAnalysis || null,
-  canonicalCard: data.canonicalCard || null,
-  catalogCrossCheck: data.catalogCrossCheck || null,
-  soldIdentityGate: data.soldIdentityGate || null,
-  identityReviewToken: data.identityReviewToken || null,
-};
+  const newReport = reportFromResponse(data);
 
   return [newReport, ...prev].slice(0, 5);
 });
 
-if (data.imageAnalysis) setImageAnalysis(data.imageAnalysis);
+if (data.imageAnalysis) setImageAnalysis(protectFinancialReport(data).imageAnalysis);
       if (data.remaining != null) setRemaining(data.remaining);
       if (data.emailSaved) { setEmailConfirm(true); track("waitlist_signup"); }
       addToHistory(cardName.trim() || "Image upload", cardType, cardSet.trim());

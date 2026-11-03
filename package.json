@@ -4,11 +4,12 @@
   "private": true,
   "scripts": {
     "dev": "next dev",
-    "build": "npm run test:sold && npm run test:mobile && next build",
+    "build": "npm run test:sold && npm run test:mobile && npm run test:reconciliation && next build",
     "start": "next start",
     "lint": "next lint",
     "test:sold": "node --test tests/soldCompsFilter.test.mjs tests/soldIdentityGate.test.mjs tests/identityReviewToken.test.mjs tests/canonicalIdentityV2.test.mjs tests/sportsIdentityAudit.test.mjs tests/ebayIdentityMatch.test.mjs",
-    "test:mobile": "node --test tests/mobile-reconciliation.test.mjs"
+    "test:mobile": "node --test tests/mobile-reconciliation.test.mjs",
+    "test:reconciliation": "node --test tests/reconciliation-handler.test.mjs"
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^0.27.0",

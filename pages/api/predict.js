@@ -11,6 +11,9 @@
 //   Text-only (JSON) requests also work: the handler detects content-type
 //   and falls back to req.body when no image is present.
 
+import { financialEligibility, protectFinancialReport } from "../../lib/financialSafety.mjs";
+import { internalMarketContext } from "../../lib/internalMarketAuth.mjs";
+import { identityComplete } from "../../lib/ebayIdentityMatch.mjs";
 import atlasOrchestrator from "../../lib/atlasOrchestrator";
 
 import calculateIdentityConfidence from "../../lib/calculateIdentityConfidence";
@@ -341,6 +344,8 @@ else if (hasObviousStructuralDamage && !saysNoStructuralDamage) {
 }  
   return {  
     // Card identity
+    identifiedLanguage: raw.identifiedLanguage != null ? safeStr(raw.identifiedLanguage,null) : null,
+    identifiedFranchise: raw.identifiedFranchise != null ? safeStr(raw.identifiedFranchise,null) : null,
     identifiedYear: raw.identifiedYear != null ? safeStr(raw.identifiedYear, null) : null,
     identifiedManufacturer: raw.identifiedManufacturer != null ? safeStr(raw.identifiedManufacturer, null) : null,
     identifiedSport: raw.identifiedSport != null ? safeStr(raw.identifiedSport, null) : null,
@@ -429,51 +434,9 @@ async function fetchPrediction(
 const setLabel       = cardSet || "not specified";
 const conditionLabel = CONDITION_LABELS[condition] || CONDITION_LABELS.strong;
 
-let preMarketData = null;
-let preLiveRawMarket = null;
+// Preliminary unstructured pricing was removed. Only canonical local screening may supply discovery evidence.
+const marketContext = "";
 
-try {
-  const preMarketQuery = [
-    cardName,
-    cardSet,
-  ]
-    .filter(Boolean)
-    .join(" ")
-    .replace(/Prospect Auto or Base/gi, "")
-    .replace(/Prospects/gi, "")
-    .replace(/Auto/gi, "")
-    .replace(/Base/gi, "")
-    .replace(/Parallel/gi, "")
-    .replace(/,/g, " ")
-    .replace(/\s+/g, " ")
-    .trim();
-
-  const baseUrl =
-    process.env.NEXT_PUBLIC_SITE_URL || "https://gempredict-live.vercel.app";
-
-  const preMarketUrl =
-    `${baseUrl}/api/ebay-search?q=` + encodeURIComponent(preMarketQuery);
-
-  const preMarketRes = await fetch(preMarketUrl);
-  const preMarketJson = await preMarketRes.json();
-
-  if (preMarketRes.ok && preMarketJson.success) {
-    preMarketData = preMarketJson;
-    preLiveRawMarket = preMarketJson?.marketSummary?.rawMedian ?? null;
-  }
-} catch (err) {
-  preMarketData = null;
-  preLiveRawMarket = null;
-}
-
-const marketContext =
-  preLiveRawMarket != null
-    ? "\n\nLIVE MARKET DATA:\n" +
-      "- Median active eBay asking price: $" + preLiveRawMarket + "\n" +
-      "- This is NOT a sold price or verified fair market value.\n" +
-      "- Do not treat this ask median as an authoritative valuation baseline.\n"
-    : "";
-  
   const prompt =
   "IMPORTANT MARKET RULES:\n" +
 "- Active eBay listing prices are asking prices, NOT verified completed sales or authoritative market value.\n" +
@@ -1023,12 +986,12 @@ if (catalogTitleCandidate) {
   catalogCrossCheck.titleSource = "TCGdex provisional";
 }
 
-    const prediction = await fetchPrediction(
-      effectiveCardName,
-      cardType,
-      effectiveCardSet,
-      condition
-    );
+    const identityV2 = canonicalIdentityV2({category:cardType === 'pokemon' ? 'pokemon' : cardType === 'sports' ? 'sports' : 'unknown',vision:imageAnalysis||{},catalog:catalogCrossCheck});
+    const sportsIdentityAudit = cardType === 'sports' ? auditSportsIdentity(imageAnalysis||{},'unspecified') : null;
+    const financialDecision = financialEligibility(identityV2);
+    const prediction = financialDecision.allowed
+      ? await fetchPrediction(effectiveCardName,cardType,effectiveCardSet,condition)
+      : {cardTitle:canonicalCard?.displayName||effectiveCardName,cardMeta:effectiveCardSet};
 
     if (catalogTitleCandidate) {
       prediction.cardTitle = effectiveCardName;
@@ -1038,13 +1001,7 @@ if (catalogTitleCandidate) {
       prediction.cardMeta = effectiveCardSet || prediction.cardMeta;
     }
 
-const atlas = atlasOrchestrator({
-  imageAnalysis,
-  canonicalCard,
-  marketData: null,
-  gpScore: null,
-  prediction,
-});
+const atlas = null; // Financial recommendations require independent identity and qualified sales.
 
     logRequest({
   ip,
@@ -1058,8 +1015,9 @@ const atlas = atlasOrchestrator({
   let marketData = null;
 
   try {
-    const baseUrl =
-      process.env.NEXT_PUBLIC_SITE_URL || "https://gempredict-live.vercel.app";
+    const context = internalMarketContext(process.env.NEXT_PUBLIC_SITE_URL,process.env,req.headers);
+    if (!context.ok) throw new Error(context.reason);
+    const baseUrl = context.baseUrl;
   
       const marketQueries = [
         ...buildSearchCandidates(catalogTitleCandidate ? { ...imageAnalysis, identifiedSubject: catalogTitleCandidate.name, identifiedBrandSet: catalogTitleCandidate.set.name } : (imageAnalysis || {})),
@@ -1079,20 +1037,23 @@ const atlas = atlasOrchestrator({
         });
   
     const lookupIdentity = {
-      year: imageAnalysis?.identifiedYear || "",
+      year: canonicalCard?.year || "",
       brand: imageAnalysis?.identifiedManufacturer || "",
-      set: catalogTitleCandidate?.set?.name || imageAnalysis?.identifiedBrandSet || "",
-      player: imageAnalysis?.identifiedSubject || "",
-      cardNumber: imageAnalysis?.identifiedCardNumber || "",
-      parallel: imageAnalysis?.identifiedParallel || "",
+      set: canonicalCard?.brandSet || "",
+      player: canonicalCard?.subject || "",
+      cardNumber: canonicalCard?.cardNumber || "",
+      parallel: canonicalCard?.parallel || "",
       autoOrRelic: imageAnalysis?.identifiedAutoOrRelic || "",
     };
+    const stamp=imageAnalysis?.identifiedSerialNumber?.match(/^\s*\d+\s*\/\s*(\d+)\s*$/);
+    if(stamp)lookupIdentity.printRun=stamp[1];
+    if(!identityComplete(lookupIdentity))throw new Error('identity_incomplete');
     const attempts = [];
     // Bounded progressively broader discovery; acceptance remains identity-strict.
     for (const q of marketQueries.slice(0, 6)) {
       const params = new URLSearchParams({q});
       for (const [k,v] of Object.entries(lookupIdentity)) if(v)params.set(k,v);
-      const response = await fetch(baseUrl + "/api/ebay-search?" + params.toString());
+      const response = await fetch(baseUrl + "/api/ebay-search?" + params.toString(),{headers:context.headers,redirect:"manual",signal:AbortSignal.timeout(12000)});
       if (!response.ok) continue;
       const candidate = await response.json();
       if (!candidate.success) continue;
@@ -1107,20 +1068,13 @@ const atlas = atlasOrchestrator({
   marketData = {
     success: false,
     error: "Market data unavailable",
+    reason: /^(?:production_host_blocked|missing_or_invalid_deployment_origin|mismatched_deployment_origin|preview_protection_token_unavailable|invalid_internal_base_url|missing_internal_base_url|identity_incomplete)$/.test(marketErr.message) ? marketErr.message : "market_request_unavailable",
   };
 }
 
-    // Shared identity and grader contracts: read-only diagnostics during migration.
-    // No changes to existing report titles, scores, lookups or economics.
-    const identityV2 = canonicalIdentityV2({
-      category: cardType === "pokemon" ? "pokemon" : (cardType === "sports" ? "sports" : "unknown"),
-      vision: imageAnalysis || {},
-      catalog: catalogCrossCheck,
-    });
     const graderScenariosV2 = emptyGraderScenarios();
-    const sportsIdentityAudit = cardType === "sports" ? auditSportsIdentity(imageAnalysis || {}, "unspecified") : null;
 
-    return res.status(200).json({
+    return res.status(200).json(protectFinancialReport({
   success: true,
   identityV2,
   graderScenariosV2,
@@ -1138,7 +1092,7 @@ const atlas = atlasOrchestrator({
   hasImageAnalysis: imageAnalysis !== null,
   remaining: rateCheck.remaining,
   emailSaved,
-});
+}));
 
   } catch (err) {
     console.error("[GemPredict] Prediction error:", err.status || "", err.message);
