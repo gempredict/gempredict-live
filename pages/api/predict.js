@@ -22,6 +22,8 @@ import { canonicalIdentityV2, emptyGraderScenarios } from "../../lib/canonicalId
 import { auditSportsIdentity } from "../../lib/sportsIdentityAudit.mjs";
 import { issueIdentityReviewToken } from "../../lib/identityReviewToken.mjs";
 import { assessArtworkSimilarity } from "../../lib/artworkSimilarity.mjs";
+import { validateAnalysisImage } from "../../lib/uploadValidation.mjs";
+import { MAX_IMAGE_BYTES } from "../../lib/mobileImages.mjs";
 
 import buildSearchCandidates from "../../lib/buildSearchCandidates";
 
@@ -46,7 +48,7 @@ const RATE_LIMIT_WINDOW = 60 * 60 * 1000;
 const CARD_NAME_MIN     = 2;
 const CARD_NAME_MAX     = 80;
 const CARD_SET_MAX      = 60;
-const IMAGE_MAX_BYTES   = 10 * 1024 * 1024;
+const IMAGE_MAX_BYTES   = MAX_IMAGE_BYTES;
 
 const VALID_CARD_TYPES = new Set([
   "pokemon", "sports", "mtg", "yugioh", "dragonball", "onepiece", "tcg",
@@ -130,60 +132,34 @@ async function parseRequest(req) {
     return new Promise(function(resolve, reject) {
       const form = formidable({
         maxFileSize: IMAGE_MAX_BYTES,
+        maxTotalFileSize: 2 * IMAGE_MAX_BYTES,
+        maxFiles: 2,
+        maxFieldsSize: 64 * 1024,
         uploadDir: "/tmp",
-        keepExtensions: true,
-        filter: function(part) {
-          // Only allow image files through
-          return part.mimetype && part.mimetype.startsWith("image/");
-        },
+        keepExtensions: false,
       });
-
-      form.parse(req, function(err, fields, files) {
-        if (err) { reject(err); return; }
-
-        // formidable v3 returns arrays for all values
-        const flat = {};
-        for (const key of Object.keys(fields)) {
-          flat[key] = Array.isArray(fields[key]) ? fields[key][0] : fields[key];
+      form.parse(req, async function(err, fields, files) {
+        const uploaded = Object.values(files || {}).flat();
+        try {
+          if (err) throw err;
+          if (Object.keys(files).some(key => !['image', 'backImage'].includes(key)) ||
+              Object.values(files).some(value => Array.isArray(value) && value.length !== 1)) throw new Error('Unexpected image fields');
+          const flat = {};
+          for (const key of Object.keys(fields)) flat[key] = Array.isArray(fields[key]) ? fields[key][0] : fields[key];
+          const readImage = async key => {
+            const file = Array.isArray(files[key]) ? files[key][0] : files[key];
+            if (!file) return { buffer: null, mime: null };
+            const buffer = fs.readFileSync(file.filepath);
+            return { buffer, mime: await validateAnalysisImage(buffer) };
+          };
+          const front = await readImage('image');
+          const back = await readImage('backImage');
+          if (back.buffer && !front.buffer) throw new Error('Front photo required');
+          resolve({ fields: flat, imageBuffer: front.buffer, imageMimeType: front.mime, backImageBuffer: back.buffer, backImageMimeType: back.mime });
+        } catch (error) { reject(error); }
+        finally {
+          for (const file of uploaded) { try { fs.unlinkSync(file.filepath); } catch {} }
         }
-
-        let imageBuffer = null;
-        let imageMimeType = null;
-        let backImageBuffer = null;
-        let backImageMimeType = null;
-
-        const imageFile = files.image ? (Array.isArray(files.image) ? files.image[0] : files.image) : null;
-        if (imageFile && imageFile.filepath) {
-          try {
-            imageBuffer = fs.readFileSync(imageFile.filepath);
-            imageMimeType = imageFile.mimetype || "image/jpeg";
-            // Clean up temp file — non-fatal
-            try { fs.unlinkSync(imageFile.filepath); } catch {}
-          } catch (readErr) {
-            console.error("[GemPredict] Image read error:", readErr.message);
-          }
-        }
-
-        const backImageFile = files.backImage ? (Array.isArray(files.backImage) ? files.backImage[0] : files.backImage) : null;
-if (backImageFile && backImageFile.filepath) {
-  try {
-    backImageBuffer = fs.readFileSync(backImageFile.filepath);
-    backImageMimeType = backImageFile.mimetype || "image/jpeg";
-
-    // Clean up temp file — non-fatal
-    try { fs.unlinkSync(backImageFile.filepath); } catch {}
-  } catch (readErr) {
-    console.error("[GemPredict] Back image read error:", readErr.message);
-  }
-}
-
-     resolve({
-          fields: flat,
-          imageBuffer,
-          imageMimeType,
-          backImageBuffer,
-          backImageMimeType,
-        });
       });
     });
   }
@@ -786,8 +762,7 @@ imageMimeType = parsed.imageMimeType;
 backImageBuffer = parsed.backImageBuffer;
 backImageMimeType = parsed.backImageMimeType;
   } catch (parseErr) {
-    console.error("[GemPredict] Request parse error", parseErr);
-    return res.status(400).json({ error: "Could not read request. Please try again." });
+    return res.status(400).json({ error: "Could not read the upload. Use valid, prepared JPEG/PNG/WebP/GIF photos within the upload limit, with a front photo when including a back." });
   }
 
   const cardName  = sanitiseString(fields.cardName  || "");
@@ -868,7 +843,7 @@ if (hasTypedCardName && looksLikeJunk(cardName)) {
 
   // Image size guard (redundant with formidable limit but belt-and-suspenders)
   if (imageBuffer && imageBuffer.length > IMAGE_MAX_BYTES) {
-    return res.status(400).json({ error: "Image file is too large. Please upload an image under 10 MB." });
+    return res.status(400).json({ error: "Image file is too large. Please upload a prepared image under 1.6 MB." });
   }
 
   let emailSaved = false;
