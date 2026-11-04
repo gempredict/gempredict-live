@@ -1,3 +1,5 @@
+import {VISION_MODEL,visionOutputBudget,parseVisionMessage,retainSportsVisionEvidence} from '../../lib/visionResponsePolicy.mjs';
+import {buildSportsVisionPrompt} from '../../lib/visionPromptContract.mjs';
 import {scanFailure,providerFailure} from '../../lib/scanFailures.mjs';
 import {beginScanDiagnostics} from '../../lib/scanDiagnostics.mjs';
 import {conditionPresentation} from '../../lib/visualEvidence.mjs';
@@ -422,11 +424,12 @@ gemRiskFactors:
 
 minorConcerns: safeStr(raw.minorConcerns, "No additional visible concerns identified."),
     ...(cardType==='pokemon'?conditionPresentation({...raw,inspectedSides,imageLimitations:[...(Array.isArray(raw.imageLimitations)?raw.imageLimitations:[]),...(!inspectedSides.includes('back')?['back_not_visible']:[])]}):{}),
+    ...(cardType!=='pokemon'?retainSportsVisionEvidence(raw,inspectedSides):{}),
   };
 }
 // ─── Anthropic client ─────────────────────────────────────────────────────────
 const anthropic = process.env.CLAUDE_API_KEY
-  ? new Anthropic({ apiKey: process.env.CLAUDE_API_KEY })
+  ? new Anthropic({ apiKey: process.env.CLAUDE_API_KEY, maxRetries: 0 })
   : null;
 
 // ─── Text-only prediction (existing logic, unchanged) ─────────────────────────
@@ -549,109 +552,11 @@ const backMime = backImageMimeType &&
   ? backImageMimeType
   : "image/jpeg";
 
-  const imagePrompt =
-  "You are an expert card pre-grader helping a collector decide whether this card is worth submitting to PSA.\n\n" +
-  "Card name: " + (cardName || "unknown") + "\n" +
-  "Card type: " + typeLabel + "\n\n" +
-
-  "Your job is NOT to guarantee a PSA grade. Your job is to identify visible grade limiters and estimate the card's realistic grading ceiling from the image.\n\n" +
-
-  "Assess ONLY what is visible in the uploaded image. If the back of the card is not visible, say that this limits confidence. If glare, sleeve reflection, angle, blur, or low resolution limits surface inspection, say so.\n\n" +
-
-  "Think like a strict PSA pre-screen reviewer:\n" +
-  "- Centering can cap the grade even if the card is otherwise clean.\n" +
-  "- Surface defects are often the biggest hidden risk, especially for holo, chrome, foil, and glossy cards.\n" +
-    "- Surface analysis is confidence-sensitive. If glare, shadows, sleeve plastic, blur, reflections, or low image quality prevent reliable inspection, clearly explain that surface confidence is limited instead of assuming the surface is clean.\n" +
-  "- Corners and edges should be evaluated for whitening, chipping, fraying, soft corners, dents, and rough cuts.\n" +
-  "- One moderate defect can cap the card below a PSA 10 even if other categories look strong.\n" +
-    "If any visible crease, bend, dent, corner bend, surface indentation, peeling, major whitening, heavy edge wear, or wrinkle is detected, it MUST be listed as the primaryLimiter and majorGradeCap. Do not say 'no major limiter identified' when a visible crease, bend, or corner damage exists.\n" +
-    "Avoid generic grading summaries. Identify the most likely grade cap first, then describe smaller concerns separately.\n" +
-    "Hard grading rules:\n" +
-"- If a visible crease, wrinkle, bend, dent, peeling layer, or corner fold exists, PSA 10 is impossible.\n" +
-"- Visible structural damage must always appear in both primaryLimiter and majorGradeCap.\n" +
-"- If visible whitening exists, do not say 'no concerns identified'.\n" +
-"- If surface glare or image quality prevents reliable inspection, confidenceLevel cannot be 'high'.\n" +
-"- If corners show visible bends or softening, those issues must appear in minorConcerns or majorGradeCap.\n" +
-"- If multiple moderate flaws exist together, the grade ceiling should drop accordingly.\n" +
-"- Do not give optimistic grades when visible defects clearly cap the card lower.\n\n" +
-    "- If visible surface scratches, print lines, chrome lines, dents, dimples, roller marks, or holo scratches are present, surface cannot be rated excellent.\n" +
-"- If surface scratches or print lines are clearly visible, they must appear in primaryLimiter, majorGradeCap, or minorConcerns depending on severity.\n" +
-"- For Pokemon holo, foil, chrome, and glossy cards, visible surface scratches should materially reduce PSA 10 confidence.\n" +
-  "- Do not give a PSA 10 candidate label unless all visible categories look exceptionally clean and image quality is good enough to justify it.\n\n" +
-
-  "Use card-type awareness:\n" +
-  "- Pokemon/TCG: pay close attention to holo scratches, whitening, silvering, edge chipping, print lines, and surface dents.\n" +
-  "- Chrome/sports parallels: pay close attention to centering, surface lines, dimples, print defects, roller marks, and corner sharpness.\n" +
-  "- Vintage cards: be stricter about corner softness, edge wear, print registration, staining, and overall eye appeal.\n\n" +
-
-  "Important consistency rule:\n" +
-  "The final overallScore and estimatedGrade MUST logically follow the category ratings and notes. If centering, corners, edges, and surface are all good or excellent with no meaningful defect, the card should generally project as PSA 9 or better unless image confidence is low. If you assign a lower score, explicitly explain the grade-capping issue.\n\n" +
-
-"Card identification task:\n" +
-"- Identify the card as specifically as possible from the image and provided card name.\n" +
-"- Look for year, brand, set, player/character, card number, parallel, serial numbering, autograph/relic indicators, and visible text.\n" +
-"- Do not invent details. If a detail is uncertain, use null and explain uncertainty in identityNotes.\n" +
-"- identityConfidence should be high only when visible card text and provided card name strongly agree.\n\n" +
-
-  "Respond with ONLY a single raw JSON object. No markdown. No backticks. No extra text.\n\n" +
-
-  "Required fields:\n" +
-  "identifiedYear - likely card year if visible or inferable, otherwise null (string or null)\n" +
-"identifiedFranchise - broad card universe such as Pokemon, Baseball, Basketball, Football, Hockey, Soccer, Disney Lorcana, Star Wars, One Piece, Magic, Yu-Gi-Oh, Marvel, Garbage Pail Kids, or unknown (string)\n" +
-"identifiedManufacturer - likely maker/publisher such as Pokemon, Topps, Panini, Upper Deck, Wizards of the Coast, Ravensburger, Bandai, Konami, or unknown (string)\n" +
-"identifiedBrandSet - likely brand, product, set, or release name if visible or inferable, otherwise null (string or null)\n" +
-"identifiedSubject - player, character, creature, team, or card subject if visible or inferable, otherwise null (string or null)\n" +
-"identifiedCardNumber - collector/card number exactly as visible if possible, otherwise null (string or null)\n" +
-"identifiedParallel - likely parallel, rarity, insert, variant, foil type, refractor type, color, numbered version, or special treatment if visible or inferable, otherwise null (string or null)\n" +
-"identifiedLanguage - likely card language such as English, Japanese, Korean, Chinese, Spanish, French, German, Italian, Portuguese, or unknown (string)\n" +
-"identifiedAutoOrRelic - one of: auto, relic, auto relic, none, unknown (string)\n" +
-"identityConfidence - 0-100 confidence in the card identity. Be conservative when set, number, language, or parallel are uncertain (integer)\n" +
-"identityNotes - one short sentence explaining which identity facts are strongly supported and which are uncertain (string)\n" +
-  "centering - one of: excellent, good, fair, poor (string)\n" +
-  "centeringNote - specific visible centering assessment, mention left/right and top/bottom if visible (string)\n" +
-  "corners - one of: excellent, good, fair, poor (string)\n" +
-  "cornersNote - specific visible corner assessment, mention any whitening, softness, fraying, bends, or unclear areas (string)\n" +
-  "edges - one of: excellent, good, fair, poor (string)\n" +
-  "edgesNote - specific visible edge assessment, mention whitening, chipping, rough cuts, or unclear areas (string)\n" +
-  "surface - one of: excellent, good, fair, poor (string)\n" +
-  "surfaceNote - specific visible surface assessment, mention scratches, print lines, dimples, glare limitations, haze, staining, or uncertainty (string)\n" +
-  "overallScore - realistic estimated grade ceiling from visible evidence, 1-10 integer (integer)\n" +
-    "gradeCeiling - realistic PSA ceiling based on visible condition like 'PSA 8 ceiling', 'PSA 9 candidate', or 'PSA 10 upside with risk' (string)\n" +
-"primaryLimiter - the single biggest visible issue or uncertainty likely limiting the grade ceiling (string)\n" +
-    "majorGradeCap - the biggest visible issue most likely preventing a higher grade, written collector-style (string)\n" +
-"minorConcerns - short collector-style list of smaller visible risks or uncertainties separated by commas (string)\n" +
-"confidenceLevel - one of: high, moderate, low (string)\n" +
-  "gradingRisk - 1-2 sentences explaining the main grade cap or uncertainty. This must directly justify the overallScore (string)\n" +
-  "estimatedGrade - short collector-friendly label like 'PSA 8 ceiling', 'PSA 9 candidate', 'PSA 9 with PSA 10 upside', or 'PSA 10 candidate but confidence limited' (string)\n" +
-  "mostLikelyGradeRange - short realistic range like 'PSA 8-9 likely' or 'PSA 9 with outside PSA 10 upside' (string)\n" +
-  "psa10Upside - one sentence explaining whether PSA 10 is realistically achievable from the visible image (string)\n" +
-  "gemRiskFactors - array of 2-4 short PSA 10 risk factors focused on collector submission concerns (array of strings)\n" +
-  "worthGrading - based only on visible condition, whether the card appears worth grading before considering market value (boolean)\n" +
-  "worthGradingReason - 1 sentence explaining the grading recommendation from visible condition only (string)\n" +
-  "imageSummary - 1-2 sentences summarizing the card's visible condition and confidence level (string)\n\n" +
-
-  "Rating scale:\n" +
-  "excellent = no meaningful visible flaw in that category\n" +
-  "good = minor visible flaw or slight uncertainty\n" +
-  "fair = moderate visible flaw that may cap grade\n" +
-  "poor = significant visible flaw likely to strongly cap grade\n\n" +
-
-  "Scoring guidance:\n" +
-  "10 = only if all visible categories are excellent and image quality is strong\n" +
-  "9 = strong card with only minor visible concerns or limited image uncertainty\n" +
-  "8 = clean-looking card with one meaningful limiter or moderate uncertainty\n" +
-  "7 or below = visible moderate-to-major flaw, multiple issues, or poor image confidence\n\n" +
-
-    "Confidence guidance:\n" +
-"high = strong image quality with clearly visible surfaces, corners, and edges\n" +
-"moderate = some uncertainty from glare, angle, reflections, or missing card back\n" +
-"low = image quality too limited for confident grading assessment\n\n" +
-
-  "Be strict, specific, and internally consistent. Avoid canned language.";
+  const imagePrompt=buildSportsVisionPrompt({cardName,typeLabel,hasBack:!!backBase64});
 
   scanDiagnostics?.vision('request_started');
   const message = await anthropic.messages.create({
-    model: "claude-sonnet-4-6", max_tokens: 2400,
+    model: VISION_MODEL, max_tokens: visionOutputBudget(!!backBase64),
     messages: [{
       role: "user",
       content: [
@@ -678,31 +583,16 @@ const backMime = backImageMimeType &&
 
   {
     type: "text",
-    text: (cardType==='pokemon'?buildVisionPrompt({cardName,typeLabel,hasBack:!!backBase64}):imagePrompt) +
-      (backBase64
-        ? "\n\nBoth front and back images are provided. Evaluate both sides when assessing confidence, corners, edges, whitening, and grading risk."
-        : "\n\nOnly the front image is provided. Missing back image should reduce confidence where appropriate."),
+    text: cardType==='pokemon'?buildVisionPrompt({cardName,typeLabel,hasBack:!!backBase64}):imagePrompt,
   },
       ],
     }],
   });
 
-  const text = (message.content || []).map(function(b) { return b.type === "text" ? b.text : ""; }).join("").trim();
-  if (!text) {
-    scanDiagnostics?.vision('empty_response');
-    console.error("[GemPredict] Vision returned empty text", { stopReason: message.stop_reason || "unknown" });
-    throw new Error(message.stop_reason==='max_tokens'?'ANALYSIS_RESPONSE_INCOMPLETE':'ANALYSIS_EMPTY_RESPONSE');
-  }
-  const parsed = extractJSON(text);
+  let parsed;
+  try{parsed=parseVisionMessage(message);}
+  catch(error){if(error.message==='ANALYSIS_EMPTY_RESPONSE')scanDiagnostics?.vision('empty_response');else scanDiagnostics?.model(null);throw error;}
   scanDiagnostics?.model(parsed);
-  if (!parsed) {
-    console.error("[GemPredict] Vision JSON parse failed", {
-      stopReason: message.stop_reason || "unknown",
-      textLength: text.length,
-      outputTokens: message.usage?.output_tokens ?? null,
-    });
-    throw new Error(message.stop_reason==='max_tokens'?'ANALYSIS_RESPONSE_INCOMPLETE':'ANALYSIS_RESPONSE_INVALID');
-  }
   let normalized;
   try{normalized=normaliseImageAnalysis(parsed,backImageBuffer?['front','back']:['front'],cardType);}
   catch{scanDiagnostics?.normalized(null);throw new Error('ANALYSIS_NORMALIZATION_FAILED');}
