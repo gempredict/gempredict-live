@@ -1,3 +1,4 @@
+import {safeScanFailure} from '../../lib/scanFailures.mjs';
 import {conditionAssessmentLabels} from '../../lib/photoConditionLabels.mjs';
 // Exercise the actual JSX components with React SSR, no DOM or provider calls.
 import fs from 'node:fs';
@@ -17,7 +18,7 @@ function components(file,bindings={}){
  const exports={};vm.runInNewContext(code,{exports,require,React,...bindings});return exports;
 }
 const {default:AtlasPanel}=components('src/components/AtlasPanel.jsx');
-const {ResultCard,ImageAnalysisCard}=components('src/App.jsx',{conditionAssessmentLabels,...financial,identitySummary,reportTitle,verificationRows,buildGemPredictScore,AtlasPanel,useState:React.useState});
+const {ResultCard,ImageAnalysisCard}=components('src/App.jsx',{safeScanFailure,conditionAssessmentLabels,...financial,identitySummary,reportTitle,verificationRows,buildGemPredictScore,AtlasPanel,useState:React.useState});
 export function renderReports(report){
  return {upper:renderToStaticMarkup(React.createElement(ResultCard,{data:report,index:0,onSave(){},isSaved:false})),lower:renderToStaticMarkup(React.createElement(ImageAnalysisCard,{report}))};
 }

@@ -1,3 +1,4 @@
+import {scanFailure,providerFailure} from '../../lib/scanFailures.mjs';
 import {beginScanDiagnostics} from '../../lib/scanDiagnostics.mjs';
 import {conditionPresentation} from '../../lib/visualEvidence.mjs';
 import {buildVisionPrompt} from '../../lib/pokemonVisionPrompt.mjs';
@@ -690,7 +691,7 @@ const backMime = backImageMimeType &&
   if (!text) {
     scanDiagnostics?.vision('empty_response');
     console.error("[GemPredict] Vision returned empty text", { stopReason: message.stop_reason || "unknown" });
-    return null;
+    throw new Error(message.stop_reason==='max_tokens'?'ANALYSIS_RESPONSE_INCOMPLETE':'ANALYSIS_EMPTY_RESPONSE');
   }
   const parsed = extractJSON(text);
   scanDiagnostics?.model(parsed);
@@ -700,11 +701,14 @@ const backMime = backImageMimeType &&
       textLength: text.length,
       outputTokens: message.usage?.output_tokens ?? null,
     });
-    return null;
+    throw new Error(message.stop_reason==='max_tokens'?'ANALYSIS_RESPONSE_INCOMPLETE':'ANALYSIS_RESPONSE_INVALID');
   }
-  const normalized = normaliseImageAnalysis(parsed,backImageBuffer?['front','back']:['front'],cardType);
+  let normalized;
+  try{normalized=normaliseImageAnalysis(parsed,backImageBuffer?['front','back']:['front'],cardType);}
+  catch{scanDiagnostics?.normalized(null);throw new Error('ANALYSIS_NORMALIZATION_FAILED');}
   scanDiagnostics?.normalized(normalized);
   if (!normalized) console.error("[GemPredict] Vision normalization failed", { stopReason: message.stop_reason || "unknown" });
+  if(!normalized)throw new Error('ANALYSIS_NORMALIZATION_FAILED');
   return normalized;
 }
 
@@ -740,7 +744,7 @@ backImageBuffer = parsed.backImageBuffer;
 backImageMimeType = parsed.backImageMimeType;
 await scanDiagnostics?.images(imageBuffer,backImageBuffer);
   } catch (parseErr) {
-    return res.status(400).json({ error: "Could not read the upload. Use valid, prepared JPEG/PNG/WebP/GIF photos within the upload limit, with a front photo when including a back." });
+    const failure=scanFailure('UPLOAD_PROCESSING_FAILED');return res.status(failure.status).json(failure.payload);
   }
 
   const cardName  = sanitiseString(fields.cardName  || "");
@@ -837,8 +841,10 @@ if (hasTypedCardName && looksLikeJunk(cardName)) {
     emailSaved = true;
   }
 
+  let failureStage='analysis';
   try {
     let imageAnalysis = null;
+    let analysisFailure=null;
 
     if (imageBuffer) {
       imageAnalysis = await fetchImageAnalysis(
@@ -850,8 +856,9 @@ if (hasTypedCardName && looksLikeJunk(cardName)) {
         cardType,
         scanDiagnostics
       ).catch(function(err) {
-        scanDiagnostics?.vision(err.message==='NO_API_KEY'?'provider_not_configured':[401,403].includes(err.status)?'provider_authentication_failed':err.status===429?'rate_limited':'request_failed');
-        console.error("[GemPredict] Image analysis error (non-fatal):", err.message);
+        analysisFailure=providerFailure(err);
+        if(!['ANALYSIS_RESPONSE_INCOMPLETE','ANALYSIS_EMPTY_RESPONSE','ANALYSIS_RESPONSE_INVALID','ANALYSIS_NORMALIZATION_FAILED'].includes(err.message))scanDiagnostics?.vision(err.message==='NO_API_KEY'?'provider_not_configured':[401,403].includes(err.status)?'provider_authentication_failed':err.status===429?'rate_limited':'request_failed');
+        console.error('[GemPredict] Image analysis failed',analysisFailure.payload.code);
         return null;
       });
     }
@@ -860,12 +867,11 @@ if (hasTypedCardName && looksLikeJunk(cardName)) {
     // Retain the original full report behavior whenever vision actually succeeds.
     if (imageBuffer && !imageAnalysis) {
       console.error("[GemPredict] Photo scan stopped: no usable image-analysis result");
-      return res.status(422).json({
-        error: "Photo analysis could not be completed. No card valuation was generated. Please try again later or use clearer front and back photos.",
-        code: "PHOTO_ANALYSIS_UNAVAILABLE",
-      });
+      const failure=analysisFailure||scanFailure('ANALYSIS_NORMALIZATION_FAILED');
+      return res.status(failure.status).json(failure.payload);
     }
 
+    failureStage='verification';
     const identifiedCardName = imageAnalysis
       ? [
           imageAnalysis.identifiedYear,
@@ -1040,10 +1046,12 @@ const atlas = null; // Financial recommendations require independent identity an
   };
 }
 
+    failureStage='report';
     const graderScenariosV2 = emptyGraderScenarios();
 
     return res.status(200).json(protectFinancialReport({
   success: true,
+  scanNotices:[...(!marketData||marketData.success===false?[scanFailure('MARKETPLACE_UNAVAILABLE').payload]:[]),...(pokemonIdentity&&!pokemonIdentity.valuationIdentityGate.allowed?[scanFailure('VERIFICATION_UNRESOLVED').payload]:[])],
   identityV2,
   graderScenariosV2,
   sportsIdentityAudit,
@@ -1065,15 +1073,8 @@ const atlas = null; // Financial recommendations require independent identity an
 }));
 
   } catch (err) {
-    console.error("[GemPredict] Prediction error:", err.status || "", err.message);
-    let userMessage = "Something went wrong. Please try again.";
-    let logLabel    = err.message || "unknown";
-    if (err.message === "NO_API_KEY")           { userMessage = "Service is not configured. Please contact support."; logLabel = "missing_api_key"; }
-    else if (err.status === 401)                { userMessage = "Service configuration error. Please contact support."; logLabel = "anthropic_auth_failed"; }
-    else if (err.status === 429)                { userMessage = "The AI service is temporarily busy. Please try again in a moment."; logLabel = "anthropic_rate_limit"; }
-    else if (err.status === 529 || err.status === 500) { userMessage = "The AI service is temporarily unavailable. Please try again shortly."; logLabel = "anthropic_server_error"; }
-    else if (["EMPTY_RESPONSE","PARSE_FAILED","NORMALISE_FAILED"].includes(err.message)) { userMessage = "The AI returned an unexpected response. Please try your search again."; }
-    logRequest({ ip, cardName, cardType, cardSet, status: "failed", errorMessage: logLabel });
-    return res.status(500).json({ error: userMessage });
+    const failure=scanFailure(failureStage==='verification'?'VERIFICATION_RUNTIME_FAILED':'UNEXPECTED_SCAN_ERROR');
+    console.error('[GemPredict] Scan failure',failure.payload.code);
+    return res.status(failure.status).json(failure.payload);
   }
 }

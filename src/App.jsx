@@ -1,3 +1,4 @@
+import {safeScanFailure} from '../lib/scanFailures.mjs';
 import {conditionAssessmentLabels} from '../lib/photoConditionLabels.mjs';
 import ScanDiagnostics from './components/ScanDiagnostics';
 import {rememberScanDiagnostic} from '../lib/scanDiagnosticClient.mjs';
@@ -10,7 +11,7 @@ import { track } from "@vercel/analytics/react";
 import AtlasPanel from "./components/AtlasPanel";
 import { buildGemPredictScore } from "../lib/gemPredictScore";
 import { normalizeMobileImage, assertUploadBudget, UploadError } from "../lib/mobileImages.mjs";
-import { requestPrediction } from "../lib/predictionTransport.mjs";
+import { predictionFailureResponse, requestPrediction } from "../lib/predictionTransport.mjs";
 
 // ─── Constants ────────────────────────────────────────────────────────────────
 const CARD_TYPES = [
@@ -592,6 +593,7 @@ export function ResultCard({ data, index, onSave, isSaved }) {
 
       <div style={{ padding: "1.1rem 1.25rem" }}>
       <VerificationStatus report={data} />
+      {(Array.isArray(data.scanNotices)?data.scanNotices:[]).map(safeScanFailure).filter(notice=>['MARKETPLACE_UNAVAILABLE','VERIFICATION_UNRESOLVED'].includes(notice?.code)).map(notice=><p key={notice.code} role="status" style={{fontSize:"0.75rem",color:C.inkSoft}}>{notice.error}</p>)}
       <div
   style={{
     background: "#0d1117",
@@ -1296,7 +1298,7 @@ if (data.imageAnalysis) setImageAnalysis(protectFinancialReport(data).imageAnaly
 });
     
 
-    } catch (error) { setError(error instanceof UploadError ? error.message : "Could not display the prediction. Please try again."); }
+    } catch (error) { const response=predictionFailureResponse(error);if(response){const failed={};rememberScanDiagnostic(failed,response);setFailedScanDiagnostic(failed);}setError(error instanceof UploadError ? error.message+(error.scanCode?" (Reference: "+error.scanCode+")":"") : "Unexpected report display error. No financial recommendation was generated."); }
     finally   { setLoading(false); }
   }
 
