@@ -1,3 +1,4 @@
+import {beginScanDiagnostics} from '../../lib/scanDiagnostics.mjs';
 import {conditionPresentation} from '../../lib/visualEvidence.mjs';
 import {buildVisionPrompt} from '../../lib/pokemonVisionPrompt.mjs';
 import {resolvePokemonIdentity} from '../../lib/pokemonIdentityPipeline.mjs';
@@ -522,7 +523,8 @@ async function fetchImageAnalysis(
   backImageBuffer,
   backImageMimeType,
   cardName,
-  cardType
+  cardType,
+  scanDiagnostics=null
 ) {
   if (!anthropic) throw new Error("NO_API_KEY");
   if (!imageBuffer || imageBuffer.length === 0) return null;
@@ -646,6 +648,7 @@ const backMime = backImageMimeType &&
 
   "Be strict, specific, and internally consistent. Avoid canned language.";
 
+  scanDiagnostics?.vision('request_started');
   const message = await anthropic.messages.create({
     model: "claude-sonnet-4-6", max_tokens: 2400,
     messages: [{
@@ -685,10 +688,12 @@ const backMime = backImageMimeType &&
 
   const text = (message.content || []).map(function(b) { return b.type === "text" ? b.text : ""; }).join("").trim();
   if (!text) {
+    scanDiagnostics?.vision('empty_response');
     console.error("[GemPredict] Vision returned empty text", { stopReason: message.stop_reason || "unknown" });
     return null;
   }
   const parsed = extractJSON(text);
+  scanDiagnostics?.model(parsed);
   if (!parsed) {
     console.error("[GemPredict] Vision JSON parse failed", {
       stopReason: message.stop_reason || "unknown",
@@ -698,12 +703,14 @@ const backMime = backImageMimeType &&
     return null;
   }
   const normalized = normaliseImageAnalysis(parsed,backImageBuffer?['front','back']:['front'],cardType);
+  scanDiagnostics?.normalized(normalized);
   if (!normalized) console.error("[GemPredict] Vision normalization failed", { stopReason: message.stop_reason || "unknown" });
   return normalized;
 }
 
 // ─── Main handler ─────────────────────────────────────────────────────────────
 export default async function handler(req, res) {
+  const scanDiagnostics = beginScanDiagnostics(req,res);
   if (req.method !== "POST") return res.status(405).json({ error: "Method not allowed." });
 
   const ip = (req.headers["x-forwarded-for"] || "").split(",")[0].trim() || req.socket?.remoteAddress || "unknown";
@@ -731,6 +738,7 @@ imageBuffer = parsed.imageBuffer;
 imageMimeType = parsed.imageMimeType;
 backImageBuffer = parsed.backImageBuffer;
 backImageMimeType = parsed.backImageMimeType;
+await scanDiagnostics?.images(imageBuffer,backImageBuffer);
   } catch (parseErr) {
     return res.status(400).json({ error: "Could not read the upload. Use valid, prepared JPEG/PNG/WebP/GIF photos within the upload limit, with a front photo when including a back." });
   }
@@ -742,6 +750,7 @@ backImageMimeType = parsed.backImageMimeType;
   const cardTypeRaw = typeof fields.cardType === "string" ? fields.cardType.trim().toLowerCase() : "";
   const cardType    = VALID_CARD_TYPES.has(cardTypeRaw) ? cardTypeRaw : "tcg";
 
+  scanDiagnostics?.category(cardType);
   const hasImage = !!imageBuffer;
 const hasTypedCardName = !!(cardName && cardName.trim());
 
@@ -838,8 +847,10 @@ if (hasTypedCardName && looksLikeJunk(cardName)) {
         backImageBuffer,
         backImageMimeType,
         cardName,
-        cardType
+        cardType,
+        scanDiagnostics
       ).catch(function(err) {
+        scanDiagnostics?.vision(err.message==='NO_API_KEY'?'provider_not_configured':[401,403].includes(err.status)?'provider_authentication_failed':err.status===429?'rate_limited':'request_failed');
         console.error("[GemPredict] Image analysis error (non-fatal):", err.message);
         return null;
       });
@@ -966,6 +977,7 @@ const atlas = null; // Financial recommendations require independent identity an
 
   try {
     const context = internalMarketContext(process.env.NEXT_PUBLIC_SITE_URL,process.env,req.headers);
+    scanDiagnostics?.market('routing',context.ok);
     if (!context.ok) throw new Error(context.reason);
     const baseUrl = context.baseUrl;
   
@@ -1007,7 +1019,9 @@ const atlas = null; // Financial recommendations require independent identity an
     for (const q of marketQueries.slice(0, 6)) {
       const params = new URLSearchParams({q});
       for (const [k,v] of Object.entries(lookupIdentity)) if(v)params.set(k,v);
+      scanDiagnostics?.market('request');
       const response = await fetch(baseUrl + "/api/ebay-search?" + params.toString(),{headers:context.headers,redirect:"manual",signal:AbortSignal.timeout(12000)});
+      scanDiagnostics?.market('status',response.status);
       if (!response.ok) continue;
       const candidate = await response.json();
       if (!candidate.success) continue;

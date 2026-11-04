@@ -1,3 +1,4 @@
+import {conditionAssessmentLabels} from '../../lib/photoConditionLabels.mjs';
 // Exercise the actual JSX components with React SSR, no DOM or provider calls.
 import fs from 'node:fs';
 import vm from 'node:vm';
@@ -16,7 +17,14 @@ function components(file,bindings={}){
  const exports={};vm.runInNewContext(code,{exports,require,React,...bindings});return exports;
 }
 const {default:AtlasPanel}=components('src/components/AtlasPanel.jsx');
-const {ResultCard,ImageAnalysisCard}=components('src/App.jsx',{...financial,identitySummary,reportTitle,verificationRows,buildGemPredictScore,AtlasPanel,useState:React.useState});
+const {ResultCard,ImageAnalysisCard}=components('src/App.jsx',{conditionAssessmentLabels,...financial,identitySummary,reportTitle,verificationRows,buildGemPredictScore,AtlasPanel,useState:React.useState});
 export function renderReports(report){
  return {upper:renderToStaticMarkup(React.createElement(ResultCard,{data:report,index:0,onSave(){},isSaved:false})),lower:renderToStaticMarkup(React.createElement(ImageAnalysisCard,{report}))};
+}
+// Isolate server authorization states without starting a browser or network.
+export async function renderDiagnosticControl(authorization,report=null){
+ const {scanDiagnosticAccess}=await import('../../lib/scanDiagnosticClient.mjs');
+ let calls=0;
+ const {default:Control}=components('src/components/ScanDiagnostics.jsx',{scanDiagnosticAccess,useEffect(){},useState(initial){return [calls++===0?authorization:initial,()=>{}];}});
+ return renderToStaticMarkup(React.createElement(Control,{report}));
 }

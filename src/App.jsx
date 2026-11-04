@@ -1,3 +1,6 @@
+import {conditionAssessmentLabels} from '../lib/photoConditionLabels.mjs';
+import ScanDiagnostics from './components/ScanDiagnostics';
+import {rememberScanDiagnostic} from '../lib/scanDiagnosticClient.mjs';
 import {reportTitle,verificationRows} from '../lib/reportVerification.mjs';
 import {identitySummary} from '../lib/pokemonReportIdentity.mjs';
 import { protectFinancialReport, reportFromResponse, protectedCopySummary, WITHHELD_MESSAGE } from "../lib/financialSafety.mjs";
@@ -373,13 +376,12 @@ export function ImageAnalysisCard({ report }) {
           {attributes.map(function(attr) {
             const rating = data[attr.key] || "unassessed";
             const assessment=data.conditionAssessments?.[attr.key];
-            const labels={no_defect_observed:"No visible defect detected",confirmed_visible_defect:"Visible defect observed",suspected_defect:"Possible defect",unassessable:"Unable to assess"};
             const notes=(data.modelPhotoNotes||[]).filter(note=>note.attribute===attr.key);
             return (
               <div key={attr.key} style={{ background: C.cream, border: "1px solid " + C.border, borderRadius: 12, padding: "0.85rem 0.9rem" }}>
                 <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "0.35rem" }}>
                   <span style={{ fontSize: "0.7rem", fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.06em", color: C.inkSoft }}>{attr.label}</span>
-                  <RatingPill rating={rating} label={assessment ? labels[assessment.state] || "Unable to assess" : undefined} />
+                  <RatingPill rating={rating} label={assessment ? conditionAssessmentLabels[assessment.state] || "Unable to assess" : undefined} />
                 </div>
                 {assessment?.observations?.length ? assessment.observations.map((observation,i)=><p key={i} style={{fontSize:"0.78rem",color:C.inkMid,lineHeight:1.55,margin:0}}>
                   {observation.side==='front'?'Front photo: ':observation.side==='back'?'Back photo: ':'Photo side not established: '}{observation.text}
@@ -1122,6 +1124,7 @@ export default function App() {
   const [waitlistEmail,   setWaitlistEmail]   = useState("");
   const [loading,         setLoading]         = useState(false);
   const [results,         setResults]         = useState([]);
+  const [failedScanDiagnostic,setFailedScanDiagnostic] = useState(null);
   const [imageAnalysis,   setImageAnalysis]   = useState(null);   // latest image analysis result
   const [error,           setError]           = useState("");
   const [rateLimitMsg,    setRateLimitMsg]    = useState("");
@@ -1243,7 +1246,7 @@ const emailRef    = useRef(null);
   async function handleSubmit() {
     if (loading || processingImages || photoErrors.front || photoErrors.back || (!cardName.trim() && !imageFile)) return;
     if (email && !isValidEmail(email)) { setError("Please enter a valid email address."); return; }
-    setLoading(true); setError(""); setRateLimitMsg(""); setEmailConfirm(false); setImageAnalysis(null);
+    setLoading(true); setError(""); setRateLimitMsg(""); setEmailConfirm(false); setImageAnalysis(null); setFailedScanDiagnostic(null);
 
     try {
       let result;
@@ -1270,11 +1273,13 @@ const emailRef    = useRef(null);
       }
 
       const { response: res, data } = result;
+      if(!res.ok){const failed={};rememberScanDiagnostic(failed,res);setFailedScanDiagnostic(failed);}
       if (res.status === 429) { setRateLimitMsg(data.message || "Rate limit exceeded. Please try again later."); setLoading(false); return; }
       if (!res.ok) { setError(data.error || "Something went wrong. Please try again."); setLoading(false); return; }
 
       setResults(function(prev) {
   const newReport = reportFromResponse(data);
+  rememberScanDiagnostic(newReport,res);
 
   return [newReport, ...prev].slice(0, 5);
 });
@@ -1528,6 +1533,8 @@ if (data.imageAnalysis) setImageAnalysis(protectFinancialReport(data).imageAnaly
                 {loading ? (<><span style={{ width: 18, height: 18, border: "2px solid rgba(255,255,255,0.4)", borderTopColor: "#fff", borderRadius: "50%", animation: "spin 0.7s linear infinite", flexShrink: 0 }} />Analyzing...</>) : "Analyze My Card"}
               </button>
             </div>
+            <ScanDiagnostics />
+            {failedScanDiagnostic && <ScanDiagnostics report={failedScanDiagnostic} />}
             {/* Condition */}
             <div style={{ marginBottom: "0.9rem" }}>
               <label style={labelSt}>
@@ -1792,6 +1799,7 @@ if (data.imageAnalysis) setImageAnalysis(protectFinancialReport(data).imageAnaly
         isSaved={isSavedReport(r)}
       />
 
+      <ScanDiagnostics report={saved} />
       {r.imageAnalysis && (
         <>
           <IdentityReviewCard report={r} />

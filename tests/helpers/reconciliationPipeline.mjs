@@ -1,3 +1,4 @@
+import {beginScanDiagnostics} from '../../lib/scanDiagnostics.mjs';
 import {conditionPresentation} from '../../lib/visualEvidence.mjs';
 import {buildVisionPrompt} from '../../lib/pokemonVisionPrompt.mjs';
 import {expandVariantAliases,matchesVariantValuation} from '../../lib/variantVerification.mjs';
@@ -42,14 +43,14 @@ export async function runScan({vision={},items=[syntheticListing()],env={},heade
   const r=new Request('http://offline/api/predict',{method:'POST',body:form});const bytes=Buffer.from(await r.arrayBuffer());req=Readable.from([bytes]);req.headers={'content-type':r.headers.get('content-type'),'content-length':String(bytes.length)};
  }
  Object.assign(req.headers,{'x-vercel-oidc-token':'mock.preview.signature',...headers});req.method='POST';req.socket={remoteAddress:'offline'};
- const response=()=>({code:null,body:null,status(n){this.code=n;return this;},setHeader(){},json(b){this.body=JSON.parse(JSON.stringify(b));return this;}});
+ const response=()=>({code:null,body:null,headers:{},status(n){this.code=n;return this;},setHeader(k,v){this.headers[k]=v;},json(b){this.body=JSON.parse(JSON.stringify(b));return this;}});
  const market=vm.runInNewContext(source('pages/api/ebay-search.js')+'\nhandler',{expandVariantAliases,matchesVariantValuation,scorePokemonListing,pokemonListingType,readPokemonIdentity,matchListing,identityComplete,process:{env:environment},Buffer,URLSearchParams,fetch:async url=>{metrics.upstream++;assert.match(String(url),/^https:\/\/api\.ebay\.com\//);return {ok:true,status:200,json:async()=>String(url).includes('oauth2/token')?{access_token:'mock'}:{itemSummaries:items,total:items.length}};}});
  class Anthropic {constructor(){this.messages={create:async request=>{
   if(Array.isArray(request.messages[0].content)){metrics.vision++;metrics.visionPrompt=request.messages[0].content.filter(v=>v.type==='text').map(v=>v.text).join('');metrics.images=request.messages[0].content.filter(v=>v.type==='image').length;return {content:[{type:'text',text:JSON.stringify({...confirmed,centering:'good',corners:'good',edges:'good',surface:'good',imageSummary:'Synthetic condition observation.',worthGrading:true,worthGradingReason:'Grade it now for profit.',...vision})}]};}
   metrics.valuation++;throw Error('Financial model must not be called for unverified identity/sales');
  }};}}
  const unavailable=async()=>{metrics.catalog++;throw Error('Offline catalog unavailable');};
- const ctx={conditionPresentation,buildVisionPrompt,readIdentityReadings,resolvePokemonIdentity:async(a,f,o)=>resolvePokemonIdentity(a,f,{...o,...catalogOptions}),Buffer,URLSearchParams,AbortSignal,fs,path,formidable,validateAnalysisImage,MAX_IMAGE_BYTES,Anthropic,supabase:null,process:{env:environment},console:{log(){},error(){}},financialEligibility,protectFinancialReport,internalMarketContext,identityComplete,canonicalIdentityV2,emptyGraderScenarios,auditSportsIdentity,assessSoldIdentityGate,assessIdentityEvidence,buildCanonicalCardFromImageAnalysis,buildMarketQueryFromCanonicalCard,calculateIdentityConfidence,buildSearchCandidates,issueIdentityReviewToken:scan=>{metrics.reviewIdentity=scan;return null;},findTcgdexCandidates:unavailable,fetchFullTcgdexCard:unavailable,crossCheckIdentity:()=>({status:'not_checked'}),assessArtworkSimilarity:unavailable,atlasOrchestrator:()=>{throw Error('Unverified finance must not reach Atlas');},fetch:async(url,options)=>{
+ const ctx={beginScanDiagnostics:(req,res)=>beginScanDiagnostics(req,res,{env:environment}),conditionPresentation,buildVisionPrompt,readIdentityReadings,resolvePokemonIdentity:async(a,f,o)=>resolvePokemonIdentity(a,f,{...o,...catalogOptions}),Buffer,URLSearchParams,AbortSignal,fs,path,formidable,validateAnalysisImage,MAX_IMAGE_BYTES,Anthropic,supabase:null,process:{env:environment},console:{log(){},error(){}},financialEligibility,protectFinancialReport,internalMarketContext,identityComplete,canonicalIdentityV2,emptyGraderScenarios,auditSportsIdentity,assessSoldIdentityGate,assessIdentityEvidence,buildCanonicalCardFromImageAnalysis,buildMarketQueryFromCanonicalCard,calculateIdentityConfidence,buildSearchCandidates,issueIdentityReviewToken:scan=>{metrics.reviewIdentity=scan;return null;},findTcgdexCandidates:unavailable,fetchFullTcgdexCard:unavailable,crossCheckIdentity:()=>({status:'not_checked'}),assessArtworkSimilarity:unavailable,atlasOrchestrator:()=>{throw Error('Unverified finance must not reach Atlas');},fetch:async(url,options)=>{
   const parsed=new URL(url);
   if(parsed.hostname==='api.tcgdex.net'){metrics.catalog++;if(catalogFetch)return catalogFetch(url,options);throw Error('Offline catalog unavailable');}
   if(parsed.hostname==='api.ebay.com'){return {ok:true,json:async()=>parsed.pathname.includes('oauth2/token')?{access_token:'mock'}:{itemSummaries:neutral,total:neutral.length}};}
@@ -57,7 +58,7 @@ export async function runScan({vision={},items=[syntheticListing()],env={},heade
   if(previewStatus)return {ok:false,status:previewStatus,json:async()=>({})};
   const r=response();await market({query:Object.fromEntries(parsed.searchParams)},r);return {ok:marketStatus===200&&r.code===200,status:marketStatus,json:async()=>r.body};
  }};
- const handler=vm.runInNewContext(source('pages/api/predict.js')+'\nhandler',ctx);const res=response();await handler(req,res);return {status:res.code,payload:res.body,metrics};
+ const handler=vm.runInNewContext(source('pages/api/predict.js')+'\nhandler',ctx);const res=response();await handler(req,res);return {status:res.code,payload:res.body,metrics,responseHeaders:res.headers};
 }
 export async function runMarketRequest(query,items=[syntheticListing()]){
  let calls=0;
