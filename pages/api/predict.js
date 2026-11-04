@@ -651,6 +651,7 @@ const backMime = backImageMimeType &&
     messages: [{
       role: "user",
       content: [
+  ...(cardType==='pokemon'?[{type:"text",text:"Image 1 — FRONT photo."}]:[]),
   {
     type: "image",
     source: {
@@ -661,7 +662,7 @@ const backMime = backImageMimeType &&
   },
 
   ...(backBase64
-    ? [{
+    ? [...(cardType==='pokemon'?[{type:"text",text:"Image 2 — BACK photo."}]:[]),{
         type: "image",
         source: {
           type: "base64",

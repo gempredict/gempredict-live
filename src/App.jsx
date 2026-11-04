@@ -371,15 +371,23 @@ export function ImageAnalysisCard({ report }) {
         {/* 4 attribute ratings */}
         <div className="gp-vision-grid" style={{ marginBottom: "1rem" }}>
           {attributes.map(function(attr) {
-            const rating = data[attr.key] || (data.identityObservationOnly?"unassessed":"fair");
-            const rc = RATING_COLORS[rating] || RATING_COLORS.fair;
+            const rating = data[attr.key] || "unassessed";
+            const assessment=data.conditionAssessments?.[attr.key];
+            const labels={no_defect_observed:"No visible defect detected",confirmed_visible_defect:"Visible defect observed",suspected_defect:"Possible defect",unassessable:"Unable to assess"};
+            const notes=(data.modelPhotoNotes||[]).filter(note=>note.attribute===attr.key);
             return (
               <div key={attr.key} style={{ background: C.cream, border: "1px solid " + C.border, borderRadius: 12, padding: "0.85rem 0.9rem" }}>
                 <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "0.35rem" }}>
                   <span style={{ fontSize: "0.7rem", fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.06em", color: C.inkSoft }}>{attr.label}</span>
-                  <RatingPill rating={rating} />
+                  <RatingPill rating={rating} label={assessment ? labels[assessment.state] || "Unable to assess" : undefined} />
                 </div>
-                <p style={{ fontSize: "0.78rem", color: C.inkMid, lineHeight: 1.55, margin: 0 }}>{attr.note || "—"}</p>
+                {assessment?.observations?.length ? assessment.observations.map((observation,i)=><p key={i} style={{fontSize:"0.78rem",color:C.inkMid,lineHeight:1.55,margin:0}}>
+                  {observation.side==='front'?'Front photo: ':observation.side==='back'?'Back photo: ':'Photo side not established: '}{observation.text}
+                </p>) : <p style={{ fontSize: "0.78rem", color: C.inkMid, lineHeight: 1.55, margin: 0 }}>{attr.note || "—"}</p>}
+                {assessment?.sides?.length>0 && <p style={{fontSize:"0.7rem",color:C.inkSoft,margin:"0.35rem 0"}}>Evidence: {assessment.sides.map(side=>side==='front'?'Front photo':'Back photo').join(', ')}</p>}
+                {notes.map((note,i)=><p key={i} style={{fontSize:"0.74rem",color:C.inkSoft,margin:"0.35rem 0"}}>
+                  Model photo note — unverified ({note.side==='front'?'Front photo':note.side==='back'?'Back photo':'Photo side not established'}): {note.text}
+                </p>)}
               </div>
             );
           })}
