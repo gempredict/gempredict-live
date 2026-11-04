@@ -4,14 +4,7 @@ import assert from 'node:assert/strict';
 import {runScan,runMarketRequest} from './helpers/reconciliationPipeline.mjs';
 import {protectFinancialReport,reportFromResponse,protectedCopySummary,FINANCIAL_FIELDS} from '../lib/financialSafety.mjs';
 import {verifyRuntimeCatalogAssets} from '../lib/runtimeCatalogAssets.mjs';
-const set={id:'30th',name:'30th Celebration',releaseDate:'2026-09-16',cardCount:{official:128},tcgOnline:'30C'};
-const hosted={id:'30th-149',localId:'149',name:'Pikachu ex',rarity:'Special illustration rare',set,updated:'2026-09-17T00:45:22+02:00',variants:{firstEdition:false,holo:false,normal:true,reverse:false,wPromo:false},variants_detailed:[{type:'normal',size:'standard',variantId:'generated'}]};
-const vision={identifiedSubject:'Pikachu ex',identifiedYear:'2023',identifiedManufacturer:'Pokemon',identifiedBrandSet:'Paldea Evolved',identifiedCardNumber:'149/128',identifiedParallel:'Holo Special Art',identifiedLanguage:'English',identifiedAutoOrRelic:'none'};
-const title='2026 Pokemon 30th Celebration Pikachu ex 149/128 English Holo Special Illustration Rare';
-const listing=(i,text=title)=>({itemId:'v1|'+(123456789012+i)+'|0',itemWebUrl:'https://www.ebay.com/itm/'+(123456789012+i),title:text,condition:'Ungraded',localizedAspects:[{name:'Language',value:'English'}],price:{value:'40',currency:'USD'}});
-const neutral=Array.from({length:3},(_,i)=>listing(i));
-const catalogFetch=async url=>({ok:true,json:async()=>structuredClone(!new URL(url).pathname.includes('/en/')?[]:new URL(url).pathname.endsWith('/cards')?[{id:hosted.id,localId:'149',name:hosted.name}]:new URL(url).pathname.includes('/cards/')?hosted:set)});
-const scan=patch=>runScan({vision,fields:{cardType:'pokemon'},neutral,items:neutral,catalogFetch,...patch});
+import {scan,vision,neutral,title,listing,set} from './helpers/pikachuFixture.mjs';
 function withheld(r){assert.equal(r.status,200);for(const f of FINANCIAL_FIELDS)assert.equal(r.payload.prediction[f],null,f);assert.equal(r.payload.financialDecision.actionable,false);assert.equal(r.metrics.valuation,0);assert.equal(r.payload.atlas,null);}
 test('original Paldea Evolved 2023 observation survives while independent catalog controls 2026 30th identity',async()=>{
  const r=await scan();withheld(r);assert.match(r.metrics.visionPrompt,/identityReadings/);assert.match(r.metrics.visionPrompt,/visualObservations/);assert.doesNotMatch(r.metrics.visionPrompt,/30th Celebration/);const p=r.payload;
