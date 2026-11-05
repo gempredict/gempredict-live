@@ -29,3 +29,18 @@ export async function renderDiagnosticControl(authorization,report=null){
  const {default:Control}=components('src/components/ScanDiagnostics.jsx',{scanDiagnosticAccess,useEffect(){},useState(initial){return [calls++===0?authorization:initial,()=>{}];}});
  return renderToStaticMarkup(React.createElement(Control,{report}));
 }
+
+export function renderIdentityResult(report){
+ const {default:View}=components('src/components/IdentityResult.jsx',{...financial,reportTitle,verificationRows,ScanDiagnostics:()=>null});
+ return renderToStaticMarkup(React.createElement(View,{report}));
+}
+
+// Drive actual App callbacks with deterministic hook storage, no browser/AI calls.
+export function appInteraction(bindings={}){
+ const slots=[];let index=0;
+ const hook=initial=>{const i=index++;if(!(i in slots))slots[i]=typeof initial==='function'?initial():initial;return [slots[i],value=>{slots[i]=typeof value==='function'?value(slots[i]):value;}];};
+ const {default:App}=components('src/App.jsx',{...financial,identitySummary,reportTitle,verificationRows,safeScanFailure,conditionAssessmentLabels,buildGemPredictScore,AtlasPanel,IdentityResult:()=>null,ScanDiagnostics:()=>null,useState:hook,useRef:initial=>hook({current:initial})[0],useEffect(){},track(){},...bindings});
+ function render(){index=0;return App();}
+ function nodes(root,predicate){const found=[];function walk(node){if(!node||typeof node!=='object')return;if(Array.isArray(node)){node.forEach(walk);return;}if(predicate(node))found.push(node);walk(node.props?.children);}walk(root);return found;}
+ return {render,nodes};
+}

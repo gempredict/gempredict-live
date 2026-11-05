@@ -1,3 +1,4 @@
+import IdentityResult from "./components/IdentityResult";
 import {safeScanFailure} from '../lib/scanFailures.mjs';
 import {conditionAssessmentLabels} from '../lib/photoConditionLabels.mjs';
 import ScanDiagnostics from './components/ScanDiagnostics';
@@ -1125,6 +1126,9 @@ export default function App() {
   const [email,           setEmail]           = useState("");
   const [waitlistEmail,   setWaitlistEmail]   = useState("");
   const [loading,         setLoading]         = useState(false);
+  const [identityResult,setIdentityResult] = useState(null);
+  const [activeStage,setActiveStage] = useState('full');
+  const scanInFlight = useRef(false);
   const [results,         setResults]         = useState([]);
   const [failedScanDiagnostic,setFailedScanDiagnostic] = useState(null);
   const [imageAnalysis,   setImageAnalysis]   = useState(null);   // latest image analysis result
@@ -1245,9 +1249,12 @@ const emailRef    = useRef(null);
     setResults([]); setImageAnalysis(null); setError(""); setRateLimitMsg("");
   }
 
-  async function handleSubmit() {
+  async function handleSubmit(mode='full') {
+    mode=mode==='identity'?'identity':'full';
+    if(scanInFlight.current||mode==='identity'&&!imageFile)return;
     if (loading || processingImages || photoErrors.front || photoErrors.back || (!cardName.trim() && !imageFile)) return;
     if (email && !isValidEmail(email)) { setError("Please enter a valid email address."); return; }
+    scanInFlight.current=true;setActiveStage(mode);if(mode==='identity')setIdentityResult(null);
     setLoading(true); setError(""); setRateLimitMsg(""); setEmailConfirm(false); setImageAnalysis(null); setFailedScanDiagnostic(null);
 
     try {
@@ -1255,6 +1262,7 @@ const emailRef    = useRef(null);
       if (imageFile) {
         // Multipart/form-data when image is present
         const formData = new FormData();
+        if(mode==='identity')formData.append("mode","identity");
         formData.append("cardName", cardName.trim());
         formData.append("cardType",  cardType);
         formData.append("cardSet",   cardSet.trim());
@@ -1279,6 +1287,11 @@ const emailRef    = useRef(null);
       if (res.status === 429) { setRateLimitMsg(data.message || "Rate limit exceeded. Please try again later."); setLoading(false); return; }
       if (!res.ok) { setError(data.error || "Something went wrong. Please try again."); setLoading(false); return; }
 
+      if(mode==='identity'){
+        const identified=reportFromResponse(data);rememberScanDiagnostic(identified,res);setIdentityResult(identified);
+        if(data.remaining!=null)setRemaining(data.remaining);
+        return;
+      }
       setResults(function(prev) {
   const newReport = reportFromResponse(data);
   rememberScanDiagnostic(newReport,res);
@@ -1299,7 +1312,7 @@ if (data.imageAnalysis) setImageAnalysis(protectFinancialReport(data).imageAnaly
     
 
     } catch (error) { const response=predictionFailureResponse(error);if(response){const failed={};rememberScanDiagnostic(failed,response);setFailedScanDiagnostic(failed);}setError(error instanceof UploadError ? error.message+(error.scanCode?" (Reference: "+error.scanCode+")":"") : "Unexpected report display error. No financial recommendation was generated."); }
-    finally   { setLoading(false); }
+    finally   { scanInFlight.current=false;setLoading(false); }
   }
 
   async function handleWaitlistSubmit() {
@@ -1531,7 +1544,7 @@ if (data.imageAnalysis) setImageAnalysis(protectFinancialReport(data).imageAnaly
                 <label style={labelSt}>Card Name</label>
                 <input ref={cardNameRef} value={cardName} onChange={function(e) { setCardName(e.target.value); }} onKeyDown={function(e) { if (e.key === "Enter") handleSubmit(); }} placeholder="e.g. Charizard Holo, LeBron Rookie, Black Lotus" style={inputSt} />
               </div>
-              <button onClick={handleSubmit} disabled={loading || processingImages > 0 || photoErrors.front || photoErrors.back || (!cardName.trim() && !imageFile)} style={{ padding: "0.85rem 1.75rem", background: loading || (!cardName.trim() && !imageFile) ? "#94a3b8" : C.ink, color: "#fff", border: "none", borderRadius: 12, fontSize: "1rem", fontWeight: 700, cursor: loading || (!cardName.trim() && !imageFile) ? "not-allowed" : "pointer", whiteSpace: "nowrap", minWidth: 155, display: "flex", alignItems: "center", justifyContent: "center", gap: "0.5rem" }}>
+              <button onClick={()=>handleSubmit()} disabled={loading || processingImages > 0 || photoErrors.front || photoErrors.back || (!cardName.trim() && !imageFile)} style={{ padding: "0.85rem 1.75rem", background: loading || (!cardName.trim() && !imageFile) ? "#94a3b8" : C.ink, color: "#fff", border: "none", borderRadius: 12, fontSize: "1rem", fontWeight: 700, cursor: loading || (!cardName.trim() && !imageFile) ? "not-allowed" : "pointer", whiteSpace: "nowrap", minWidth: 155, display: "flex", alignItems: "center", justifyContent: "center", gap: "0.5rem" }}>
                 {loading ? (<><span style={{ width: 18, height: 18, border: "2px solid rgba(255,255,255,0.4)", borderTopColor: "#fff", borderRadius: "50%", animation: "spin 0.7s linear infinite", flexShrink: 0 }} />Analyzing...</>) : "Analyze My Card"}
               </button>
             </div>
@@ -1756,6 +1769,12 @@ if (data.imageAnalysis) setImageAnalysis(protectFinancialReport(data).imageAnaly
             )}
           </div>
 
+          <div style={{marginTop:16,display:'flex',gap:12,alignItems:'center',flexWrap:'wrap'}}>
+            <button type="button" onClick={()=>handleSubmit('identity')} disabled={loading||processingImages>0||!!photoErrors.front||!!photoErrors.back||!imageFile} style={{padding:'0.85rem 1.75rem',borderRadius:12,border:'1px solid #d2b48c',background:C.ink,color:'#fff',fontWeight:700}}>Identify Card</button>
+            <span style={{fontSize:'0.8rem',color:C.inkSoft}}>Front photo required; back optional. Identification only. Analyze My Card remains the separate full scan.</span>
+          </div>
+          {identityResult&&!loading&&<IdentityResult report={identityResult} onSave={saveReport}/>}
+
           {/* Remaining */}
           {remaining !== null && (
             <p style={{ fontSize: "0.75rem", color: C.inkSoft, textAlign: "center", marginTop: "0.75rem" }}>
@@ -1767,7 +1786,7 @@ if (data.imageAnalysis) setImageAnalysis(protectFinancialReport(data).imageAnaly
           {loading && (
             <div style={{ textAlign: "center", padding: "2.5rem 1rem" }}>
               <div style={{ width: 40, height: 40, border: "3px solid " + C.border, borderTopColor: C.gold, borderRadius: "50%", animation: "spin 0.7s linear infinite", margin: "0 auto 1rem" }} />
-              <p style={{ color: C.inkSoft, fontSize: "0.9rem" }}>{imageFile ? "Analyzing card values and photo..." : "Pulling market data and grading intel..."}</p>
+              <p style={{ color: C.inkSoft, fontSize: "0.9rem" }}>{activeStage==='identity'?"Reading printed card identity and checking catalog evidence...":imageFile ? "Analyzing card values and photo..." : "Pulling market data and grading intel..."}</p>
             </div>
           )}
           {/* Rate limit */}
@@ -1781,7 +1800,7 @@ if (data.imageAnalysis) setImageAnalysis(protectFinancialReport(data).imageAnaly
           {error && <div style={{ marginTop: "1.25rem", background: C.redLight, border: "1px solid #fca5a5", borderRadius: 12, padding: "1rem 1.25rem", color: C.red, fontSize: "0.875rem" }}>{error}</div>}
 
           {/* Empty state */}
-          {!loading && results.length === 0 && !error && !rateLimitMsg && <EmptyState />}
+          {!loading && !identityResult && results.length === 0 && !error && !rateLimitMsg && <EmptyState />}
 
           {/* Results */}
           {results.length > 0 && !loading && (

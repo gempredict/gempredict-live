@@ -1,3 +1,4 @@
+import {identifyFromPhotos} from '../../lib/identityStage.mjs';
 import {VISION_MODEL,visionOutputBudget,parseVisionMessage,retainSportsVisionEvidence} from '../../lib/visionResponsePolicy.mjs';
 import {buildSportsVisionPrompt} from '../../lib/visionPromptContract.mjs';
 import {scanFailure,providerFailure} from '../../lib/scanFailures.mjs';
@@ -717,6 +718,22 @@ if (hasTypedCardName && looksLikeJunk(cardName)) {
   // Image size guard (redundant with formidable limit but belt-and-suspenders)
   if (imageBuffer && imageBuffer.length > IMAGE_MAX_BYTES) {
     return res.status(400).json({ error: "Image file is too large. Please upload a prepared image under 1.6 MB." });
+  }
+
+  // Explicitly isolated mode shares the same parser, image checks and hourly cap.
+  if(fields.mode && !['identity','full'].includes(fields.mode))return res.status(400).json({error:'Unsupported scan mode.'});
+  if(fields.mode==='identity'){
+    scanDiagnostics?.stage('identity');
+    if(!imageBuffer)return res.status(400).json({error:'A front photograph is required to identify a card.'});
+    try{
+      const identity=await identifyFromPhotos({client:anthropic,front:imageBuffer,frontMime:imageMimeType,back:backImageBuffer,backMime:backImageMimeType,cardType,fields,diagnostics:scanDiagnostics,fetchImpl:fetch});
+      return res.status(200).json({...identity,remaining:rateCheck.remaining});
+    }catch(error){
+      const runtime=error.message==='IDENTITY_VERIFICATION_RUNTIME_FAILED';
+      const failure=runtime?scanFailure('VERIFICATION_RUNTIME_FAILED'):providerFailure(error);
+      if(!runtime&&!['ANALYSIS_RESPONSE_INCOMPLETE','ANALYSIS_EMPTY_RESPONSE','ANALYSIS_RESPONSE_INVALID'].includes(error.message))scanDiagnostics?.vision(error.message==='NO_API_KEY'?'provider_not_configured':[401,403].includes(error.status)?'provider_authentication_failed':error.status===429?'rate_limited':'request_failed');
+      return res.status(failure.status).json(failure.payload);
+    }
   }
 
   let emailSaved = false;
