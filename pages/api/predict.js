@@ -1,3 +1,4 @@
+import {safeIdentityValidation} from '../../lib/identityValidation.mjs';
 import {identifyFromPhotos} from '../../lib/identityStage.mjs';
 import {VISION_MODEL,visionOutputBudget,parseVisionMessage,retainSportsVisionEvidence} from '../../lib/visionResponsePolicy.mjs';
 import {buildSportsVisionPrompt} from '../../lib/visionPromptContract.mjs';
@@ -732,7 +733,7 @@ if (hasTypedCardName && looksLikeJunk(cardName)) {
       const runtime=error.message==='IDENTITY_VERIFICATION_RUNTIME_FAILED';
       const failure=runtime?scanFailure('VERIFICATION_RUNTIME_FAILED'):providerFailure(error);
       if(!runtime&&!['ANALYSIS_RESPONSE_INCOMPLETE','ANALYSIS_EMPTY_RESPONSE','ANALYSIS_RESPONSE_INVALID'].includes(error.message))scanDiagnostics?.vision(error.message==='NO_API_KEY'?'provider_not_configured':[401,403].includes(error.status)?'provider_authentication_failed':error.status===429?'rate_limited':'request_failed');
-      return res.status(failure.status).json(failure.payload);
+      return res.status(failure.status).json({...failure.payload,...(safeIdentityValidation(error.identityValidation)?{identityValidation:safeIdentityValidation(error.identityValidation)}:{})});
     }
   }
 

@@ -10,7 +10,7 @@ export default function IdentityResult({report,onSave}){
  if(!r.identityVerification)rows[0]={...rows[0],reason:'No trusted independent catalog is connected for this card category. This is an unverified photo identification proposal.'};
  const show=value=>value||'Unresolved';
  return <section aria-label="Card identification result" style={{marginTop:24,padding:24,border:'1px solid #e2d9ca',borderRadius:18,background:'#fff'}}>
-  <p style={{fontSize:12,fontWeight:700}}>Card identification · {verified?'Catalog supported':'Unverified proposal'}</p>
+  <p style={{fontSize:12,fontWeight:700}}>Card identification · {r.photoIdentityStatus?.status==='conflict'?'Identity conflict — review required':r.photoIdentityStatus?.photoSupported?'Catalog and printed evidence agree':verified?'Catalog supported — photo evidence incomplete':'Unverified proposal'}</p>
   <h3>{reportTitle(r)}</h3>
   {r.verificationRuntimeFailed&&<p role="status">Photo identification completed, but catalog verification encountered a runtime problem. The proposal remains unverified.</p>}
   <p>Condition analysis: not requested. Marketplace discovery: not requested.</p>
