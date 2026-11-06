@@ -57,7 +57,7 @@ test('complete JSON contract rejects truncation, malformed, empty, extra financi
 });
 test('provider failure is distinct from catalog unresolved and does not retry',async()=>{
  for(const status of [401,429,503]){const r=await identify({visionError:{status}});assert.notEqual(r.status,200);assert.equal(r.payload.failureCategory,'analysis_provider');assert.equal(r.metrics.vision,1);assert.equal(r.metrics.catalog,0);assert.equal(r.metrics.valuation,0);}
- const runtime=await identifyFromPhotos({client:{messages:{create:async()=>message(zapdos)}},front:Buffer.from('mock'),frontMime:'image/jpeg',cardType:'pokemon',fetchImpl:async()=>{throw Error('offline');}});assert.equal(runtime.pokemonIdentityStatus.catalogOutcome,'unavailable');
+ const runtime=await identifyFromPhotos({client:{messages:{create:()=>({withResponse:async()=>({data:message(zapdos),response:{status:200}})})}},front:Buffer.from('mock'),frontMime:'image/jpeg',cardType:'pokemon',fetchImpl:async()=>{throw Error('offline');}});assert.equal(runtime.pokemonIdentityStatus.catalogOutcome,'unavailable');
 });
 test('identity action requires valid front photo and explicit mode; malformed uploads stop before any paid call',async()=>{
  for(const options of [{textOnly:true},{badBack:true},{fields:{mode:'unsupported',cardType:'pokemon'}}]){const r=await identify(options);assert.equal(r.status,400);assert.equal(r.metrics.vision,0);}

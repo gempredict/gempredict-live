@@ -431,7 +431,7 @@ minorConcerns: safeStr(raw.minorConcerns, "No additional visible concerns identi
 }
 // ─── Anthropic client ─────────────────────────────────────────────────────────
 const anthropic = process.env.CLAUDE_API_KEY
-  ? new Anthropic({ apiKey: process.env.CLAUDE_API_KEY, maxRetries: 0 })
+  ? new Anthropic({ apiKey: process.env.CLAUDE_API_KEY, maxRetries: 0, logLevel: 'off' })
   : null;
 
 // ─── Text-only prediction (existing logic, unchanged) ─────────────────────────
@@ -732,7 +732,7 @@ if (hasTypedCardName && looksLikeJunk(cardName)) {
     }catch(error){
       const runtime=error.message==='IDENTITY_VERIFICATION_RUNTIME_FAILED';
       const failure=runtime?scanFailure('VERIFICATION_RUNTIME_FAILED'):providerFailure(error);
-      if(!runtime&&!['ANALYSIS_RESPONSE_INCOMPLETE','ANALYSIS_EMPTY_RESPONSE','ANALYSIS_RESPONSE_INVALID'].includes(error.message))scanDiagnostics?.vision(error.message==='NO_API_KEY'?'provider_not_configured':[401,403].includes(error.status)?'provider_authentication_failed':error.status===429?'rate_limited':'request_failed');
+      if(!runtime&&!['ANALYSIS_PROVIDER_REQUEST_REJECTED','ANALYSIS_PROVIDER_REFUSED','ANALYSIS_TRANSPORT_INVALID','ANALYSIS_RESPONSE_INCOMPLETE','ANALYSIS_EMPTY_RESPONSE','ANALYSIS_RESPONSE_INVALID'].includes(error.message))scanDiagnostics?.vision(error.message==='NO_API_KEY'?'provider_not_configured':[401,403].includes(error.status)?'provider_authentication_failed':error.status===429?'rate_limited':'request_failed');
       return res.status(failure.status).json({...failure.payload,...(safeIdentityValidation(error.identityValidation)?{identityValidation:safeIdentityValidation(error.identityValidation)}:{})});
     }
   }
