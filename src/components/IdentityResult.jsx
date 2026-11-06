@@ -5,17 +5,19 @@ import ScanDiagnostics from './ScanDiagnostics';
 export default function IdentityResult({report,onSave}){
  const r=protectFinancialReport(report),original=r.originalIdentityObservation||{};
  const verified=r.pokemonIdentityStatus?.catalogVerified===true;
+ const coreSupported=r.coreCatalogIdentity?.supported===true;
+ const raritySupported=coreSupported&&r.rarityVerification?.verified===true;
  const printed=r.printedIdentityEvidence||r.identityVerification?.printed;
  const rows=verificationRows(r);
  if(!r.identityVerification)rows[0]={...rows[0],reason:'No trusted independent catalog is connected for this card category. This is an unverified photo identification proposal.'};
  const show=value=>value||'Unresolved';
  return <section aria-label="Card identification result" style={{marginTop:24,padding:24,border:'1px solid #e2d9ca',borderRadius:18,background:'#fff'}}>
-  <p style={{fontSize:12,fontWeight:700}}>Card identification · {r.photoIdentityStatus?.status==='conflict'?'Identity conflict — review required':r.photoIdentityStatus?.photoSupported?'Catalog and printed evidence agree':verified?'Catalog supported — photo evidence incomplete':'Unverified proposal'}</p>
+  <p style={{fontSize:12,fontWeight:700}}>Card identification · {r.photoIdentityStatus?.status==='conflict'?'Identity conflict — review required':r.photoIdentityStatus?.photoSupported?'Catalog and printed evidence agree':coreSupported&&!verified?'Core catalog supported — exact printing unresolved':verified?'Catalog supported — photo evidence incomplete':'Unverified proposal'}</p>
   <h3>{reportTitle(r)}</h3>
   {r.verificationRuntimeFailed&&<p role="status">Photo identification completed, but catalog verification encountered a runtime problem. The proposal remains unverified.</p>}
   <p>Condition analysis: not requested. Marketplace discovery: not requested.</p>
   <dl>{rows.map(row=><div key={row.key} style={{marginBottom:12}}><dt><strong>{row.label}: {row.status}</strong></dt><dd style={{marginLeft:0}}>{row.reason}</dd></div>)}
-   <div><dt><strong>Rarity: {verified&&r.canonicalCard?.rarity?'Catalog supported':'Unverified'}</strong></dt><dd style={{marginLeft:0}}>{show(verified?r.canonicalCard?.rarity:original.identifiedRarity)}</dd></div>
+   <div><dt><strong>Rarity: {raritySupported?'Catalog supported':'Unverified'}</strong></dt><dd style={{marginLeft:0}}>{show(raritySupported?r.canonicalCard?.rarity:original.identifiedRarity)}</dd></div>
   </dl>
   <details open><summary>Printed photo evidence — readings may be uncertain</summary>
    {original.identityReadings?.length?<ul>{original.identityReadings.map((reading,i)=><li key={i}>{reading.field}: {reading.text||'Unreadable'} · {reading.side}, {reading.area} · {reading.certainty}{reading.alternatives?.length?' · Alternatives: '+reading.alternatives.join(' / '):''}</li>)}</ul>:<p>No readable printed evidence was returned.</p>}
