@@ -1,0 +1,48 @@
+import {readFileSync,writeFileSync,mkdirSync} from 'node:fs';
+import path from 'node:path';
+import {createHash} from 'node:crypto';
+import {fileURLToPath} from 'node:url';
+import {sanitizeObservation,evaluateBenchmark,benchmarkMarkdown} from '../lib/identificationBenchmark.mjs';
+const fields={subject:'identifiedSubject',year:'identifiedYear',set:'identifiedBrandSet',cardNumber:'identifiedCardNumber',manufacturer:'identifiedManufacturer',language:'identifiedLanguage',rarity:'identifiedRarity',parallel:'identifiedParallel',franchise:'identifiedFranchise',autoOrRelic:'identifiedAutoOrRelic'};
+function canonical(c){return {...c,set:c?.brandSet??c?.set,finish:c?.finish??c?.variant?.finish,serialNumber:c?.serialNumber};}
+// Import an already owner-authorized exported report/diagnostic, never a ticket,
+// photograph, provider request/response, network URL or environment credential.
+export function importScanEvidence(raw,{id,cardId,cohortId,attemptIndex,photoHashes={},evidenceDigest=null}){
+ if(!raw||typeof raw!=='object'||Array.isArray(raw))throw Error('benchmark_import_object_required');
+ const diagnostic=raw.version===1&&raw.environment==='preview'&&raw.stage==='identity';
+ const report=raw.stage==='identity'&&typeof raw.success==='boolean';
+ if(!diagnostic&&!report)throw Error('benchmark_import_requires_identity_report_or_exported_diagnostic');
+ const original=diagnostic?raw.model?.originalIdentity:raw.originalIdentityObservation;
+ const candidate=raw.identityVerification?.catalog?.candidate;
+ const technical=diagnostic?{validCompletedResponse:raw.stages?.identity==='completed'&&raw.responseStatus===200&&raw.visionStatus==='normalized',httpStatus:raw.responseStatus,failureCode:raw.failureCode,phase:raw.identityValidation?.phase,rule:raw.identityValidation?.rule,stopReason:raw.identityCompletion?.stopReason}:{validCompletedResponse:raw.success===true,httpStatus:raw.success?200:null,failureCode:raw.errorCode||raw.code};
+ const usage=raw.identityCompletion?.usage;
+ return sanitizeObservation({id,cardId,cohortId,attemptIndex,evidenceDigest,evidenceKind:'live_scan',deploymentCommit:diagnostic?raw.commit:null,scanId:raw.scanId,photoHashes,
+  technical,originalAI:Object.fromEntries(Object.entries(fields).map(([key,field])=>[key,original?.[field]])),modelConfidence:original?.identityConfidence??raw.model?.uncertainty?.identityConfidence,
+  canonical:canonical(diagnostic?raw.canonicalIdentity:raw.canonicalCard),
+  printedReadings:diagnostic?[...(raw.identity?.printed?.setMarkings||[]).map(r=>({...r,field:'setCode'})),...(raw.model?.uncertainty?.readings||[])]:original?.identityReadings,
+  catalog:{outcome:diagnostic?raw.identity?.catalogOutcome:raw.pokemonIdentityStatus?.catalogOutcome,reasonCodes:diagnostic?raw.identity?.catalogReasonCodes:raw.identityVerification?.catalog?.reasonCodes,conflicts:diagnostic?raw.catalogComparison?.finalConflicts:raw.catalogComparison?.finalConflicts,
+   provenance:{provider:diagnostic?raw.identity?.catalogReference?.provider:raw.identityVerification?.catalog?.source,revision:raw.sourceCatalogEvidence?.source?.revision||raw.sourceCatalogEvidence?.revision,cardBlob:raw.sourceCatalogEvidence?.source?.cardBlob||raw.sourceCatalogEvidence?.cardBlob,setBlob:raw.sourceCatalogEvidence?.source?.setBlob||raw.sourceCatalogEvidence?.setBlob},candidatesRetained:false,candidates:candidate?[{provider:raw.identityVerification?.catalog?.source,id:raw.identityVerification.catalog.referenceId,identity:canonical(candidate)}]:[],selectedReference:diagnostic?raw.identity?.catalogReference:raw.identityVerification?.catalog?.referenceId?{provider:raw.identityVerification.catalog.source,id:raw.identityVerification.catalog.referenceId}:null},
+  dimensions:{coreCatalog:diagnostic?raw.catalogComparison?.core?.status:raw.coreCatalogIdentity?.status,photo:diagnostic?raw.photoIdentity?.status:raw.photoIdentityStatus?.status,variant:diagnostic?raw.identity?.variantStatus:raw.variantVerification?.status,artwork:diagnostic?raw.identity?.artwork:raw.artworkStatus?.status,physicalPrinting:diagnostic?raw.identity?.physicalPrinting:raw.physicalPrintingStatus?.status,catalogPrinting:diagnostic?raw.catalogComparison?.printing?.status:raw.catalogComparison?.printing?.status},
+  claims:{catalogVerified:diagnostic?raw.identity?.catalogVerified:raw.pokemonIdentityStatus?.catalogVerified,photoVerified:diagnostic?raw.photoIdentity?.photoSupported:raw.photoIdentityStatus?.photoSupported,printingVerified:diagnostic?null:raw.physicalPrintingStatus?.verified},
+  usage,cost:{actualUsd:null,basis:null},latencyMs:null,
+  unresolvedReasons:[...(raw.photoIdentity?.missingReadings||raw.photoIdentityStatus?.missingReadings||[]).map(k=>'missing_clear_'+k)],annotations:{possibleConflation:raw.sourceCatalogEvidence?.possibleCombinedMarking===true}});
+}
+function read(file){const text=readFileSync(file,'utf8');if(Buffer.byteLength(text)>2*1024*1024)throw Error('benchmark_input_too_large');return JSON.parse(text);}
+export function main(args){
+ const command=args[0],options={};for(let i=1;i<args.length;i+=2){if(!args[i]?.startsWith('--')||args[i+1]==null)throw Error('benchmark_arguments_invalid');options[args[i].slice(2)]=args[i+1];}
+ if(command==='import'){
+  if(!options.input||!options.output||!options.id||!options.card||!options.cohort||!options.attempt)throw Error('benchmark_import_arguments_required');
+  const result=importScanEvidence(read(options.input),{id:options.id,cardId:options.card,cohortId:options.cohort,attemptIndex:Number(options.attempt),evidenceDigest:createHash('sha256').update(readFileSync(options.input)).digest('hex'),photoHashes:{front:options['front-hash'],back:options['back-hash']}});
+  if(!result.id||!result.cardId||!result.cohortId||!result.attemptIndex)throw Error('benchmark_import_identifiers_invalid');
+  writeFileSync(options.output,JSON.stringify(result,null,2)+'\n',{flag:'wx',mode:0o600});return;
+ }
+ if(command!=='report')throw Error('benchmark_command_must_be_report_or_import');
+ const manifest=read(options.manifest||'benchmarks/identity/manifest.json'),input=read(options.observations||'benchmarks/identity/historical-observations.json');
+ const result=evaluateBenchmark(manifest,input.observations||input);
+ const output=options.output||'benchmarks/identity/results';mkdirSync(output,{recursive:true});
+ writeFileSync(path.join(output,'results.json'),JSON.stringify(result,null,2)+'\n',{mode:0o600});writeFileSync(path.join(output,'REPORT.md'),benchmarkMarkdown(result),{mode:0o600});
+ console.log(`Benchmark report: ${result.completedAccuracyTests} completed accuracy tests; ${result.historical.observations} historical observations excluded from accuracy.`);
+}
+if(process.argv[1]&&path.resolve(process.argv[1])===fileURLToPath(import.meta.url)){
+ try{main(process.argv.slice(2));}catch{console.error('Benchmark command failed: check local JSON schema, identifiers and file permissions. No input contents were logged.');process.exitCode=1;}
+}

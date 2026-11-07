@@ -1,0 +1,1309 @@
+{
+  "version": 1,
+  "baselineCommit": "ff3b3a5cf2b4326049ec666af11c44fdfc621cbb",
+  "cohortId": "phase2-initial",
+  "cardSlots": 12,
+  "selectedCards": 12,
+  "completedAccuracyTests": 0,
+  "metrics": {
+    "technicalSuccess": {
+      "numerator": 0,
+      "denominator": 0,
+      "rate": null
+    },
+    "coreAccuracy": {
+      "numerator": 0,
+      "denominator": 0,
+      "rate": null
+    },
+    "exactPrintingAccuracy": {
+      "numerator": 0,
+      "denominator": 0,
+      "rate": null
+    },
+    "candidateRecall": {
+      "numerator": 0,
+      "denominator": 0,
+      "rate": null
+    },
+    "verificationPrecision": {
+      "numerator": 0,
+      "denominator": 0,
+      "rate": null
+    },
+    "verificationCoverage": {
+      "numerator": 0,
+      "denominator": 0,
+      "rate": null
+    },
+    "falseVerificationCount": 0,
+    "unassessableVerificationClaims": 0,
+    "unsupportedSportsVerificationClaims": 0
+  },
+  "categories": {
+    "pokemon_standard": {
+      "slots": 2,
+      "attempted": 0,
+      "coreEligible": 0,
+      "exactEligible": 0
+    },
+    "pokemon_ir": {
+      "slots": 2,
+      "attempted": 0,
+      "coreEligible": 0,
+      "exactEligible": 0
+    },
+    "pokemon_sir": {
+      "slots": 1,
+      "attempted": 0,
+      "coreEligible": 0,
+      "exactEligible": 0
+    },
+    "pokemon_other_rarity": {
+      "slots": 1,
+      "attempted": 0,
+      "coreEligible": 0,
+      "exactEligible": 0
+    },
+    "pokemon_promo": {
+      "slots": 1,
+      "attempted": 0,
+      "coreEligible": 0,
+      "exactEligible": 0
+    },
+    "sports_unclassified": {
+      "slots": 3,
+      "attempted": 0,
+      "coreEligible": 0,
+      "exactEligible": 0
+    },
+    "sports_parallel": {
+      "slots": 1,
+      "attempted": 0,
+      "coreEligible": 0,
+      "exactEligible": 0
+    },
+    "sports_serial_or_auto": {
+      "slots": 1,
+      "attempted": 0,
+      "coreEligible": 0,
+      "exactEligible": 0
+    }
+  },
+  "historical": {
+    "observations": 5,
+    "physicalCards": 2,
+    "technicalSuccessReported": 1,
+    "failuresReported": 1,
+    "accuracyEligible": 0,
+    "warning": "Owner summaries are not retained response payloads, reviewed photo labels or independent accuracy trials."
+  },
+  "cost": {
+    "requestsRecorded": 0,
+    "actualCostKnown": 0,
+    "actualUsd": null,
+    "unknownCosts": 0
+  },
+  "latency": {
+    "known": 0,
+    "meanMs": null
+  },
+  "printedEvidenceAudit": {
+    "possibleConflations": [
+      "H-ZAP-03"
+    ],
+    "unrepresentableMarkings": []
+  },
+  "failureClasses": {},
+  "rows": [
+    {
+      "cardId": "GP-ID-001",
+      "category": "pokemon_standard",
+      "selection": "owner_reported_inventory",
+      "displayName": "Charmander 004/165",
+      "physicalCardId": "owner-card-001",
+      "historicalObservationIds": [],
+      "selectedObservationId": null,
+      "repeatCount": 0,
+      "photoReady": false,
+      "photoMatches": false,
+      "coreEligible": false,
+      "exactEligible": false,
+      "technicalSuccess": null,
+      "core": {
+        "status": "unassessable",
+        "fields": {}
+      },
+      "exact": {
+        "status": "unassessable",
+        "fields": {}
+      },
+      "candidateRecall": null,
+      "claimResults": [],
+      "falseVerification": false,
+      "unsupportedSportsClaim": false,
+      "sportsStatus": null,
+      "checklistCorroborated": false,
+      "sportsStatuses": [],
+      "exactParallelUnresolved": false,
+      "gaps": [
+        "private_front_back_photos",
+        "year_manufacturer_product_review",
+        "independent_physical_label_review",
+        "exact_printing_review",
+        "reviewed_photo_unavailable",
+        "reviewed_core_label_unavailable",
+        "no_cohort_scan"
+      ],
+      "failure": null,
+      "unresolvedReasons": []
+    },
+    {
+      "cardId": "GP-ID-002",
+      "category": "pokemon_standard",
+      "selection": "owner_reported_inventory",
+      "displayName": "Pikachu 28/73",
+      "physicalCardId": "owner-card-002",
+      "historicalObservationIds": [],
+      "selectedObservationId": null,
+      "repeatCount": 0,
+      "photoReady": false,
+      "photoMatches": false,
+      "coreEligible": false,
+      "exactEligible": false,
+      "technicalSuccess": null,
+      "core": {
+        "status": "unassessable",
+        "fields": {}
+      },
+      "exact": {
+        "status": "unassessable",
+        "fields": {}
+      },
+      "candidateRecall": null,
+      "claimResults": [],
+      "falseVerification": false,
+      "unsupportedSportsClaim": false,
+      "sportsStatus": null,
+      "checklistCorroborated": false,
+      "sportsStatuses": [],
+      "exactParallelUnresolved": false,
+      "gaps": [
+        "private_front_back_photos",
+        "year_manufacturer_product_review",
+        "independent_physical_label_review",
+        "exact_printing_review",
+        "reviewed_photo_unavailable",
+        "reviewed_core_label_unavailable",
+        "no_cohort_scan"
+      ],
+      "failure": null,
+      "unresolvedReasons": []
+    },
+    {
+      "cardId": "GP-ID-003",
+      "category": "pokemon_ir",
+      "selection": "owner_reported_inventory",
+      "displayName": "Zapdos 133/128",
+      "physicalCardId": "owner-zapdos-133",
+      "historicalObservationIds": [
+        "H-ZAP-01",
+        "H-ZAP-02",
+        "H-ZAP-03",
+        "H-ZAP-04"
+      ],
+      "selectedObservationId": null,
+      "repeatCount": 0,
+      "photoReady": false,
+      "photoMatches": false,
+      "coreEligible": false,
+      "exactEligible": false,
+      "technicalSuccess": null,
+      "core": {
+        "status": "unassessable",
+        "fields": {}
+      },
+      "exact": {
+        "status": "unassessable",
+        "fields": {}
+      },
+      "candidateRecall": null,
+      "claimResults": [],
+      "falseVerification": false,
+      "unsupportedSportsClaim": false,
+      "sportsStatus": null,
+      "checklistCorroborated": false,
+      "sportsStatuses": [],
+      "exactParallelUnresolved": false,
+      "gaps": [
+        "private_front_photo",
+        "back_availability",
+        "independent_physical_label_review",
+        "foil_and_stamp_photo_review",
+        "reviewed_photo_unavailable",
+        "reviewed_core_label_unavailable",
+        "no_cohort_scan"
+      ],
+      "failure": null,
+      "unresolvedReasons": []
+    },
+    {
+      "cardId": "GP-ID-004",
+      "category": "pokemon_ir",
+      "selection": "owner_reported_inventory",
+      "displayName": "Rotom IR 197/182",
+      "physicalCardId": "owner-card-004",
+      "historicalObservationIds": [],
+      "selectedObservationId": null,
+      "repeatCount": 0,
+      "photoReady": false,
+      "photoMatches": false,
+      "coreEligible": false,
+      "exactEligible": false,
+      "technicalSuccess": null,
+      "core": {
+        "status": "unassessable",
+        "fields": {}
+      },
+      "exact": {
+        "status": "unassessable",
+        "fields": {}
+      },
+      "candidateRecall": null,
+      "claimResults": [],
+      "falseVerification": false,
+      "unsupportedSportsClaim": false,
+      "sportsStatus": null,
+      "checklistCorroborated": false,
+      "sportsStatuses": [],
+      "exactParallelUnresolved": false,
+      "gaps": [
+        "private_front_back_photos",
+        "year_manufacturer_product_review",
+        "independent_physical_label_review",
+        "exact_printing_review",
+        "reviewed_photo_unavailable",
+        "reviewed_core_label_unavailable",
+        "no_cohort_scan"
+      ],
+      "failure": null,
+      "unresolvedReasons": []
+    },
+    {
+      "cardId": "GP-ID-005",
+      "category": "pokemon_sir",
+      "selection": "owner_reported_inventory",
+      "displayName": "Pikachu ex 149/128",
+      "physicalCardId": "owner-pikachu-149",
+      "historicalObservationIds": [
+        "H-PIKA-01"
+      ],
+      "selectedObservationId": null,
+      "repeatCount": 0,
+      "photoReady": false,
+      "photoMatches": false,
+      "coreEligible": false,
+      "exactEligible": false,
+      "technicalSuccess": null,
+      "core": {
+        "status": "unassessable",
+        "fields": {}
+      },
+      "exact": {
+        "status": "unassessable",
+        "fields": {}
+      },
+      "candidateRecall": null,
+      "claimResults": [],
+      "falseVerification": false,
+      "unsupportedSportsClaim": false,
+      "sportsStatus": null,
+      "checklistCorroborated": false,
+      "sportsStatuses": [],
+      "exactParallelUnresolved": false,
+      "gaps": [
+        "private_front_photo",
+        "back_availability",
+        "independent_physical_label_review",
+        "foil_and_stamp_photo_review",
+        "reviewed_photo_unavailable",
+        "reviewed_core_label_unavailable",
+        "no_cohort_scan"
+      ],
+      "failure": null,
+      "unresolvedReasons": []
+    },
+    {
+      "cardId": "GP-ID-006",
+      "category": "pokemon_other_rarity",
+      "selection": "owner_reported_inventory",
+      "displayName": "Rosa’s Encouragement 114/088",
+      "physicalCardId": "owner-card-006",
+      "historicalObservationIds": [],
+      "selectedObservationId": null,
+      "repeatCount": 0,
+      "photoReady": false,
+      "photoMatches": false,
+      "coreEligible": false,
+      "exactEligible": false,
+      "technicalSuccess": null,
+      "core": {
+        "status": "unassessable",
+        "fields": {}
+      },
+      "exact": {
+        "status": "unassessable",
+        "fields": {}
+      },
+      "candidateRecall": null,
+      "claimResults": [],
+      "falseVerification": false,
+      "unsupportedSportsClaim": false,
+      "sportsStatus": null,
+      "checklistCorroborated": false,
+      "sportsStatuses": [],
+      "exactParallelUnresolved": false,
+      "gaps": [
+        "private_front_back_photos",
+        "year_manufacturer_product_review",
+        "independent_physical_label_review",
+        "exact_printing_review",
+        "requested_SIR_slot_not_filled_by_this_reference",
+        "reviewed_photo_unavailable",
+        "reviewed_core_label_unavailable",
+        "no_cohort_scan"
+      ],
+      "failure": null,
+      "unresolvedReasons": []
+    },
+    {
+      "cardId": "GP-ID-007",
+      "category": "pokemon_promo",
+      "selection": "owner_reported_inventory",
+      "displayName": "Snivy 5/25",
+      "physicalCardId": "owner-card-007",
+      "historicalObservationIds": [],
+      "selectedObservationId": null,
+      "repeatCount": 0,
+      "photoReady": false,
+      "photoMatches": false,
+      "coreEligible": false,
+      "exactEligible": false,
+      "technicalSuccess": null,
+      "core": {
+        "status": "unassessable",
+        "fields": {}
+      },
+      "exact": {
+        "status": "unassessable",
+        "fields": {}
+      },
+      "candidateRecall": null,
+      "claimResults": [],
+      "falseVerification": false,
+      "unsupportedSportsClaim": false,
+      "sportsStatus": null,
+      "checklistCorroborated": false,
+      "sportsStatuses": [],
+      "exactParallelUnresolved": false,
+      "gaps": [
+        "private_front_back_photos",
+        "year_manufacturer_product_review",
+        "independent_physical_label_review",
+        "exact_printing_review",
+        "reviewed_photo_unavailable",
+        "reviewed_core_label_unavailable",
+        "no_cohort_scan"
+      ],
+      "failure": null,
+      "unresolvedReasons": []
+    },
+    {
+      "cardId": "GP-ID-008",
+      "category": "sports_unclassified",
+      "selection": "owner_reported_inventory",
+      "displayName": "Babe Ruth SV-40",
+      "physicalCardId": "owner-card-008",
+      "historicalObservationIds": [],
+      "selectedObservationId": null,
+      "repeatCount": 0,
+      "photoReady": false,
+      "photoMatches": false,
+      "coreEligible": false,
+      "exactEligible": false,
+      "technicalSuccess": null,
+      "core": {
+        "status": "unassessable",
+        "fields": {}
+      },
+      "exact": {
+        "status": "unassessable",
+        "fields": {}
+      },
+      "candidateRecall": null,
+      "claimResults": [],
+      "falseVerification": false,
+      "unsupportedSportsClaim": false,
+      "sportsStatus": "not_scanned",
+      "checklistCorroborated": false,
+      "sportsStatuses": [
+        "not_scanned",
+        "exact_parallel_unresolved"
+      ],
+      "exactParallelUnresolved": true,
+      "gaps": [
+        "private_front_back_photos",
+        "year_manufacturer_product_review",
+        "independent_physical_label_review",
+        "exact_printing_review",
+        "reviewed_photo_unavailable",
+        "reviewed_core_label_unavailable",
+        "no_cohort_scan"
+      ],
+      "failure": null,
+      "unresolvedReasons": []
+    },
+    {
+      "cardId": "GP-ID-009",
+      "category": "sports_unclassified",
+      "selection": "owner_reported_inventory",
+      "displayName": "8 Bit Ballers Bryce Harper BB-11",
+      "physicalCardId": "owner-card-009",
+      "historicalObservationIds": [],
+      "selectedObservationId": null,
+      "repeatCount": 0,
+      "photoReady": false,
+      "photoMatches": false,
+      "coreEligible": false,
+      "exactEligible": false,
+      "technicalSuccess": null,
+      "core": {
+        "status": "unassessable",
+        "fields": {}
+      },
+      "exact": {
+        "status": "unassessable",
+        "fields": {}
+      },
+      "candidateRecall": null,
+      "claimResults": [],
+      "falseVerification": false,
+      "unsupportedSportsClaim": false,
+      "sportsStatus": "not_scanned",
+      "checklistCorroborated": false,
+      "sportsStatuses": [
+        "not_scanned",
+        "exact_parallel_unresolved"
+      ],
+      "exactParallelUnresolved": true,
+      "gaps": [
+        "private_front_back_photos",
+        "year_manufacturer_product_review",
+        "independent_physical_label_review",
+        "exact_printing_review",
+        "reviewed_photo_unavailable",
+        "reviewed_core_label_unavailable",
+        "no_cohort_scan"
+      ],
+      "failure": null,
+      "unresolvedReasons": []
+    },
+    {
+      "cardId": "GP-ID-010",
+      "category": "sports_parallel",
+      "selection": "owner_reported_inventory",
+      "displayName": "It Take Two Sand Glitter 52",
+      "physicalCardId": "owner-card-010",
+      "historicalObservationIds": [],
+      "selectedObservationId": null,
+      "repeatCount": 0,
+      "photoReady": false,
+      "photoMatches": false,
+      "coreEligible": false,
+      "exactEligible": false,
+      "technicalSuccess": null,
+      "core": {
+        "status": "unassessable",
+        "fields": {}
+      },
+      "exact": {
+        "status": "unassessable",
+        "fields": {}
+      },
+      "candidateRecall": null,
+      "claimResults": [],
+      "falseVerification": false,
+      "unsupportedSportsClaim": false,
+      "sportsStatus": "not_scanned",
+      "checklistCorroborated": false,
+      "sportsStatuses": [
+        "not_scanned",
+        "exact_parallel_unresolved"
+      ],
+      "exactParallelUnresolved": true,
+      "gaps": [
+        "private_front_back_photos",
+        "year_manufacturer_product_review",
+        "independent_physical_label_review",
+        "exact_printing_review",
+        "reviewed_photo_unavailable",
+        "reviewed_core_label_unavailable",
+        "no_cohort_scan"
+      ],
+      "failure": null,
+      "unresolvedReasons": []
+    },
+    {
+      "cardId": "GP-ID-011",
+      "category": "sports_serial_or_auto",
+      "selection": "owner_reported_inventory",
+      "displayName": "Josh Dix Bowman 1st Green Auto /99 PA-JD",
+      "physicalCardId": "owner-card-011",
+      "historicalObservationIds": [],
+      "selectedObservationId": null,
+      "repeatCount": 0,
+      "photoReady": false,
+      "photoMatches": false,
+      "coreEligible": false,
+      "exactEligible": false,
+      "technicalSuccess": null,
+      "core": {
+        "status": "unassessable",
+        "fields": {}
+      },
+      "exact": {
+        "status": "unassessable",
+        "fields": {}
+      },
+      "candidateRecall": null,
+      "claimResults": [],
+      "falseVerification": false,
+      "unsupportedSportsClaim": false,
+      "sportsStatus": "not_scanned",
+      "checklistCorroborated": false,
+      "sportsStatuses": [
+        "not_scanned",
+        "exact_parallel_unresolved"
+      ],
+      "exactParallelUnresolved": true,
+      "gaps": [
+        "private_front_back_photos",
+        "year_manufacturer_product_review",
+        "independent_physical_label_review",
+        "exact_printing_review",
+        "reviewed_photo_unavailable",
+        "reviewed_core_label_unavailable",
+        "no_cohort_scan"
+      ],
+      "failure": null,
+      "unresolvedReasons": []
+    },
+    {
+      "cardId": "GP-ID-012",
+      "category": "sports_unclassified",
+      "selection": "owner_reported_inventory",
+      "displayName": "Paul Skenes Nice List MNL-11",
+      "physicalCardId": "owner-card-012",
+      "historicalObservationIds": [],
+      "selectedObservationId": null,
+      "repeatCount": 0,
+      "photoReady": false,
+      "photoMatches": false,
+      "coreEligible": false,
+      "exactEligible": false,
+      "technicalSuccess": null,
+      "core": {
+        "status": "unassessable",
+        "fields": {}
+      },
+      "exact": {
+        "status": "unassessable",
+        "fields": {}
+      },
+      "candidateRecall": null,
+      "claimResults": [],
+      "falseVerification": false,
+      "unsupportedSportsClaim": false,
+      "sportsStatus": "not_scanned",
+      "checklistCorroborated": false,
+      "sportsStatuses": [
+        "not_scanned",
+        "exact_parallel_unresolved"
+      ],
+      "exactParallelUnresolved": true,
+      "gaps": [
+        "private_front_back_photos",
+        "year_manufacturer_product_review",
+        "independent_physical_label_review",
+        "exact_printing_review",
+        "reviewed_photo_unavailable",
+        "reviewed_core_label_unavailable",
+        "no_cohort_scan"
+      ],
+      "failure": null,
+      "unresolvedReasons": []
+    }
+  ],
+  "observations": [
+    {
+      "id": "H-ZAP-01",
+      "cardId": "GP-ID-003",
+      "cohortId": "historical",
+      "attemptIndex": null,
+      "evidenceKind": "owner_reported_summary",
+      "evidenceDigest": null,
+      "deploymentCommit": null,
+      "contextCommit": "64916865bf0ebf0c12e500df8878dd6370e34656",
+      "scanId": null,
+      "sources": [
+        {
+          "kind": "owner_summary",
+          "url": null,
+          "path": "docs/CATALOG_RECONCILIATION_PHASE1A.md",
+          "revision": null,
+          "blob": null,
+          "supports": []
+        }
+      ],
+      "photoHashes": {
+        "front": null,
+        "back": null
+      },
+      "technical": {
+        "validCompletedResponse": null,
+        "httpStatus": null,
+        "failureCode": null,
+        "phase": null,
+        "rule": null,
+        "stopReason": null
+      },
+      "originalAI": {
+        "subject": "Zapdos",
+        "year": "2025",
+        "set": null,
+        "cardNumber": "133/128",
+        "manufacturer": null,
+        "subset": null,
+        "language": null,
+        "rarity": null,
+        "parallel": null,
+        "finish": null,
+        "stamps": [],
+        "serialNumber": null,
+        "autograph": null,
+        "regulationMark": null,
+        "franchise": null,
+        "autoOrRelic": null,
+        "printRun": null
+      },
+      "modelConfidence": 88,
+      "reportedPrintedFacts": [],
+      "printedReadings": [],
+      "missingProposalFields": [
+        "set"
+      ],
+      "canonical": {
+        "subject": null,
+        "year": null,
+        "set": null,
+        "cardNumber": null,
+        "manufacturer": null,
+        "subset": null,
+        "language": null,
+        "rarity": null,
+        "parallel": null,
+        "finish": null,
+        "stamps": [],
+        "serialNumber": null,
+        "autograph": null,
+        "regulationMark": null,
+        "franchise": null,
+        "autoOrRelic": null,
+        "printRun": null
+      },
+      "catalog": {
+        "outcome": "conflict",
+        "reasonCodes": [],
+        "conflicts": [
+          "subject",
+          "cardNumber",
+          "year",
+          "brandSet"
+        ],
+        "candidatesRetained": false,
+        "candidates": [],
+        "provenance": {
+          "provider": null,
+          "revision": null,
+          "cardBlob": null,
+          "setBlob": null
+        },
+        "selectedReference": null
+      },
+      "dimensions": {
+        "coreCatalog": null,
+        "photo": null,
+        "variant": null,
+        "artwork": null,
+        "physicalPrinting": null,
+        "catalogPrinting": null
+      },
+      "claims": {
+        "catalogVerified": null,
+        "photoVerified": null,
+        "printingVerified": null
+      },
+      "unresolvedReasons": [
+        "set_year_unresolved",
+        "catalog_comparison_not_retained"
+      ],
+      "usage": {
+        "inputTokens": null,
+        "outputTokens": null,
+        "cacheReadTokens": null,
+        "cacheCreationTokens": null
+      },
+      "cost": {
+        "actualUsd": null,
+        "basis": null
+      },
+      "latencyMs": null,
+      "annotations": {
+        "possibleConflation": null,
+        "distinctMarkingsUnrepresentable": null
+      }
+    },
+    {
+      "id": "H-ZAP-02",
+      "cardId": "GP-ID-003",
+      "cohortId": "historical",
+      "attemptIndex": null,
+      "evidenceKind": "owner_reported_summary",
+      "evidenceDigest": null,
+      "deploymentCommit": null,
+      "contextCommit": "2490206a4536a6ad6d6d7373c7c1c43c6bb03254",
+      "scanId": null,
+      "sources": [
+        {
+          "kind": "owner_summary",
+          "url": null,
+          "path": "docs/IDENTITY_STRUCTURED_OUTPUT.md",
+          "revision": null,
+          "blob": null,
+          "supports": []
+        }
+      ],
+      "photoHashes": {
+        "front": null,
+        "back": null
+      },
+      "technical": {
+        "validCompletedResponse": false,
+        "httpStatus": null,
+        "failureCode": "ANALYSIS_RESPONSE_INVALID",
+        "phase": "json",
+        "rule": "json_syntax",
+        "stopReason": null
+      },
+      "originalAI": {
+        "subject": null,
+        "year": null,
+        "set": null,
+        "cardNumber": null,
+        "manufacturer": null,
+        "subset": null,
+        "language": null,
+        "rarity": null,
+        "parallel": null,
+        "finish": null,
+        "stamps": [],
+        "serialNumber": null,
+        "autograph": null,
+        "regulationMark": null,
+        "franchise": null,
+        "autoOrRelic": null,
+        "printRun": null
+      },
+      "modelConfidence": null,
+      "reportedPrintedFacts": [],
+      "printedReadings": [],
+      "missingProposalFields": [
+        "subject",
+        "year",
+        "set",
+        "cardNumber"
+      ],
+      "canonical": {
+        "subject": null,
+        "year": null,
+        "set": null,
+        "cardNumber": null,
+        "manufacturer": null,
+        "subset": null,
+        "language": null,
+        "rarity": null,
+        "parallel": null,
+        "finish": null,
+        "stamps": [],
+        "serialNumber": null,
+        "autograph": null,
+        "regulationMark": null,
+        "franchise": null,
+        "autoOrRelic": null,
+        "printRun": null
+      },
+      "catalog": {
+        "outcome": null,
+        "reasonCodes": [],
+        "conflicts": [],
+        "candidatesRetained": false,
+        "candidates": [],
+        "provenance": {
+          "provider": null,
+          "revision": null,
+          "cardBlob": null,
+          "setBlob": null
+        },
+        "selectedReference": null
+      },
+      "dimensions": {
+        "coreCatalog": null,
+        "photo": null,
+        "variant": null,
+        "artwork": null,
+        "physicalPrinting": null,
+        "catalogPrinting": null
+      },
+      "claims": {
+        "catalogVerified": null,
+        "photoVerified": null,
+        "printingVerified": null
+      },
+      "unresolvedReasons": [],
+      "usage": {
+        "inputTokens": null,
+        "outputTokens": null,
+        "cacheReadTokens": null,
+        "cacheCreationTokens": null
+      },
+      "cost": {
+        "actualUsd": null,
+        "basis": null
+      },
+      "latencyMs": null,
+      "annotations": {
+        "possibleConflation": null,
+        "distinctMarkingsUnrepresentable": null
+      }
+    },
+    {
+      "id": "H-ZAP-03",
+      "cardId": "GP-ID-003",
+      "cohortId": "historical",
+      "attemptIndex": null,
+      "evidenceKind": "owner_reported_summary",
+      "evidenceDigest": null,
+      "deploymentCommit": null,
+      "contextCommit": "3c37d206cdb3a1e97aeccd3df738bd58a2ccdd41",
+      "scanId": "ebc24d1e-ab56-49b6-b190-0ebc56abc524",
+      "sources": [
+        {
+          "kind": "owner_summary",
+          "url": null,
+          "path": "tests/fixtures/zapdos-live-identity-evidence.json",
+          "revision": null,
+          "blob": null,
+          "supports": []
+        }
+      ],
+      "photoHashes": {
+        "front": null,
+        "back": null
+      },
+      "technical": {
+        "validCompletedResponse": true,
+        "httpStatus": 200,
+        "failureCode": null,
+        "phase": null,
+        "rule": null,
+        "stopReason": "end_turn"
+      },
+      "originalAI": {
+        "subject": "Zapdos",
+        "year": null,
+        "set": null,
+        "cardNumber": "133/128",
+        "manufacturer": null,
+        "subset": null,
+        "language": "English",
+        "rarity": null,
+        "parallel": null,
+        "finish": null,
+        "stamps": [],
+        "serialNumber": null,
+        "autograph": null,
+        "regulationMark": null,
+        "franchise": null,
+        "autoOrRelic": null,
+        "printRun": null
+      },
+      "modelConfidence": 72,
+      "reportedPrintedFacts": [
+        {
+          "field": "copyrightYear",
+          "value": "2026",
+          "certainty": "uncertain",
+          "literalTranscriptionRetained": false
+        }
+      ],
+      "printedReadings": [
+        {
+          "field": "setCode",
+          "text": "J 30CEN",
+          "certainty": "uncertain",
+          "side": "front",
+          "area": null,
+          "alternatives": []
+        }
+      ],
+      "missingProposalFields": [
+        "year",
+        "set"
+      ],
+      "canonical": {
+        "subject": null,
+        "year": null,
+        "set": null,
+        "cardNumber": null,
+        "manufacturer": null,
+        "subset": null,
+        "language": null,
+        "rarity": null,
+        "parallel": null,
+        "finish": null,
+        "stamps": [],
+        "serialNumber": null,
+        "autograph": null,
+        "regulationMark": null,
+        "franchise": null,
+        "autoOrRelic": null,
+        "printRun": null
+      },
+      "catalog": {
+        "outcome": "conflict",
+        "reasonCodes": [
+          "catalog_candidate_conflict"
+        ],
+        "conflicts": [],
+        "candidatesRetained": false,
+        "candidates": [],
+        "provenance": {
+          "provider": null,
+          "revision": null,
+          "cardBlob": null,
+          "setBlob": null
+        },
+        "selectedReference": {
+          "provider": "tcgdex",
+          "id": "30th-133"
+        }
+      },
+      "dimensions": {
+        "coreCatalog": null,
+        "photo": null,
+        "variant": null,
+        "artwork": null,
+        "physicalPrinting": null,
+        "catalogPrinting": null
+      },
+      "claims": {
+        "catalogVerified": false,
+        "photoVerified": false,
+        "printingVerified": null
+      },
+      "unresolvedReasons": [
+        "missing_clear_setCode",
+        "raw_copyright_transcription_not_retained"
+      ],
+      "usage": {
+        "inputTokens": null,
+        "outputTokens": 405,
+        "cacheReadTokens": null,
+        "cacheCreationTokens": null
+      },
+      "cost": {
+        "actualUsd": null,
+        "basis": null
+      },
+      "latencyMs": null,
+      "annotations": {
+        "possibleConflation": true,
+        "distinctMarkingsUnrepresentable": null
+      }
+    },
+    {
+      "id": "H-ZAP-04",
+      "cardId": "GP-ID-003",
+      "cohortId": "historical",
+      "attemptIndex": null,
+      "evidenceKind": "owner_reported_summary",
+      "evidenceDigest": null,
+      "deploymentCommit": null,
+      "contextCommit": "3bce90f3db3d626ed2a4b2ee169af30663a636fe",
+      "scanId": null,
+      "sources": [
+        {
+          "kind": "owner_summary",
+          "url": null,
+          "path": "docs/CATALOG_FINISH_ACCURACY_AUDIT.md",
+          "revision": null,
+          "blob": null,
+          "supports": []
+        }
+      ],
+      "photoHashes": {
+        "front": null,
+        "back": null
+      },
+      "technical": {
+        "validCompletedResponse": null,
+        "httpStatus": null,
+        "failureCode": null,
+        "phase": null,
+        "rule": null,
+        "stopReason": null
+      },
+      "originalAI": {
+        "subject": null,
+        "year": null,
+        "set": null,
+        "cardNumber": null,
+        "manufacturer": null,
+        "subset": null,
+        "language": null,
+        "rarity": null,
+        "parallel": "Special Illustration Rare (full-art holo)",
+        "finish": null,
+        "stamps": [],
+        "serialNumber": null,
+        "autograph": null,
+        "regulationMark": null,
+        "franchise": null,
+        "autoOrRelic": null,
+        "printRun": null
+      },
+      "modelConfidence": null,
+      "reportedPrintedFacts": [],
+      "printedReadings": [],
+      "missingProposalFields": [
+        "subject",
+        "year",
+        "set",
+        "cardNumber"
+      ],
+      "canonical": {
+        "subject": "Zapdos",
+        "year": "2026",
+        "set": "30th Celebration",
+        "cardNumber": "133/128",
+        "manufacturer": null,
+        "subset": null,
+        "language": null,
+        "rarity": "Illustration rare",
+        "parallel": null,
+        "finish": null,
+        "stamps": [],
+        "serialNumber": null,
+        "autograph": null,
+        "regulationMark": null,
+        "franchise": null,
+        "autoOrRelic": null,
+        "printRun": null
+      },
+      "catalog": {
+        "outcome": "conflict",
+        "reasonCodes": [],
+        "conflicts": [
+          "finish",
+          "parallel"
+        ],
+        "candidatesRetained": false,
+        "candidates": [],
+        "provenance": {
+          "provider": null,
+          "revision": null,
+          "cardBlob": null,
+          "setBlob": null
+        },
+        "selectedReference": {
+          "provider": "tcgdex",
+          "id": "30th-133"
+        }
+      },
+      "dimensions": {
+        "coreCatalog": null,
+        "photo": null,
+        "variant": null,
+        "artwork": null,
+        "physicalPrinting": null,
+        "catalogPrinting": null
+      },
+      "claims": {
+        "catalogVerified": false,
+        "photoVerified": false,
+        "printingVerified": false
+      },
+      "unresolvedReasons": [
+        "printing_conflict",
+        "missing_clear_setCode"
+      ],
+      "usage": {
+        "inputTokens": null,
+        "outputTokens": null,
+        "cacheReadTokens": null,
+        "cacheCreationTokens": null
+      },
+      "cost": {
+        "actualUsd": null,
+        "basis": null
+      },
+      "latencyMs": null,
+      "annotations": {
+        "possibleConflation": null,
+        "distinctMarkingsUnrepresentable": null
+      }
+    },
+    {
+      "id": "H-PIKA-01",
+      "cardId": "GP-ID-005",
+      "cohortId": "historical",
+      "attemptIndex": null,
+      "evidenceKind": "owner_reported_summary",
+      "evidenceDigest": null,
+      "deploymentCommit": null,
+      "contextCommit": "88ff567b1a5c527026f44b47f8d619feff833857",
+      "scanId": null,
+      "sources": [
+        {
+          "kind": "owner_summary",
+          "url": null,
+          "path": "docs/PIKACHU_REPORT_CONSISTENCY.md",
+          "revision": null,
+          "blob": null,
+          "supports": []
+        }
+      ],
+      "photoHashes": {
+        "front": null,
+        "back": null
+      },
+      "technical": {
+        "validCompletedResponse": null,
+        "httpStatus": null,
+        "failureCode": null,
+        "phase": null,
+        "rule": null,
+        "stopReason": null
+      },
+      "originalAI": {
+        "subject": null,
+        "year": null,
+        "set": "Scarlet & Violet / Prismatic Evolutions",
+        "cardNumber": null,
+        "manufacturer": null,
+        "subset": null,
+        "language": null,
+        "rarity": null,
+        "parallel": null,
+        "finish": null,
+        "stamps": [],
+        "serialNumber": null,
+        "autograph": null,
+        "regulationMark": null,
+        "franchise": null,
+        "autoOrRelic": null,
+        "printRun": null
+      },
+      "modelConfidence": null,
+      "reportedPrintedFacts": [],
+      "printedReadings": [],
+      "missingProposalFields": [
+        "subject",
+        "year",
+        "cardNumber"
+      ],
+      "canonical": {
+        "subject": "Pikachu ex",
+        "year": null,
+        "set": null,
+        "cardNumber": null,
+        "manufacturer": null,
+        "subset": null,
+        "language": null,
+        "rarity": null,
+        "parallel": null,
+        "finish": null,
+        "stamps": [],
+        "serialNumber": null,
+        "autograph": null,
+        "regulationMark": null,
+        "franchise": null,
+        "autoOrRelic": null,
+        "printRun": null
+      },
+      "catalog": {
+        "outcome": null,
+        "reasonCodes": [],
+        "conflicts": [],
+        "candidatesRetained": false,
+        "candidates": [],
+        "provenance": {
+          "provider": null,
+          "revision": null,
+          "cardBlob": null,
+          "setBlob": null
+        },
+        "selectedReference": null
+      },
+      "dimensions": {
+        "coreCatalog": null,
+        "photo": null,
+        "variant": null,
+        "artwork": null,
+        "physicalPrinting": null,
+        "catalogPrinting": null
+      },
+      "claims": {
+        "catalogVerified": null,
+        "photoVerified": null,
+        "printingVerified": null
+      },
+      "unresolvedReasons": [
+        "raw_response_and_screenshot_not_retained",
+        "catalog_status_not_recoverable"
+      ],
+      "usage": {
+        "inputTokens": null,
+        "outputTokens": null,
+        "cacheReadTokens": null,
+        "cacheCreationTokens": null
+      },
+      "cost": {
+        "actualUsd": null,
+        "basis": null
+      },
+      "latencyMs": null,
+      "annotations": {
+        "possibleConflation": null,
+        "distinctMarkingsUnrepresentable": null
+      }
+    }
+  ],
+  "repeatComparisons": [],
+  "limitations": [
+    "Twelve cards do not establish statistical accuracy.",
+    "Historical summaries and synthetic fixtures never enter measured cohort accuracy.",
+    "Other TCGs are not represented in the requested initial 12-card mix.",
+    "An unassessable verification claim is not a proven false verification."
+  ]
+}

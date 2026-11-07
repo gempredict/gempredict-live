@@ -1,0 +1,302 @@
+{
+  "version": 1,
+  "evidencePolicy": "Owner summaries only. Context commit is not a verified deployment commit. Never import offline mocked transport or reconstructed readings as live observations.",
+  "observations": [
+    {
+      "id": "H-ZAP-01",
+      "cardId": "GP-ID-003",
+      "cohortId": "historical",
+      "attemptIndex": null,
+      "evidenceKind": "owner_reported_summary",
+      "deploymentCommit": null,
+      "contextCommit": "64916865bf0ebf0c12e500df8878dd6370e34656",
+      "scanId": null,
+      "sources": [
+        {
+          "kind": "owner_summary",
+          "path": "docs/CATALOG_RECONCILIATION_PHASE1A.md"
+        }
+      ],
+      "photoHashes": {
+        "front": null,
+        "back": null
+      },
+      "technical": {
+        "validCompletedResponse": null,
+        "httpStatus": null,
+        "failureCode": null
+      },
+      "originalAI": {
+        "subject": "Zapdos",
+        "year": "2025",
+        "cardNumber": "133/128"
+      },
+      "modelConfidence": 88,
+      "canonical": {},
+      "catalog": {
+        "outcome": "conflict",
+        "candidatesRetained": false,
+        "conflicts": [
+          "subject",
+          "cardNumber",
+          "year",
+          "brandSet"
+        ]
+      },
+      "claims": {
+        "catalogVerified": null,
+        "photoVerified": null,
+        "printingVerified": null
+      },
+      "usage": {},
+      "cost": {
+        "actualUsd": null
+      },
+      "latencyMs": null,
+      "unresolvedReasons": [
+        "set_year_unresolved",
+        "catalog_comparison_not_retained"
+      ]
+    },
+    {
+      "id": "H-ZAP-02",
+      "cardId": "GP-ID-003",
+      "cohortId": "historical",
+      "attemptIndex": null,
+      "evidenceKind": "owner_reported_summary",
+      "deploymentCommit": null,
+      "contextCommit": "2490206a4536a6ad6d6d7373c7c1c43c6bb03254",
+      "scanId": null,
+      "sources": [
+        {
+          "kind": "owner_summary",
+          "path": "docs/IDENTITY_STRUCTURED_OUTPUT.md"
+        }
+      ],
+      "photoHashes": {
+        "front": null,
+        "back": null
+      },
+      "technical": {
+        "validCompletedResponse": false,
+        "failureCode": "ANALYSIS_RESPONSE_INVALID",
+        "phase": "json",
+        "rule": "json_syntax"
+      },
+      "originalAI": {},
+      "modelConfidence": null,
+      "canonical": {},
+      "catalog": {
+        "outcome": null,
+        "candidatesRetained": false,
+        "candidates": []
+      },
+      "claims": {
+        "catalogVerified": null,
+        "photoVerified": null,
+        "printingVerified": null
+      },
+      "usage": {},
+      "cost": {
+        "actualUsd": null
+      },
+      "latencyMs": null,
+      "unresolvedReasons": []
+    },
+    {
+      "id": "H-ZAP-03",
+      "cardId": "GP-ID-003",
+      "cohortId": "historical",
+      "attemptIndex": null,
+      "evidenceKind": "owner_reported_summary",
+      "deploymentCommit": null,
+      "contextCommit": "3c37d206cdb3a1e97aeccd3df738bd58a2ccdd41",
+      "scanId": "ebc24d1e-ab56-49b6-b190-0ebc56abc524",
+      "sources": [
+        {
+          "kind": "owner_summary",
+          "path": "tests/fixtures/zapdos-live-identity-evidence.json"
+        }
+      ],
+      "photoHashes": {
+        "front": null,
+        "back": null
+      },
+      "technical": {
+        "validCompletedResponse": true,
+        "httpStatus": 200,
+        "stopReason": "end_turn"
+      },
+      "originalAI": {
+        "subject": "Zapdos",
+        "cardNumber": "133/128",
+        "language": "English",
+        "year": null,
+        "set": null
+      },
+      "modelConfidence": 72,
+      "canonical": {},
+      "catalog": {
+        "outcome": "conflict",
+        "candidatesRetained": false,
+        "candidates": [],
+        "selectedReference": {
+          "provider": "tcgdex",
+          "id": "30th-133"
+        },
+        "reasonCodes": [
+          "catalog_candidate_conflict"
+        ],
+        "conflicts": []
+      },
+      "claims": {
+        "photoVerified": false,
+        "catalogVerified": false
+      },
+      "usage": {
+        "outputTokens": 405
+      },
+      "cost": {
+        "actualUsd": null
+      },
+      "latencyMs": null,
+      "unresolvedReasons": [
+        "missing_clear_setCode",
+        "raw_copyright_transcription_not_retained"
+      ],
+      "printedReadings": [
+        {
+          "field": "setCode",
+          "text": "J 30CEN",
+          "certainty": "uncertain",
+          "side": "front"
+        }
+      ],
+      "annotations": {
+        "possibleConflation": true
+      },
+      "reportedPrintedFacts": [
+        {
+          "field": "copyrightYear",
+          "value": "2026",
+          "certainty": "uncertain",
+          "literalTranscriptionRetained": false
+        }
+      ]
+    },
+    {
+      "id": "H-ZAP-04",
+      "cardId": "GP-ID-003",
+      "cohortId": "historical",
+      "attemptIndex": null,
+      "evidenceKind": "owner_reported_summary",
+      "deploymentCommit": null,
+      "contextCommit": "3bce90f3db3d626ed2a4b2ee169af30663a636fe",
+      "scanId": null,
+      "sources": [
+        {
+          "kind": "owner_summary",
+          "path": "docs/CATALOG_FINISH_ACCURACY_AUDIT.md"
+        }
+      ],
+      "photoHashes": {
+        "front": null,
+        "back": null
+      },
+      "technical": {
+        "validCompletedResponse": null,
+        "httpStatus": null,
+        "failureCode": null
+      },
+      "originalAI": {
+        "parallel": "Special Illustration Rare (full-art holo)"
+      },
+      "modelConfidence": null,
+      "canonical": {
+        "subject": "Zapdos",
+        "year": "2026",
+        "set": "30th Celebration",
+        "cardNumber": "133/128",
+        "rarity": "Illustration rare"
+      },
+      "catalog": {
+        "outcome": "conflict",
+        "candidatesRetained": false,
+        "candidates": [],
+        "selectedReference": {
+          "provider": "tcgdex",
+          "id": "30th-133"
+        },
+        "conflicts": [
+          "finish",
+          "parallel"
+        ]
+      },
+      "claims": {
+        "catalogVerified": false,
+        "photoVerified": false,
+        "printingVerified": false
+      },
+      "usage": {},
+      "cost": {
+        "actualUsd": null
+      },
+      "latencyMs": null,
+      "unresolvedReasons": [
+        "printing_conflict",
+        "missing_clear_setCode"
+      ]
+    },
+    {
+      "id": "H-PIKA-01",
+      "cardId": "GP-ID-005",
+      "cohortId": "historical",
+      "attemptIndex": null,
+      "evidenceKind": "owner_reported_summary",
+      "deploymentCommit": null,
+      "contextCommit": "88ff567b1a5c527026f44b47f8d619feff833857",
+      "scanId": null,
+      "sources": [
+        {
+          "kind": "owner_summary",
+          "path": "docs/PIKACHU_REPORT_CONSISTENCY.md"
+        }
+      ],
+      "photoHashes": {
+        "front": null,
+        "back": null
+      },
+      "technical": {
+        "validCompletedResponse": null,
+        "httpStatus": null,
+        "failureCode": null
+      },
+      "originalAI": {
+        "set": "Scarlet & Violet / Prismatic Evolutions"
+      },
+      "modelConfidence": null,
+      "canonical": {
+        "subject": "Pikachu ex"
+      },
+      "catalog": {
+        "outcome": null,
+        "candidatesRetained": false,
+        "candidates": []
+      },
+      "claims": {
+        "catalogVerified": null,
+        "photoVerified": null,
+        "printingVerified": null
+      },
+      "usage": {},
+      "cost": {
+        "actualUsd": null
+      },
+      "latencyMs": null,
+      "unresolvedReasons": [
+        "raw_response_and_screenshot_not_retained",
+        "catalog_status_not_recoverable"
+      ]
+    }
+  ]
+}

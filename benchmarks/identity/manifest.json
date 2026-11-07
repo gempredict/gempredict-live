@@ -1,0 +1,712 @@
+{
+  "version": 1,
+  "baselineCommit": "ff3b3a5cf2b4326049ec666af11c44fdfc621cbb",
+  "cohortId": "phase2-initial",
+  "samplingPolicy": "First attempt per physical card per cohort; repeat scans reported separately, never extra cards.",
+  "cards": [
+    {
+      "id": "GP-ID-001",
+      "category": "pokemon_standard",
+      "physicalCardId": "owner-card-001",
+      "selection": "owner_reported_inventory",
+      "displayName": "Charmander 004/165",
+      "photos": {
+        "front": {
+          "status": "not_retained",
+          "sha256": null
+        },
+        "back": {
+          "status": "unknown",
+          "sha256": null
+        }
+      },
+      "groundTruth": {
+        "status": "unreviewed",
+        "reviewer": null,
+        "reviewedAt": null,
+        "fields": {},
+        "sources": []
+      },
+      "referenceFacts": {
+        "subject": "Charmander",
+        "year": "2023",
+        "set": "151",
+        "cardNumber": "004/165",
+        "rarity": "Common",
+        "setId": "sv03.5",
+        "regulationMark": "G",
+        "printings": [
+          {
+            "finish": "normal",
+            "stamps": []
+          },
+          {
+            "finish": "reverse",
+            "stamps": []
+          },
+          {
+            "finish": "normal",
+            "stamps": [
+              "gamestop"
+            ]
+          },
+          {
+            "finish": "holo",
+            "stamps": []
+          },
+          {
+            "finish": "reverse",
+            "stamps": [
+              "eb-games"
+            ]
+          },
+          {
+            "finish": "reverse",
+            "stamps": []
+          }
+        ],
+        "sources": [
+          {
+            "kind": "independent_catalog",
+            "url": "https://github.com/tcgdex/cards-database/blob/a8fe5736aef9bd6be2436e3be730109030f4c6e2/data/Scarlet%20&%20Violet/151/004.ts",
+            "revision": "a8fe5736aef9bd6be2436e3be730109030f4c6e2",
+            "blob": "470f63714cf33fe4d4c3abc2a908708653f0a654"
+          },
+          {
+            "kind": "independent_catalog",
+            "url": "https://github.com/tcgdex/cards-database/blob/a8fe5736aef9bd6be2436e3be730109030f4c6e2/data/Scarlet%20&%20Violet/151.ts",
+            "revision": "a8fe5736aef9bd6be2436e3be730109030f4c6e2",
+            "blob": "9beb49e95513181eaea7d0ba096b258d12d24008"
+          }
+        ]
+      },
+      "requiredExactFields": [
+        "language",
+        "rarity",
+        "parallel",
+        "finish",
+        "stamps"
+      ],
+      "gaps": [
+        "private_front_back_photos",
+        "year_manufacturer_product_review",
+        "independent_physical_label_review",
+        "exact_printing_review"
+      ],
+      "categoryBasis": "provisional_owner_label_not_verified"
+    },
+    {
+      "id": "GP-ID-002",
+      "category": "pokemon_standard",
+      "physicalCardId": "owner-card-002",
+      "selection": "owner_reported_inventory",
+      "displayName": "Pikachu 28/73",
+      "photos": {
+        "front": {
+          "status": "not_retained",
+          "sha256": null
+        },
+        "back": {
+          "status": "unknown",
+          "sha256": null
+        }
+      },
+      "groundTruth": {
+        "status": "unreviewed",
+        "reviewer": null,
+        "reviewedAt": null,
+        "fields": {},
+        "sources": []
+      },
+      "referenceFacts": {
+        "subject": "Pikachu",
+        "year": "2017",
+        "set": "Shining Legends",
+        "cardNumber": "28/73",
+        "rarity": "Common",
+        "setId": "sm3.5",
+        "printings": null,
+        "sourceReview": "Manually inspected card and set literals; original restricted runtime parser remains unchanged.",
+        "sources": [
+          {
+            "kind": "independent_catalog",
+            "url": "https://github.com/tcgdex/cards-database/blob/a8fe5736aef9bd6be2436e3be730109030f4c6e2/data/Sun%20&%20Moon/Shining%20Legends/28.ts",
+            "revision": "a8fe5736aef9bd6be2436e3be730109030f4c6e2",
+            "blob": "277ffd18f26f8819fcda3bffc601a4018242d130"
+          },
+          {
+            "kind": "independent_catalog",
+            "url": "https://github.com/tcgdex/cards-database/blob/a8fe5736aef9bd6be2436e3be730109030f4c6e2/data/Sun%20&%20Moon/Shining%20Legends.ts",
+            "revision": "a8fe5736aef9bd6be2436e3be730109030f4c6e2",
+            "blob": "e55ed18a0ba6d66501c71fa426228d4bfe3aff01"
+          }
+        ]
+      },
+      "requiredExactFields": [
+        "language",
+        "rarity",
+        "parallel",
+        "finish",
+        "stamps"
+      ],
+      "gaps": [
+        "private_front_back_photos",
+        "year_manufacturer_product_review",
+        "independent_physical_label_review",
+        "exact_printing_review"
+      ],
+      "categoryBasis": "provisional_owner_label_not_verified"
+    },
+    {
+      "id": "GP-ID-003",
+      "category": "pokemon_ir",
+      "physicalCardId": "owner-zapdos-133",
+      "selection": "owner_reported_inventory",
+      "displayName": "Zapdos 133/128",
+      "photos": {
+        "front": {
+          "status": "owner_reported_not_retained",
+          "sha256": null
+        },
+        "back": {
+          "status": "unknown",
+          "sha256": null
+        }
+      },
+      "groundTruth": {
+        "status": "unreviewed",
+        "reviewer": null,
+        "reviewedAt": null,
+        "fields": {},
+        "sources": []
+      },
+      "referenceFacts": {
+        "subject": "Zapdos",
+        "year": "2026",
+        "set": "30th Celebration",
+        "cardNumber": "133/128",
+        "language": "English",
+        "rarity": "Illustration rare",
+        "finish": "holo",
+        "stamps": [
+          "30th-anniversary"
+        ],
+        "regulationMark": "J",
+        "catalogId": "30th-133",
+        "sources": [
+          {
+            "kind": "independent_catalog",
+            "url": "https://github.com/tcgdex/cards-database/blob/a8fe5736aef9bd6be2436e3be730109030f4c6e2/data/Mega%20Evolution/30th%20Celebration/133.ts",
+            "revision": "a8fe5736aef9bd6be2436e3be730109030f4c6e2",
+            "blob": "81cafaa797f6701d0d8b61708cb324dc6a636bd8"
+          }
+        ]
+      },
+      "requiredExactFields": [
+        "language",
+        "rarity",
+        "parallel",
+        "finish",
+        "stamps"
+      ],
+      "gaps": [
+        "private_front_photo",
+        "back_availability",
+        "independent_physical_label_review",
+        "foil_and_stamp_photo_review"
+      ],
+      "categoryBasis": "provisional_owner_label_not_verified"
+    },
+    {
+      "id": "GP-ID-004",
+      "category": "pokemon_ir",
+      "physicalCardId": "owner-card-004",
+      "selection": "owner_reported_inventory",
+      "displayName": "Rotom IR 197/182",
+      "photos": {
+        "front": {
+          "status": "not_retained",
+          "sha256": null
+        },
+        "back": {
+          "status": "unknown",
+          "sha256": null
+        }
+      },
+      "groundTruth": {
+        "status": "unreviewed",
+        "reviewer": null,
+        "reviewedAt": null,
+        "fields": {},
+        "sources": []
+      },
+      "referenceFacts": {
+        "subject": "Rotom",
+        "year": "2025",
+        "set": "Destined Rivals",
+        "cardNumber": "197/182",
+        "rarity": "Illustration rare",
+        "setId": "sv10",
+        "regulationMark": "I",
+        "printings": [
+          {
+            "finish": "holo",
+            "stamps": []
+          }
+        ],
+        "sources": [
+          {
+            "kind": "independent_catalog",
+            "url": "https://github.com/tcgdex/cards-database/blob/a8fe5736aef9bd6be2436e3be730109030f4c6e2/data/Scarlet%20&%20Violet/Destined%20Rivals/197.ts",
+            "revision": "a8fe5736aef9bd6be2436e3be730109030f4c6e2",
+            "blob": "6bdfdf5c18e99015ce050abb1f8ef8b0c602af1f"
+          },
+          {
+            "kind": "independent_catalog",
+            "url": "https://github.com/tcgdex/cards-database/blob/a8fe5736aef9bd6be2436e3be730109030f4c6e2/data/Scarlet%20&%20Violet/Destined%20Rivals.ts",
+            "revision": "a8fe5736aef9bd6be2436e3be730109030f4c6e2",
+            "blob": "d2bcf1edaa1e0feeb3c43e99f18691dbb0c0204f"
+          }
+        ]
+      },
+      "requiredExactFields": [
+        "language",
+        "rarity",
+        "parallel",
+        "finish",
+        "stamps"
+      ],
+      "gaps": [
+        "private_front_back_photos",
+        "year_manufacturer_product_review",
+        "independent_physical_label_review",
+        "exact_printing_review"
+      ],
+      "categoryBasis": "provisional_owner_label_not_verified"
+    },
+    {
+      "id": "GP-ID-005",
+      "category": "pokemon_sir",
+      "physicalCardId": "owner-pikachu-149",
+      "selection": "owner_reported_inventory",
+      "displayName": "Pikachu ex 149/128",
+      "photos": {
+        "front": {
+          "status": "owner_reported_not_retained",
+          "sha256": null
+        },
+        "back": {
+          "status": "unknown",
+          "sha256": null
+        }
+      },
+      "groundTruth": {
+        "status": "unreviewed",
+        "reviewer": null,
+        "reviewedAt": null,
+        "fields": {},
+        "sources": []
+      },
+      "referenceFacts": {
+        "subject": "Pikachu ex",
+        "year": "2026",
+        "set": "30th Celebration",
+        "cardNumber": "149/128",
+        "language": "English",
+        "rarity": "Special illustration rare",
+        "finish": "holo",
+        "stamps": [
+          "30th-anniversary"
+        ],
+        "regulationMark": "J",
+        "catalogId": "30th-149",
+        "sources": [
+          {
+            "kind": "independent_catalog",
+            "url": "https://github.com/tcgdex/cards-database/blob/a8fe5736aef9bd6be2436e3be730109030f4c6e2/data/Mega%20Evolution/30th%20Celebration/149.ts",
+            "revision": "a8fe5736aef9bd6be2436e3be730109030f4c6e2",
+            "blob": "324e88fd3c53586fba675bbb335479d18cbd996b"
+          }
+        ]
+      },
+      "requiredExactFields": [
+        "language",
+        "rarity",
+        "parallel",
+        "finish",
+        "stamps"
+      ],
+      "gaps": [
+        "private_front_photo",
+        "back_availability",
+        "independent_physical_label_review",
+        "foil_and_stamp_photo_review"
+      ],
+      "categoryBasis": "provisional_owner_label_not_verified"
+    },
+    {
+      "id": "GP-ID-006",
+      "category": "pokemon_other_rarity",
+      "physicalCardId": "owner-card-006",
+      "selection": "owner_reported_inventory",
+      "displayName": "Rosa\u2019s Encouragement 114/088",
+      "photos": {
+        "front": {
+          "status": "not_retained",
+          "sha256": null
+        },
+        "back": {
+          "status": "unknown",
+          "sha256": null
+        }
+      },
+      "groundTruth": {
+        "status": "unreviewed",
+        "reviewer": null,
+        "reviewedAt": null,
+        "fields": {},
+        "sources": []
+      },
+      "referenceFacts": {
+        "subject": "Rosa's Encouragement",
+        "year": "2026",
+        "set": "Perfect Order",
+        "cardNumber": "114/88",
+        "rarity": "Ultra Rare",
+        "setId": "me03",
+        "regulationMark": "J",
+        "printings": [
+          {
+            "finish": "holo",
+            "stamps": []
+          }
+        ],
+        "sources": [
+          {
+            "kind": "independent_catalog",
+            "url": "https://github.com/tcgdex/cards-database/blob/a8fe5736aef9bd6be2436e3be730109030f4c6e2/data/Mega%20Evolution/Perfect%20Order/114.ts",
+            "revision": "a8fe5736aef9bd6be2436e3be730109030f4c6e2",
+            "blob": "56638669ac0c541612c931144113b565a2793607"
+          },
+          {
+            "kind": "independent_catalog",
+            "url": "https://github.com/tcgdex/cards-database/blob/a8fe5736aef9bd6be2436e3be730109030f4c6e2/data/Mega%20Evolution/Perfect%20Order.ts",
+            "revision": "a8fe5736aef9bd6be2436e3be730109030f4c6e2",
+            "blob": "ecbcdec5a0db2fc0e049c9fee7658d5722893a05"
+          }
+        ]
+      },
+      "requiredExactFields": [
+        "language",
+        "rarity",
+        "parallel",
+        "finish",
+        "stamps"
+      ],
+      "gaps": [
+        "private_front_back_photos",
+        "year_manufacturer_product_review",
+        "independent_physical_label_review",
+        "exact_printing_review",
+        "requested_SIR_slot_not_filled_by_this_reference"
+      ],
+      "categoryBasis": "reviewed_catalog_reference_physical_card_unreviewed"
+    },
+    {
+      "id": "GP-ID-007",
+      "category": "pokemon_promo",
+      "physicalCardId": "owner-card-007",
+      "selection": "owner_reported_inventory",
+      "displayName": "Snivy 5/25",
+      "photos": {
+        "front": {
+          "status": "not_retained",
+          "sha256": null
+        },
+        "back": {
+          "status": "unknown",
+          "sha256": null
+        }
+      },
+      "groundTruth": {
+        "status": "unreviewed",
+        "reviewer": null,
+        "reviewedAt": null,
+        "fields": {},
+        "sources": []
+      },
+      "referenceFacts": null,
+      "requiredExactFields": [
+        "language",
+        "rarity",
+        "parallel",
+        "finish",
+        "stamps"
+      ],
+      "gaps": [
+        "private_front_back_photos",
+        "year_manufacturer_product_review",
+        "independent_physical_label_review",
+        "exact_printing_review"
+      ],
+      "categoryBasis": "provisional_owner_label_not_verified"
+    },
+    {
+      "id": "GP-ID-008",
+      "category": "sports_unclassified",
+      "physicalCardId": "owner-card-008",
+      "selection": "owner_reported_inventory",
+      "displayName": "Babe Ruth SV-40",
+      "photos": {
+        "front": {
+          "status": "not_retained",
+          "sha256": null
+        },
+        "back": {
+          "status": "unknown",
+          "sha256": null
+        }
+      },
+      "groundTruth": {
+        "status": "unreviewed",
+        "reviewer": null,
+        "reviewedAt": null,
+        "fields": {},
+        "sources": []
+      },
+      "referenceFacts": null,
+      "requiredExactFields": [
+        "manufacturer",
+        "subset",
+        "parallel",
+        "finish",
+        "serialNumber",
+        "autograph"
+      ],
+      "gaps": [
+        "private_front_back_photos",
+        "year_manufacturer_product_review",
+        "independent_physical_label_review",
+        "exact_printing_review"
+      ],
+      "categoryBasis": "provisional_owner_label_not_verified"
+    },
+    {
+      "id": "GP-ID-009",
+      "category": "sports_unclassified",
+      "physicalCardId": "owner-card-009",
+      "selection": "owner_reported_inventory",
+      "displayName": "8 Bit Ballers Bryce Harper BB-11",
+      "photos": {
+        "front": {
+          "status": "not_retained",
+          "sha256": null
+        },
+        "back": {
+          "status": "unknown",
+          "sha256": null
+        }
+      },
+      "groundTruth": {
+        "status": "unreviewed",
+        "reviewer": null,
+        "reviewedAt": null,
+        "fields": {},
+        "sources": []
+      },
+      "referenceFacts": null,
+      "requiredExactFields": [
+        "manufacturer",
+        "subset",
+        "parallel",
+        "finish",
+        "serialNumber",
+        "autograph"
+      ],
+      "gaps": [
+        "private_front_back_photos",
+        "year_manufacturer_product_review",
+        "independent_physical_label_review",
+        "exact_printing_review"
+      ],
+      "categoryBasis": "provisional_owner_label_not_verified"
+    },
+    {
+      "id": "GP-ID-010",
+      "category": "sports_parallel",
+      "physicalCardId": "owner-card-010",
+      "selection": "owner_reported_inventory",
+      "displayName": "It Take Two Sand Glitter 52",
+      "photos": {
+        "front": {
+          "status": "not_retained",
+          "sha256": null
+        },
+        "back": {
+          "status": "unknown",
+          "sha256": null
+        }
+      },
+      "groundTruth": {
+        "status": "unreviewed",
+        "reviewer": null,
+        "reviewedAt": null,
+        "fields": {},
+        "sources": []
+      },
+      "referenceFacts": null,
+      "requiredExactFields": [
+        "manufacturer",
+        "subset",
+        "parallel",
+        "finish",
+        "serialNumber",
+        "autograph"
+      ],
+      "gaps": [
+        "private_front_back_photos",
+        "year_manufacturer_product_review",
+        "independent_physical_label_review",
+        "exact_printing_review"
+      ],
+      "categoryBasis": "provisional_owner_label_not_verified"
+    },
+    {
+      "id": "GP-ID-011",
+      "category": "sports_serial_or_auto",
+      "physicalCardId": "owner-card-011",
+      "selection": "owner_reported_inventory",
+      "displayName": "Josh Dix Bowman 1st Green Auto /99 PA-JD",
+      "photos": {
+        "front": {
+          "status": "not_retained",
+          "sha256": null
+        },
+        "back": {
+          "status": "unknown",
+          "sha256": null
+        }
+      },
+      "groundTruth": {
+        "status": "unreviewed",
+        "reviewer": null,
+        "reviewedAt": null,
+        "fields": {},
+        "sources": []
+      },
+      "referenceFacts": null,
+      "requiredExactFields": [
+        "manufacturer",
+        "subset",
+        "parallel",
+        "finish",
+        "serialNumber",
+        "autograph"
+      ],
+      "gaps": [
+        "private_front_back_photos",
+        "year_manufacturer_product_review",
+        "independent_physical_label_review",
+        "exact_printing_review"
+      ],
+      "categoryBasis": "provisional_owner_label_not_verified"
+    },
+    {
+      "id": "GP-ID-012",
+      "category": "sports_unclassified",
+      "physicalCardId": "owner-card-012",
+      "selection": "owner_reported_inventory",
+      "displayName": "Paul Skenes Nice List MNL-11",
+      "photos": {
+        "front": {
+          "status": "not_retained",
+          "sha256": null
+        },
+        "back": {
+          "status": "unknown",
+          "sha256": null
+        }
+      },
+      "groundTruth": {
+        "status": "unreviewed",
+        "reviewer": null,
+        "reviewedAt": null,
+        "fields": {},
+        "sources": []
+      },
+      "referenceFacts": null,
+      "requiredExactFields": [
+        "manufacturer",
+        "subset",
+        "parallel",
+        "finish",
+        "serialNumber",
+        "autograph"
+      ],
+      "gaps": [
+        "private_front_back_photos",
+        "year_manufacturer_product_review",
+        "independent_physical_label_review",
+        "exact_printing_review"
+      ],
+      "categoryBasis": "provisional_owner_label_not_verified"
+    }
+  ],
+  "excludedDisputedFixtures": [
+    {
+      "label": "2024 Konnor Griffin BCP-86 Mojo Refractor",
+      "status": "disputed_not_ground_truth",
+      "reason": "Earlier regression input is not a reviewed physical-card label. Manufacturer checklists must be reconciled with the actual card back/year/product/parallel before inclusion.",
+      "independentFindings": [
+        {
+          "year": "2024",
+          "cardNumber": "BCP-86",
+          "subject": "Brock Wilken",
+          "sourceKind": "manufacturer_checklist",
+          "url": "https://cdn.shopify.com/s/files/1/0662/9749/5709/files/MLB2407-2024BowmanBaseballChecklist.pdf",
+          "page": 3
+        },
+        {
+          "year": "2025",
+          "cardNumber": "BCP-86",
+          "subject": "Konnor Griffin",
+          "sourceKind": "manufacturer_checklist",
+          "url": "https://cdn.shopify.com/s/files/1/0662/9749/5709/files/MLB2507-2025BowmanBaseballChecklist2.pdf",
+          "page": 8
+        }
+      ]
+    }
+  ],
+  "extensions": [
+    {
+      "category": "other_tcg",
+      "status": "not_in_initial_12",
+      "reason": "The requested initial mix has no other-TCG slots. No cross-TCG coverage claim is permitted; add a separately labeled cohort after card selection."
+    }
+  ],
+  "requestedCategoryPlan": {
+    "pokemon_standard": 2,
+    "pokemon_ir": 2,
+    "pokemon_sir": 2,
+    "pokemon_promo": 2,
+    "sports_base": 1,
+    "sports_parallel": 2,
+    "sports_serial_or_auto": 1
+  },
+  "categoryPlan": {
+    "pokemon_standard": 2,
+    "pokemon_ir": 2,
+    "pokemon_sir": 1,
+    "pokemon_other_rarity": 1,
+    "pokemon_promo": 1,
+    "sports_unclassified": 3,
+    "sports_parallel": 1,
+    "sports_serial_or_auto": 1
+  },
+  "samplingDeviations": [
+    "Owner inventory is seven Pokemon and five sports, not requested eight/four.",
+    "Babe Ruth, Bryce Harper and Paul Skenes remain sports_unclassified; inserts are not automatically parallels or base.",
+    "One more Pokemon promo/unusual-number card and a verified sports base/second parallel selection are needed to fulfill the original stratified mix.",
+    "Reviewed TCGdex source classifies Rosa 114/088 as Ultra Rare, not Special Illustration Rare; do not count it toward SIR coverage."
+  ]
+}
