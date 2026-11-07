@@ -373,6 +373,7 @@ export function ImageAnalysisCard({ report }) {
           </div>
         </div>
 
+        {(data.conditionEvidenceLimits?.observationsExceeded||data.conditionEvidenceLimits?.coverageExceeded)&&<p style={{fontSize:"0.78rem",color:C.inkSoft}}>The response exceeded the bounded evidence format. Retained findings remain unassessable; inspection coverage is incomplete.</p>}
         {/* 4 attribute ratings */}
         <div className="gp-vision-grid" style={{ marginBottom: "1rem" }}>
           {attributes.map(function(attr) {
@@ -386,9 +387,16 @@ export function ImageAnalysisCard({ report }) {
                   <RatingPill rating={rating} label={assessment ? conditionAssessmentLabels[assessment.state] || "Unable to assess" : undefined} />
                 </div>
                 {assessment?.observations?.length ? assessment.observations.map((observation,i)=><p key={i} style={{fontSize:"0.78rem",color:C.inkMid,lineHeight:1.55,margin:0}}>
-                  {observation.side==='front'?'Front photo: ':observation.side==='back'?'Back photo: ':'Photo side not established: '}{observation.text}
+                  {observation.side==='front'?'Front photo: ':observation.side==='back'?'Back photo: ':'Photo side not established: '}{observation.text}{observation.region&&<span> Model-proposed photo region [{observation.region.join(', ')}].</span>}
                 </p>) : <p style={{ fontSize: "0.78rem", color: C.inkMid, lineHeight: 1.55, margin: 0 }}>{attr.note || "—"}</p>}
                 {assessment?.sides?.length>0 && <p style={{fontSize:"0.7rem",color:C.inkSoft,margin:"0.35rem 0"}}>Evidence: {assessment.sides.map(side=>side==='front'?'Front photo':'Back photo').join(', ')}</p>}
+                {(data.inspectionCoverage||[]).filter(c=>c.attribute===attr.key).map(c=><p key={c.side} style={{fontSize:"0.7rem",color:C.inkSoft,margin:"0.35rem 0"}}>
+                  {c.side==='front'?'Front':'Back'} inspection: {c.reason==='photo_unavailable'?'photograph unavailable':c.regions.length?`${c.status} — ${c.regions.length} reported region(s)`:'coverage not established'}.
+                  {c.regions.map((r,i)=><span key={i}> Region {i+1}: {r.status}; proposed image box [{r.region.join(', ')}].</span>)}
+                  {c.limitations.map((l,i)=><span key={i}> Limitation: {l.code.replace(/_/g,' ')} ({l.region?'localized region':'this side'}).</span>)}
+                </p>)}
+                <p style={{fontSize:"0.7rem",color:C.inkSoft,margin:"0.35rem 0"}}>Model-reported findings describe photo areas, not independently verified whole-card condition. Locations are model proposals, not verified card geometry.</p>
+                {attr.key==='centering'&&<p style={{fontSize:"0.7rem",color:C.inkSoft,margin:"0.35rem 0"}}>Centering measurement: {data.centeringMeasurementStatus==='unverified_geometry'?'unverified model estimate; geometry not established':'unavailable'}.</p>}
                 {notes.map((note,i)=><p key={i} style={{fontSize:"0.74rem",color:C.inkSoft,margin:"0.35rem 0"}}>
                   Model photo note — unverified ({note.side==='front'?'Front photo':note.side==='back'?'Back photo':'Photo side not established'}): {note.text}
                 </p>)}
@@ -447,7 +455,7 @@ export function ImageAnalysisCard({ report }) {
 {data.gemRiskFactors && data.gemRiskFactors.length > 0 && (
   <div style={{ background: "#fff8e7", border: "1px solid #f5d487", borderRadius: 10, padding: "0.8rem 1rem", marginBottom: "1rem" }}>
     <div style={{ fontSize: "0.65rem", fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.08em", color: "#8a6a00", marginBottom: "0.45rem" }}>
-      PSA 10 Risk Factors
+      Photo Inspection Concerns
     </div>
 
     <ul style={{ margin: 0, paddingLeft: "1rem" }}>

@@ -425,8 +425,8 @@ gemRiskFactors:
     : [],
 
 minorConcerns: safeStr(raw.minorConcerns, "No additional visible concerns identified."),
-    ...(cardType==='pokemon'?conditionPresentation({...raw,inspectedSides,imageLimitations:[...(Array.isArray(raw.imageLimitations)?raw.imageLimitations:[]),...(!inspectedSides.includes('back')?['back_not_visible']:[])]}):{}),
-    ...(cardType!=='pokemon'?retainSportsVisionEvidence(raw,inspectedSides):{}),
+    ...conditionPresentation({...raw,inspectedSides,imageLimitations:[...(Array.isArray(raw.imageLimitations)?raw.imageLimitations:[]),...(!inspectedSides.includes('back')?['back_not_visible']:[])]}),
+    ...(cardType!=='pokemon'?{identityReadings:retainSportsVisionEvidence(raw,inspectedSides).identityReadings}:{}),
   };
 }
 // ─── Anthropic client ─────────────────────────────────────────────────────────

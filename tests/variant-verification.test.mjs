@@ -106,7 +106,8 @@ test('unresolved pricing is suppressed in API, atlas, stored reports and copied 
   assert.equal(guarded.prediction.verdict, 'withheld');
   assert.equal(guarded.marketData.marketSummary.rawMedian, null);
   assert.equal(guarded.atlas, null);
-  assert.equal(guarded.imageAnalysis.centering, 'good');
+  assert.equal(guarded.imageAnalysis.centering, null);
+  assert.equal(guarded.imageAnalysis.conditionAssessments.centering.state, 'unassessable');
   const stored = safeStoredReport({ ...prediction, marketData: prices });
   assert.equal(stored.rawValue, null);
   assert.equal(stored.gradingUpside, null);
