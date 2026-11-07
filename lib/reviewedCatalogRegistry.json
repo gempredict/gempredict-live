@@ -1,0 +1,69 @@
+[
+  {
+    "id": "30th-133",
+    "repository": "tcgdex/cards-database",
+    "revision": "a8fe5736aef9bd6be2436e3be730109030f4c6e2",
+    "cardPath": "data/Mega Evolution/30th Celebration/133.ts",
+    "cardBlob": "81cafaa797f6701d0d8b61708cb324dc6a636bd8",
+    "setPath": "data/Mega Evolution/30th Celebration.ts",
+    "setBlob": "243974934c09da19c65312179af7a2bd267917e7",
+    "setId": "30th",
+    "setName": "30th Celebration",
+    "setCode": "30C",
+    "cardNumber": "133/128",
+    "year": "2026",
+    "releaseDate": "2026-09-16",
+    "language": "en",
+    "subject": "Zapdos",
+    "rarity": "Illustration rare",
+    "regulationMark": "J",
+    "printings": [
+      {
+        "finish": "holo",
+        "stamps": [
+          "30th-anniversary"
+        ]
+      }
+    ]
+  },
+  {
+    "id": "30th-149",
+    "repository": "tcgdex/cards-database",
+    "revision": "a8fe5736aef9bd6be2436e3be730109030f4c6e2",
+    "cardPath": "data/Mega Evolution/30th Celebration/149.ts",
+    "cardBlob": "324e88fd3c53586fba675bbb335479d18cbd996b",
+    "setPath": "data/Mega Evolution/30th Celebration.ts",
+    "setBlob": "243974934c09da19c65312179af7a2bd267917e7",
+    "setId": "30th",
+    "setName": "30th Celebration",
+    "setCode": "30C",
+    "cardNumber": "149/128",
+    "year": "2026",
+    "releaseDate": "2026-09-16",
+    "language": "en",
+    "subject": "Pikachu ex",
+    "rarity": "Special illustration rare",
+    "regulationMark": "J",
+    "printings": [
+      {
+        "finish": "holo",
+        "stamps": [
+          "30th-anniversary"
+        ]
+      }
+    ],
+    "priorPrintingReview": {
+      "repository": "tcgdex/cards-database",
+      "revision": "a211f11f3ba57d56c65c5ac33be35b77d3280757",
+      "correctionRevision": "9f90a62ec32ec00cd4ca3059f5ee9d61eae85a1c",
+      "previousRevision": "46e7d514d534d38257914a5ffee54c17849f72c3",
+      "cardPath": "data/Mega Evolution/30th Celebration/149.ts",
+      "cardBlob": "07a536c4226e534642d26e41012c75d9f2b34a80",
+      "setPath": "data/Mega Evolution/30th Celebration.ts",
+      "setBlob": "454be7141b08a542bbc20471f18ac880a1fd6496",
+      "snapshotDigest": "bd218f4878223fc9f87e3b9641c8e572004b89f0080b03dc3ec5df5fa545b8df",
+      "previousAt": "2026-09-16T22:45:22Z",
+      "correctedAt": "2026-09-20T08:47:23Z"
+    }
+  }
+]

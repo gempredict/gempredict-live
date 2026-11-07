@@ -10,7 +10,7 @@ export function checkCatalogPackaging(root = process.cwd()) {
     throw new Error('Invalid /api/predict output trace');
   }
   const included = new Set(trace.files.map(file => path.resolve(path.dirname(tracePath), file)));
-  const required = ['data/tcgdex/upstream-snapshot.json', 'data/tcgdex/LICENSE'];
+  const required = ['data/tcgdex/reviewed-source.json', 'data/tcgdex/upstream-snapshot.json', 'data/tcgdex/LICENSE'];
   for (const relative of required) {
     const file = path.resolve(root, relative);
     if (!included.has(file)) throw new Error(`Missing from /api/predict output trace: ${relative}`);
