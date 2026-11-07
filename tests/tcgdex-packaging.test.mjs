@@ -5,7 +5,7 @@ import { tmpdir } from 'node:os';
 import path from 'node:path';
 import { checkCatalogPackaging } from '../scripts/check-tcgdex-packaging.mjs';
 
-const assets = ['data/tcgdex/reviewed-source.json', 'data/tcgdex/upstream-snapshot.json', 'data/tcgdex/LICENSE'];
+const assets = ['data/tcgdex/reviewed-sets.json', 'data/tcgdex/reviewed-source.json', 'data/tcgdex/upstream-snapshot.json', 'data/tcgdex/LICENSE'];
 function fixture(run) {
   const root = mkdtempSync(path.join(tmpdir(), 'gp-packaging-'));
   const trace = path.join(root, '.next/server/pages/api/predict.js.nft.json');

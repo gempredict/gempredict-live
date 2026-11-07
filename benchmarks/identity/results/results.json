@@ -97,9 +97,9 @@
     }
   },
   "historical": {
-    "observations": 5,
-    "physicalCards": 2,
-    "technicalSuccessReported": 1,
+    "observations": 6,
+    "physicalCards": 3,
+    "technicalSuccessReported": 2,
     "failuresReported": 1,
     "accuracyEligible": 0,
     "warning": "Owner summaries are not retained response payloads, reviewed photo labels or independent accuracy trials."
@@ -128,7 +128,9 @@
       "selection": "owner_reported_inventory",
       "displayName": "Charmander 004/165",
       "physicalCardId": "owner-card-001",
-      "historicalObservationIds": [],
+      "historicalObservationIds": [
+        "H-CHAR-01"
+      ],
       "selectedObservationId": null,
       "repeatCount": 0,
       "photoReady": false,
@@ -1325,6 +1327,149 @@
       "unresolvedReasons": [
         "raw_response_and_screenshot_not_retained",
         "catalog_status_not_recoverable"
+      ],
+      "usage": {
+        "inputTokens": null,
+        "outputTokens": null,
+        "cacheReadTokens": null,
+        "cacheCreationTokens": null
+      },
+      "cost": {
+        "actualUsd": null,
+        "basis": null
+      },
+      "latencyMs": null,
+      "annotations": {
+        "possibleConflation": null,
+        "distinctMarkingsUnrepresentable": null
+      }
+    },
+    {
+      "id": "H-CHAR-01",
+      "cardId": "GP-ID-001",
+      "cohortId": "historical",
+      "attemptIndex": null,
+      "evidenceKind": "owner_reported_summary",
+      "evidenceDigest": null,
+      "deploymentCommit": null,
+      "contextCommit": "d7e07bfebada7f71ab1bd666747d0940c5324b01",
+      "scanId": "10906ad7-950f-4859-9a8e-174d02b2f6fc",
+      "sources": [
+        {
+          "kind": "owner_summary",
+          "url": null,
+          "path": "benchmarks/identity/CHARMANDER_SET_CODE_DISCOVERY.md",
+          "revision": null,
+          "blob": null,
+          "supports": []
+        }
+      ],
+      "photoHashes": {
+        "front": null,
+        "back": null
+      },
+      "photoLinkage": {
+        "method": "owner_reported_summary",
+        "preparedHashes": {
+          "front": "a3a890f2a8da940d215736f3aab03ae9ae472c9bd77635c30a7eabb0dcb3169e",
+          "back": null
+        },
+        "backRequired": false
+      },
+      "technical": {
+        "validCompletedResponse": true,
+        "httpStatus": null,
+        "failureCode": null,
+        "phase": null,
+        "rule": null,
+        "stopReason": null
+      },
+      "originalAI": {
+        "subject": "Charmander",
+        "year": "2023",
+        "set": null,
+        "cardNumber": "004/165",
+        "manufacturer": null,
+        "subset": null,
+        "language": "English",
+        "rarity": "Common",
+        "parallel": null,
+        "finish": null,
+        "stamps": [],
+        "serialNumber": null,
+        "autograph": null,
+        "regulationMark": null,
+        "franchise": null,
+        "autoOrRelic": null,
+        "printRun": null
+      },
+      "modelConfidence": null,
+      "reportedPrintedFacts": [],
+      "printedReadings": [
+        {
+          "field": "setCode",
+          "text": "MEW EN",
+          "certainty": "clear",
+          "side": "front",
+          "area": null,
+          "alternatives": []
+        }
+      ],
+      "missingProposalFields": [
+        "set"
+      ],
+      "canonical": {
+        "subject": null,
+        "year": null,
+        "set": null,
+        "cardNumber": null,
+        "manufacturer": null,
+        "subset": null,
+        "language": null,
+        "rarity": null,
+        "parallel": null,
+        "finish": null,
+        "stamps": [],
+        "serialNumber": null,
+        "autograph": null,
+        "regulationMark": null,
+        "franchise": null,
+        "autoOrRelic": null,
+        "printRun": null
+      },
+      "catalog": {
+        "outcome": "ambiguous",
+        "reasonCodes": [
+          "catalog_candidates_ambiguous"
+        ],
+        "conflicts": [],
+        "candidatesRetained": false,
+        "candidates": [],
+        "provenance": {
+          "provider": null,
+          "revision": null,
+          "cardBlob": null,
+          "setBlob": null
+        },
+        "selectedReference": null
+      },
+      "dimensions": {
+        "coreCatalog": null,
+        "photo": "unresolved",
+        "variant": null,
+        "artwork": null,
+        "physicalPrinting": "unverified",
+        "catalogPrinting": null
+      },
+      "claims": {
+        "catalogVerified": false,
+        "photoVerified": false,
+        "printingVerified": false
+      },
+      "unresolvedReasons": [
+        "catalog_candidates_ambiguous",
+        "missing_original_diagnostic_and_photo",
+        "candidate_list_not_retained"
       ],
       "usage": {
         "inputTokens": null,

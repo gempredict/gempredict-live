@@ -34,7 +34,7 @@ npm run benchmark:identity
 npm run test:benchmark
 ```
 
-The command writes deterministic `results/REPORT.md` and `results/results.json`. It reads only local JSON. The committed report uses **five owner-summary observations across two physical cards**, not reconstructed model payloads. It has **zero completed accuracy tests**, unknown accuracy/precision/recall, unknown scan cost and latency, and only one retained output-token figure (405). A false-verification count of zero with no adjudicated cohort scans is not evidence of perfect verification.
+The command writes deterministic `results/REPORT.md` and `results/results.json`. It reads only local JSON. The committed report uses **six owner-summary observations across three physical cards**, not reconstructed model payloads. It has **zero completed accuracy tests**, unknown accuracy/precision/recall, unknown scan cost and latency, and only one retained output-token figure (405). A false-verification count of zero with no adjudicated cohort scans is not evidence of perfect verification.
 
 Historical context commits are preserved as `contextCommit`. Their exact deployed revisions were not retained and remain null. The old original-year Zapdos result, JSON failure, structured-output result and later printing-conflict result are separate observations, never four benchmark cards. Pikachu's missing response and screenshot are not recreated. See `HISTORICAL_SOURCES.md`.
 

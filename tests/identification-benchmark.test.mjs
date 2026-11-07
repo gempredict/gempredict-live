@@ -53,7 +53,7 @@ test('initial 12 slots preserve requested category mix without manufacturing own
 });
 test('historical repeated Zapdos observations are one card and never accuracy trials',()=>{
  const r=evaluateBenchmark(load('benchmarks/identity/manifest.json'),load('benchmarks/identity/historical-observations.json').observations);
- assert.equal(r.historical.observations,5);assert.equal(r.historical.physicalCards,2);assert.equal(r.completedAccuracyTests,0);assert.equal(r.metrics.coreAccuracy.denominator,0);assert.equal(r.metrics.coreAccuracy.rate,null);assert.equal(r.cost.actualUsd,null);
+ assert.equal(r.historical.observations,6);assert.equal(r.historical.physicalCards,3);assert.equal(r.completedAccuracyTests,0);assert.equal(r.metrics.coreAccuracy.denominator,0);assert.equal(r.metrics.coreAccuracy.rate,null);assert.equal(r.cost.actualUsd,null);
  const zap=r.rows.find(c=>c.cardId==='GP-ID-003');assert.equal(zap.historicalObservationIds.length,4);assert.equal(r.observations.find(o=>o.id==='H-ZAP-03').usage.outputTokens,405);assert.equal(r.observations.find(o=>o.id==='H-ZAP-03').deploymentCommit,null);
 });
 test('eligible independently labeled photographed scan measures core and exact separately',()=>{

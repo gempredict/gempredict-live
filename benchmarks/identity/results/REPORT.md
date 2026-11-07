@@ -4,7 +4,7 @@ Baseline: ff3b3a5cf2b4326049ec666af11c44fdfc621cbb
 
 Cohort: phase2-initial
 
-Completed accuracy tests: 0. Historical observations: 5 across 2 cards (excluded from accuracy). No zero-denominator result is an accuracy estimate.
+Completed accuracy tests: 0. Historical observations: 6 across 3 cards (excluded from accuracy). No zero-denominator result is an accuracy estimate.
 
 | Metric | Result |
 | --- | --- |
@@ -44,6 +44,7 @@ Completed accuracy tests: 0. Historical observations: 5 across 2 cards (excluded
 | H-ZAP-03 | GP-ID-003 | 3c37d206cdb3a1e97aeccd3df738bd58a2ccdd41 / unknown | reported complete  | Zapdos 133/128 | conflict | output tokens 405; latency unknown; cost unknown |
 | H-ZAP-04 | GP-ID-003 | 3bce90f3db3d626ed2a4b2ee169af30663a636fe / unknown | unknown  |  | conflict | output tokens unknown; latency unknown; cost unknown |
 | H-PIKA-01 | GP-ID-005 | 88ff567b1a5c527026f44b47f8d619feff833857 / unknown | unknown  | Scarlet & Violet / Prismatic Evolutions | unknown | output tokens unknown; latency unknown; cost unknown |
+| H-CHAR-01 | GP-ID-001 | d7e07bfebada7f71ab1bd666747d0940c5324b01 / unknown | reported complete  | Charmander 2023 004/165 | ambiguous | output tokens unknown; latency unknown; cost unknown |
 
 - H-ZAP-01: model confidence 88; original parallel unknown; printed readings not retained; conflicts subject, cardNumber, year, brandSet; unresolved reasons set_year_unresolved, catalog_comparison_not_retained.
 
@@ -54,6 +55,8 @@ Completed accuracy tests: 0. Historical observations: 5 across 2 cards (excluded
 - H-ZAP-04: model confidence unknown; original parallel Special Illustration Rare (full-art holo); printed readings not retained; conflicts finish, parallel; unresolved reasons printing_conflict, missing_clear_setCode.
 
 - H-PIKA-01: model confidence unknown; original parallel unknown; printed readings not retained; conflicts not reported / empty; unresolved reasons raw_response_and_screenshot_not_retained, catalog_status_not_recoverable.
+
+- H-CHAR-01: model confidence unknown; original parallel unknown; printed readings setCode: MEW EN: clear; conflicts not reported / empty; unresolved reasons catalog_candidates_ambiguous, missing_original_diagnostic_and_photo, candidate_list_not_retained.
 
 ## Category coverage
 
