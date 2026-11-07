@@ -1,0 +1,21 @@
+GemPredict mobile image processing components
+
+heic-to 1.6.6 (unmodified upstream library, separately lazy-loaded)
+Copyright: upstream contributors, https://github.com/hoppergee/heic-to
+License: GNU LGPL v3 or later; see heic-to-LICENSE.txt and GPL-3.txt.
+Exact package and its source/build scripts:
+https://registry.npmjs.org/heic-to/-/heic-to-1.6.6.tgz
+https://github.com/hoppergee/heic-to
+The package bundles libheif 1.23.6, including HEVC decoding components.
+Corresponding upstream source and build instructions:
+https://github.com/strukturag/libheif/tree/v1.23.6
+https://github.com/strukturag/libde265
+No modifications to these libraries were made. The decoder is bundled locally,
+not fetched from these URLs during a scan. It runs in the browser; originals
+are not sent to a third-party image-conversion service.
+
+sharp 0.35.5 (server-only)
+Copyright: Lovell Fuller and contributors, https://github.com/lovell/sharp
+License: Apache-2.0; see sharp-LICENSE.txt.
+Native dependency notices and licenses are distributed with the installed
+@img/sharp-* and @img/sharp-libvips-* npm packages in the server dependencies.

@@ -1,0 +1,4 @@
+GemPredict uses the unmodified @anthropic-ai/sdk 1.6.0 runtime dependency.
+Source: https://github.com/anthropics/anthropic-sdk-typescript
+License: Apache License 2.0; see LICENSE.txt in this directory.
+This notice does not grant rights in card imagery or catalog/marketplace data.

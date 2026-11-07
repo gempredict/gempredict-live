@@ -1,0 +1,27 @@
+{
+  "source": {
+    "repository": "tcgdex/cards-database",
+    "revision": "00da1023eddd6878a0bd12570abde1760dba61c7",
+    "cardPath": "data/Mega Evolution/30th Celebration/133.ts",
+    "cardBlob": "81cafaa797f6701d0d8b61708cb324dc6a636bd8",
+    "setPath": "data/Mega Evolution/30th Celebration.ts",
+    "setBlob": "454be7141b08a542bbc20471f18ac880a1fd6496",
+    "license": "data/tcgdex/LICENSE"
+  },
+  "facts": {
+    "subject": "Zapdos",
+    "rarity": "Illustration rare",
+    "localId": "133",
+    "setId": "30th",
+    "setName": "30th Celebration",
+    "releaseDate": "2026-09-16",
+    "officialCount": 128,
+    "setCode": "30C",
+    "printingTypes": [
+      "holo"
+    ],
+    "stamps": [
+      "30th-anniversary"
+    ]
+  }
+}

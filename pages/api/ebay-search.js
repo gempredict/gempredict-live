@@ -1,4 +1,6 @@
-import { matchListing } from "../../lib/ebayIdentityMatch.mjs";
+import {expandVariantAliases,matchesVariantValuation} from '../../lib/variantVerification.mjs';
+import {scoreListing as scorePokemonListing,getListingType as pokemonListingType,readMarketIdentity as readPokemonIdentity} from '../../lib/pokemonListingMatch.mjs';
+import { matchListing, identityComplete } from "../../lib/ebayIdentityMatch.mjs";
 function getMedian(nums) {
   if (!nums.length) return null;
   const sorted = nums.slice().sort(function(a, b) {
@@ -84,7 +86,7 @@ function getListingType(title, condition) {
 
 export default async function handler(req, res) {
   try {
-    const identity = {
+    let identity = {
   game: typeof req.query.game === "string" ? req.query.game.trim() : null,
   year: typeof req.query.year === "string" ? req.query.year.trim() : null,
   brand: typeof req.query.brand === "string" ? req.query.brand.trim() : null,
@@ -93,12 +95,15 @@ export default async function handler(req, res) {
   cardName: typeof req.query.cardName === "string" ? req.query.cardName.trim() : null,
   cardNumber: typeof req.query.cardNumber === "string" ? req.query.cardNumber.trim() : null,
   parallel: typeof req.query.parallel === "string" ? req.query.parallel.trim() : null,
+  printRun: typeof req.query.printRun === "string" ? req.query.printRun.trim() : null,
   autoOrRelic: typeof req.query.autoOrRelic === "string" ? req.query.autoOrRelic.trim() : null,
 };
 
+const pokemon=req.query.game==='pokemon';
+if(pokemon)identity=readPokemonIdentity(req.query);
 const structuredQuery = [
   identity.year,
-  identity.brand || identity.set,
+  identity.set || identity.brand,
   identity.player || identity.cardName,
   identity.cardNumber,
   identity.parallel,
@@ -116,6 +121,8 @@ const q = typeof req.query.q === "string" && req.query.q.trim()
         error: "Missing search query. Use /api/ebay-search?q=2024%20Optic%20Jayden%20Daniels",
       });
     }
+
+    if (!identityComplete(identity)) return res.status(400).json({success:false,error:"Complete structured identity is required; query text alone cannot establish comparables."});
 
     const clientId = process.env.EBAY_PROD_CLIENT_ID;
     const clientSecret = process.env.EBAY_PROD_CLIENT_SECRET;
@@ -185,11 +192,13 @@ const q = typeof req.query.q === "string" && req.query.q.trim()
         const title = item.title || "";
         const listingType = getListingType(title, item.condition);
 
-        const match = matchListing(title, identity, item.condition);
+        const candidate=pokemon?scorePokemonListing(expandVariantAliases(title),q,identity,item):null;
+        if(candidate?.comparable&&!matchesVariantValuation({...item,title:expandVariantAliases(title)},{subject:identity.player||identity.cardName,year:identity.year,brandSet:identity.set,cardNumber:identity.cardNumber,parallel:identity.parallel,language:identity.language,autoOrRelic:identity.autoOrRelic,printRun:identity.printRun,...(identity.variantIdentity?{variant:JSON.parse(identity.variantIdentity)}:{})}))Object.assign(candidate,{comparable:false,score:0,reasons:[...candidate.reasons,'Variant valuation mismatch']});
+        const match = pokemon?{matchScore:candidate.score,matchReasons:candidate.reasons,rejectionReasons:candidate.comparable?[]:candidate.reasons,accepted:candidate.comparable,listingType:pokemonListingType(title,item.condition,item)}:matchListing(title, identity, item.condition);
 
 return {
   title,
-  matchScore: match.score,
+  matchScore: match.matchScore,
   matchReasons: match.matchReasons,
   rejectionReasons: match.rejectionReasons,
   listingType: match.listingType,
@@ -202,6 +211,7 @@ return {
     : null,
   priceValue: Number.isFinite(priceValue) ? priceValue : null,
   condition: item.condition || null,
+  ...(pokemon?{localizedAspects:item.localizedAspects||[]}:{}),
   itemWebUrl: item.itemWebUrl || null,
   image: item.image && item.image.imageUrl ? item.image.imageUrl : null,
   itemId: item.itemId || null,
@@ -224,7 +234,7 @@ return {
     });
 
     const excludedItems = items.filter(function(item) {
-      return item.listingType === "excluded";
+      return item.listingType === "excluded" || pokemon&&!item.accepted;
     });
 
    const rawPrices = rawComparableItems
@@ -280,6 +290,8 @@ marketConfidence = Math.max(0, Math.min(99, marketConfidence));
   environment: "production",
   query: q,
   identity,
+  discoveryOnly: true,
+  identityVerified: false,
       total: searchData.total || 0,
       count: items.length,
       marketSummary: {
@@ -293,6 +305,7 @@ rawOutlierCount: rawPrices.length - filteredRawPrices.length,
         rawLowest: roundMoney(rawLowest),
         rawHighest: roundMoney(rawHighest),
         rawMedian: roundMoney(rawMedian),
+        valuationTrusted: false,
         fairMarketValue: null, // Active asking listings cannot establish sale-based FMV.
         priceBasis: "active_asking_listings",
         soldComparableCount: 0,

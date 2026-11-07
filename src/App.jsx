@@ -1,8 +1,18 @@
+import IdentityResult from "./components/IdentityResult";
+import {safeScanFailure} from '../lib/scanFailures.mjs';
+import {conditionAssessmentLabels} from '../lib/photoConditionLabels.mjs';
+import ScanDiagnostics from './components/ScanDiagnostics';
+import {rememberScanDiagnostic} from '../lib/scanDiagnosticClient.mjs';
+import {reportTitle,verificationRows} from '../lib/reportVerification.mjs';
+import {identitySummary} from '../lib/pokemonReportIdentity.mjs';
+import { protectFinancialReport, reportFromResponse, protectedCopySummary, WITHHELD_MESSAGE } from "../lib/financialSafety.mjs";
 // src/App.jsx — GemPredict main component
 import { useState, useRef, useEffect } from "react";
 import { track } from "@vercel/analytics/react";
 import AtlasPanel from "./components/AtlasPanel";
 import { buildGemPredictScore } from "../lib/gemPredictScore";
+import { normalizeMobileImage, assertUploadBudget, UploadError } from "../lib/mobileImages.mjs";
+import { predictionFailureResponse, requestPrediction } from "../lib/predictionTransport.mjs";
 
 // ─── Constants ────────────────────────────────────────────────────────────────
 const CARD_TYPES = [
@@ -23,12 +33,14 @@ const EXAMPLES = [
 ];
 
 const VERDICTS = {
+  withheld: {label:"Financial Recommendations Withheld",bg:"#fffbeb",color:"#92400e",border:"#fde68a",explain:WITHHELD_MESSAGE},
   grade: { label: "Grade It",    bg: "#f0fdf4", color: "#15803d", border: "#86efac", explain: "Strong upside — the PSA 10 premium makes grading clearly worth it." },
   skip:  { label: "Skip It",     bg: "#fef2f2", color: "#b91c1c", border: "#fca5a5", explain: "Not worth grading — the cost likely exceeds the value gained." },
   maybe: { label: "Consider It", bg: "#fffbeb", color: "#b45309", border: "#fde68a", explain: "Borderline — grading upside depends heavily on card condition." },
 };
 
 const VERDICT_USE_CASE = {
+  withheld:"Confirm exact identity and independent market evidence before evaluating grading.",
   grade: "Best for submission or resale upside.",
   maybe: "Best for condition-sensitive cards — strong gem rate matters here.",
   skip:  "Best to sell raw, hold, or trade rather than submit.",
@@ -62,6 +74,7 @@ function lsSet(key, val) {
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 function safeMoney(val) {
+  if (val == null) return "—";
   const n = typeof val === "number" && isFinite(val) ? val : 0;
   try { return n.toLocaleString(); } catch { return String(n); }
 }
@@ -69,6 +82,7 @@ function isValidEmail(email) {
   return /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/.test((email || "").trim());
 }
 function getVerdictBullets(data) {
+  if(data.financialDecision?.actionable!==true)return [WITHHELD_MESSAGE];
   const upside = typeof data.gradingUpside === "number" ? data.gradingUpside : 0;
   const prob   = typeof data.psa10Probability === "number" ? data.psa10Probability : 50;
   const raw    = data.rawValue || 0;
@@ -91,15 +105,7 @@ function getVerdictBullets(data) {
   }
   return bullets.slice(0, 3);
 }
-function buildCopySummary(data) {
-  const v = VERDICTS[data.verdict] ? VERDICTS[data.verdict].label : data.verdict;
-  return "GemPredict Report — " + data.cardTitle +
-    " | Raw: $" + safeMoney(data.rawValue) +
-    " | PSA 9: $" + safeMoney(data.psa9Value) +
-    " | PSA 10: $" + safeMoney(data.psa10Value) +
-    " | Upside: " + (data.gradingUpside >= 0 ? "+$" : "-$") + safeMoney(Math.abs(data.gradingUpside || 0)) +
-    " | Verdict: " + v;
-}
+function buildCopySummary(data) { return protectedCopySummary(data); }
 
 // ─── CSS ──────────────────────────────────────────────────────────────────────
 const GLOBAL_CSS = `
@@ -213,11 +219,23 @@ function IdentityReviewCard({ report }) {
   );
 }
 
-function ImageAnalysisCard({ data }) {
+function VerificationStatus({report}) {
+  return <dl aria-label="Verification status" style={{fontSize:"0.75rem",lineHeight:1.5,margin:"0.75rem 0"}}>
+    {verificationRows(report).map(row=><div key={row.key} style={{marginBottom:"0.55rem"}}>
+      <dt style={{fontWeight:700,color:C.ink}}>{row.label}: {row.status}</dt>
+      <dd style={{margin:0,color:C.inkSoft}}>{row.reason}</dd>
+    </div>)}
+  </dl>;
+}
+
+export function ImageAnalysisCard({ report }) {
+  const safe = protectFinancialReport(report);
+  const data = safe.imageAnalysis;
+  const observation = safe.originalIdentityObservation || data;
   if (!data) return null;
 
   function RatingPill({ rating, label }) {
-    const r = RATING_COLORS[rating] || RATING_COLORS.fair;
+    const r = RATING_COLORS[rating] || (rating==="unassessed"?{color:C.inkSoft,bg:C.cream,label:"Unassessed"}:RATING_COLORS.fair);
     return (
       <span style={{ display: "inline-block", fontSize: "0.65rem", fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.06em", color: r.color, background: r.bg, padding: "0.15rem 0.5rem", borderRadius: 100 }}>
         {label || r.label}
@@ -238,7 +256,7 @@ function ImageAnalysisCard({ data }) {
   ? "Lower Submission Risk"
   : data.worthGrading === false
     ? "High Submission Risk"
-    : "Borderline Submission Risk";
+    : "Grading recommendation unavailable";
 
   const attributes = [
     { key: "centering", label: "Centering", note: data.centeringNote },
@@ -264,13 +282,17 @@ function ImageAnalysisCard({ data }) {
         </div>
       </div>
 
-            {/* Card Identification */}
-      {(data.identifiedSubject ||
-        data.identifiedBrandSet ||
-        data.identifiedYear ||
-        data.identifiedParallel ||
-        data.identifiedCardNumber) && (
-        <div
+            <div style={{padding:"1rem 1.25rem 0"}}>
+        <h3 style={{margin:"0 0 0.5rem",color:C.ink}}>{reportTitle(safe)}</h3>
+        <VerificationStatus report={safe} />
+      </div>
+      {/* Original observation is secondary and never supplies the heading. */}
+      {(observation.identifiedSubject ||
+        observation.identifiedBrandSet ||
+        observation.identifiedYear ||
+        observation.identifiedParallel ||
+        observation.identifiedCardNumber) && (
+        <details
           style={{
             margin: "1rem 1.25rem 0",
             background: C.cream,
@@ -279,21 +301,9 @@ function ImageAnalysisCard({ data }) {
             padding: "0.9rem 1rem",
           }}
         >
-          <div
-            style={{
-              fontSize: "0.65rem",
-              fontWeight: 700,
-              textTransform: "uppercase",
-              letterSpacing: "0.08em",
-              color: C.inkSoft,
-              marginBottom: "0.55rem",
-            }}
-          >
-            Card Identification
-          </div>
-
+          <summary style={{fontSize:"0.72rem",color:C.inkSoft,cursor:"pointer"}}>Original AI Observation — Unverified</summary>
           <div style={{ fontSize: "0.95rem", fontWeight: 800, color: C.ink }}>
-            {[data.identifiedYear, data.identifiedBrandSet, data.identifiedSubject]
+            {[observation.identifiedYear, observation.identifiedBrandSet, observation.identifiedSubject]
               .filter(Boolean)
               .join(" · ") || "Card identity uncertain"}
           </div>
@@ -306,45 +316,30 @@ function ImageAnalysisCard({ data }) {
               marginTop: "0.55rem",
             }}
           >
-            {data.identifiedParallel && (
+            {observation.identifiedParallel && (
               <span style={{ fontSize: "0.68rem", fontWeight: 700, color: C.amber, background: C.goldLight, border: "1px solid " + C.gold, borderRadius: 100, padding: "0.15rem 0.55rem" }}>
-                {data.identifiedParallel}
+                {observation.identifiedParallel}
               </span>
             )}
 
-            {data.identifiedCardNumber && (
+            {observation.identifiedCardNumber && (
               <span style={{ fontSize: "0.68rem", fontWeight: 700, color: C.inkSoft, background: C.white, border: "1px solid " + C.border, borderRadius: 100, padding: "0.15rem 0.55rem" }}>
-                #{data.identifiedCardNumber}
+                #{observation.identifiedCardNumber}
               </span>
             )}
 
-            {data.identifiedAutoOrRelic && data.identifiedAutoOrRelic !== "none" && data.identifiedAutoOrRelic !== "unknown" && (
+            {observation.identifiedAutoOrRelic && observation.identifiedAutoOrRelic !== "none" && observation.identifiedAutoOrRelic !== "unknown" && (
               <span style={{ fontSize: "0.68rem", fontWeight: 700, color: C.inkSoft, background: C.white, border: "1px solid " + C.border, borderRadius: 100, padding: "0.15rem 0.55rem" }}>
-                {data.identifiedAutoOrRelic}
+                {observation.identifiedAutoOrRelic}
               </span>
             )}
 
-            <span
-              style={{
-                fontSize: "0.68rem",
-                fontWeight: 700,
-                color: (data.identityConfidence || 0) >= 85 ? C.green : (data.identityConfidence || 0) >= 60 ? C.amber : C.red,
-                background: (data.identityConfidence || 0) >= 85 ? C.greenLight : (data.identityConfidence || 0) >= 60 ? C.goldLight : C.redLight,
-                border: "1px solid " + ((data.identityConfidence || 0) >= 85 ? "#86efac" : (data.identityConfidence || 0) >= 60 ? C.gold : "#fca5a5"),
-                borderRadius: 100,
-                padding: "0.15rem 0.55rem",
-              }}
-            >
-              {(data.identityConfidence || 0) >= 85
-                ? "High Confidence"
-                : (data.identityConfidence || 0) >= 60
-                ? "Moderate Confidence"
-                : "Low Confidence"}{" "}
-              {data.identityConfidence || 0}%
-            </span>
+            {Number.isFinite(observation.identityConfidence) && <span style={{fontSize:"0.68rem",color:C.inkSoft}}>
+              Model-reported observation confidence: {observation.identityConfidence}% (not catalog or financial confidence)
+            </span>}
           </div>
 
-          {data.identityNotes && (
+          {observation.identityNotes && (
             <div
               style={{
                 fontSize: "0.72rem",
@@ -353,10 +348,10 @@ function ImageAnalysisCard({ data }) {
                 lineHeight: 1.45,
               }}
             >
-              {data.identityNotes}
+              {observation.identityNotes}
             </div>
           )}
-        </div>
+        </details>
       )}
 
       <div style={{ padding: "1.1rem 1.25rem" }}>
@@ -372,7 +367,7 @@ function ImageAnalysisCard({ data }) {
           </span>
           <div>
             <div style={{ fontSize: "0.7rem", fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.07em", color: worthColor, marginBottom: "0.2rem" }}>
-              {worthLabel} — based on visible grading risk
+              {worthLabel}{data.worthGrading != null ? " — based on visible grading risk" : ""}
             </div>
             <div style={{ fontSize: "0.84rem", color: C.inkMid }}>{data.worthGradingReason}</div>
           </div>
@@ -381,15 +376,22 @@ function ImageAnalysisCard({ data }) {
         {/* 4 attribute ratings */}
         <div className="gp-vision-grid" style={{ marginBottom: "1rem" }}>
           {attributes.map(function(attr) {
-            const rating = data[attr.key] || "fair";
-            const rc = RATING_COLORS[rating] || RATING_COLORS.fair;
+            const rating = data[attr.key] || "unassessed";
+            const assessment=data.conditionAssessments?.[attr.key];
+            const notes=(data.modelPhotoNotes||[]).filter(note=>note.attribute===attr.key);
             return (
               <div key={attr.key} style={{ background: C.cream, border: "1px solid " + C.border, borderRadius: 12, padding: "0.85rem 0.9rem" }}>
                 <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "0.35rem" }}>
                   <span style={{ fontSize: "0.7rem", fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.06em", color: C.inkSoft }}>{attr.label}</span>
-                  <RatingPill rating={rating} />
+                  <RatingPill rating={rating} label={assessment ? conditionAssessmentLabels[assessment.state] || "Unable to assess" : undefined} />
                 </div>
-                <p style={{ fontSize: "0.78rem", color: C.inkMid, lineHeight: 1.55, margin: 0 }}>{attr.note || "—"}</p>
+                {assessment?.observations?.length ? assessment.observations.map((observation,i)=><p key={i} style={{fontSize:"0.78rem",color:C.inkMid,lineHeight:1.55,margin:0}}>
+                  {observation.side==='front'?'Front photo: ':observation.side==='back'?'Back photo: ':'Photo side not established: '}{observation.text}
+                </p>) : <p style={{ fontSize: "0.78rem", color: C.inkMid, lineHeight: 1.55, margin: 0 }}>{attr.note || "—"}</p>}
+                {assessment?.sides?.length>0 && <p style={{fontSize:"0.7rem",color:C.inkSoft,margin:"0.35rem 0"}}>Evidence: {assessment.sides.map(side=>side==='front'?'Front photo':'Back photo').join(', ')}</p>}
+                {notes.map((note,i)=><p key={i} style={{fontSize:"0.74rem",color:C.inkSoft,margin:"0.35rem 0"}}>
+                  Model photo note — unverified ({note.side==='front'?'Front photo':note.side==='back'?'Back photo':'Photo side not established'}): {note.text}
+                </p>)}
               </div>
             );
           })}
@@ -408,7 +410,7 @@ function ImageAnalysisCard({ data }) {
     Primary Grade Limiter
   </div>
   <div style={{ fontSize: "0.84rem", color: C.inkMid, lineHeight: 1.6 }}>
-    {data.primaryLimiter || "No major limiter identified from the uploaded image."}
+    {data.primaryLimiter || "Unassessed from the available photos."}
   </div>
 </div>
 
@@ -417,7 +419,7 @@ function ImageAnalysisCard({ data }) {
     Confidence Level
   </div>
   <div style={{ fontSize: "0.9rem", fontWeight: 700, color: C.ink }}>
-    {data.confidenceLevel || "Moderate"}
+    {data.confidenceLevel || "Unassessed"}
   </div>
 </div>
         <div style={{ background: "#fefce8", border: "1px solid #fde68a", borderRadius: 10, padding: "0.8rem 1rem", marginBottom: "1rem" }}>
@@ -425,7 +427,7 @@ function ImageAnalysisCard({ data }) {
     Major Grade Cap
   </div>
   <div style={{ fontSize: "0.84rem", color: C.inkMid, lineHeight: 1.6 }}>
-    {data.majorGradeCap || data.primaryLimiter || "No major grade cap identified."}
+    {data.majorGradeCap || data.primaryLimiter || "A grade ceiling has not been established."}
   </div>
 </div>
 <div style={{ background: C.cream, border: "1px solid " + C.border, borderRadius: 10, padding: "0.8rem 1rem", marginBottom: "1rem" }}>
@@ -464,7 +466,7 @@ function ImageAnalysisCard({ data }) {
     Minor Concerns
   </div>
   <div style={{ fontSize: "0.84rem", color: C.inkMid, lineHeight: 1.6 }}>
-    {data.minorConcerns || "No additional visible concerns identified."}
+    {data.minorConcerns || "Unassessed from the available photos."}
   </div>
 </div>
 
@@ -533,7 +535,8 @@ function EmptyState() {
   );
 }
 
-function ResultCard({ data, index, onSave, isSaved }) {
+export function ResultCard({ data, index, onSave, isSaved }) {
+  data = protectFinancialReport(data);
   const gpScore = buildGemPredictScore(data);
   const unifiedScore = gpScore?.score ?? null;
   const verdict  = VERDICTS[data.verdict] || VERDICTS.maybe;
@@ -541,16 +544,10 @@ function ResultCard({ data, index, onSave, isSaved }) {
   const marketSummary = data.marketData && data.marketData.marketSummary
   ? data.marketData.marketSummary
   : null;
-  const displayTitle =
-  data.catalogCrossCheck?.catalogName && data.catalogCrossCheck?.catalogSet && data.canonicalCard?.cardNumber
-    ? [data.catalogCrossCheck.catalogSet, data.catalogCrossCheck.catalogName, "#" + data.canonicalCard.cardNumber].join(" ")
-    : (data.canonicalCard?.displayName || data.cardTitle);
-
-const displayMeta =
-  data.catalogCrossCheck?.catalogName
-    ? "TCGdex catalog candidate · Artwork / printing not verified"
-    : (data.cardMeta || "Identity provisional");
-  const barPct   = Math.min(100, Math.max(4, (Math.abs(profit) / Math.max(data.psa10Value || 1, 1)) * 100));
+  const displayTitle = reportTitle(data);
+  const displayMeta = data.pokemonIdentityStatus?.catalogVerified
+    ? "Catalog-supported identity · Physical printing not verified"
+    : (data.cardMeta || "Identity unverified");
   const bullets  = getVerdictBullets(data);
   const useCase  = VERDICT_USE_CASE[data.verdict] || VERDICT_USE_CASE.maybe;
   const [copied, setCopied] = useState(false);
@@ -583,13 +580,8 @@ const displayMeta =
 <div style={{ fontSize: "0.75rem", color: C.inkSoft, marginTop: "0.15rem" }}>
   {displayMeta}
 </div>
-{data.canonicalCard?.confidence != null && (
-  <div style={{ fontSize: "0.68rem", color: C.green, marginTop: "0.3rem", fontWeight: 700 }}>
-    ✓ Card Identity {data.canonicalCard.confidence}% Confidence
-  </div>
-)}
           <div style={{ fontSize: "0.68rem", color: C.inkSoft, marginTop: "0.35rem", fontStyle: "italic" }}>
-            Market-based AI estimate using collector pricing patterns.
+            {data.pokemonIdentityStatus ? identitySummary(data) : 'Unverified identity proposal; valuation and grading recommendations withheld.'}
           </div>
         </div>
         <div style={{ textAlign: "center", flexShrink: 0 }}>
@@ -601,6 +593,8 @@ const displayMeta =
       </div>
 
       <div style={{ padding: "1.1rem 1.25rem" }}>
+      <VerificationStatus report={data} />
+      {(Array.isArray(data.scanNotices)?data.scanNotices:[]).map(safeScanFailure).filter(notice=>['MARKETPLACE_UNAVAILABLE','VERIFICATION_UNRESOLVED'].includes(notice?.code)).map(notice=><p key={notice.code} role="status" style={{fontSize:"0.75rem",color:C.inkSoft}}>{notice.error}</p>)}
       <div
   style={{
     background: "#0d1117",
@@ -631,7 +625,7 @@ const displayMeta =
       marginTop: ".5rem",
     }}
   >
-    {gpScore.score}
+    {gpScore?.score ?? "—"}
   </div>
 
   <div
@@ -641,8 +635,8 @@ const displayMeta =
       marginTop: ".5rem",
     }}
   >
-    {"★".repeat(gpScore.stars)}
-    {"☆".repeat(5 - gpScore.stars)}
+    {gpScore?.score != null && "★".repeat((gpScore?.stars || 0))}
+    {gpScore?.score != null && "☆".repeat(5 - (gpScore?.stars || 0))}
   </div>
 
   <div
@@ -652,7 +646,7 @@ const displayMeta =
       color: "#ddd",
     }}
   >
-    {gpScore.recommendation}
+    {gpScore?.recommendation || "Verification required before scoring"}
   </div>
 </div>
 
@@ -828,7 +822,7 @@ const displayMeta =
         color: profit >= 0 ? C.green : C.red,
       }}
     >
-      {(profit >= 0 ? "+$" : "-$") + safeMoney(Math.abs(profit))}
+      {data.gradingUpside == null ? "—" : (profit >= 0 ? "+$" : "-$") + safeMoney(Math.abs(profit))}
     </div>
   </div>
 </div>
@@ -836,14 +830,14 @@ const displayMeta =
         {marketSummary && (
   <div style={{ background: C.cream, border: "1px solid " + C.border, borderRadius: 12, padding: "0.9rem 1rem", marginBottom: "1rem" }}>
     <div style={{ fontSize: "0.65rem", fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.08em", color: C.inkSoft, marginBottom: "0.65rem" }}>
-     Listings Used
+     Candidate Asking Listings — Identity Unverified
     </div>
 
     <div style={{ display: "grid", gridTemplateColumns: "repeat(2,1fr)", gap: "0.65rem", textAlign: "center" }}>
       <div>
         <div style={{ fontSize: "0.62rem", color: C.inkSoft }}>Median Asking Price</div>
         <div style={{ fontFamily: "'Playfair Display', serif", fontSize: "1.25rem", fontWeight: 700, color: C.ink }}>
-          {marketSummary.rawMedian != null ? "$" + safeMoney(marketSummary.rawMedian) : "—"}
+          {data.financialDecision?.allowed && marketSummary.rawMedian != null ? "$" + safeMoney(marketSummary.rawMedian) : "—"}
         </div>
       </div>
       <div>
@@ -851,7 +845,7 @@ const displayMeta =
     Asking Price Range
   </div>
   <div style={{ fontFamily: "'Playfair Display', serif", fontSize: "1.05rem", fontWeight: 700, color: C.ink }}>
-    {marketSummary.rawTypicalRangeLow != null &&
+    {data.financialDecision?.allowed && marketSummary.rawTypicalRangeLow != null &&
      marketSummary.rawTypicalRangeHigh != null
       ? "$" +
         safeMoney(marketSummary.rawTypicalRangeLow) +
@@ -873,13 +867,13 @@ const displayMeta =
       <div>
         <div style={{ fontSize: "0.62rem", color: C.inkSoft }}>Listing Match Score</div>
         <div style={{ fontFamily: "'Playfair Display', serif", fontSize: "1.25rem", fontWeight: 700, color: C.green }}>
-          {marketSummary.marketConfidence != null ? marketSummary.marketConfidence + "%" : "—"}
+          {data.financialDecision?.allowed && marketSummary.marketConfidence != null ? marketSummary.marketConfidence + "%" : "—"}
         </div>
       </div>
     </div>
 
     <div style={{ fontSize: "0.7rem", color: C.inkSoft, marginTop: "0.65rem", fontStyle: "italic" }}>
-      Active eBay asking prices, not completed sales or verified fair market value. Grading economics below are provisional estimates.
+      Active eBay asking prices, not completed sales or verified fair market value. These candidate asking listings do not establish the exact physical card or authorize grading economics.
       <div style={{marginTop:"0.5rem",fontStyle:"normal"}}>
         eBay matching: {data.marketData?.count ?? 0} returned · {marketSummary.rawComparableCount ?? 0} accepted · {marketSummary.rejectedCount ?? 0} rejected.
         {!marketSummary.evidenceSufficient && <strong> Insufficient exact-card listings for a reliable asking-price estimate.</strong>}
@@ -895,7 +889,7 @@ const displayMeta =
       {data.marketData?.rawComparableItems?.length > 0 && (
   <div style={{ marginTop: "0.85rem", borderTop: "1px solid " + C.border, paddingTop: "0.75rem" }}>
     <div style={{ fontSize: "0.65rem", fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.08em", color: C.inkSoft, marginBottom: "0.55rem" }}>
-     Top Comparable Listings
+     Candidate Listings — Not Verified Comparables
     </div>
     <div>
   <div style={{ fontSize: "0.62rem", color: C.inkSoft }}>Outliers Removed</div>
@@ -929,9 +923,9 @@ const displayMeta =
 </a>
   <div style={{ fontSize: "0.64rem", color: C.inkSoft, marginTop: "0.25rem" }}>
     {item.matchScore >= 140
-  ? "High Confidence Match"
+  ? "Local candidate match"
   : item.matchScore >= 90
-  ? "Good Match"
+  ? "Local candidate match"
   : "Weak Match"}
   </div>
   {item.matchReasons && item.matchReasons.length > 0 && (
@@ -976,15 +970,15 @@ const displayMeta =
 
   <div style={{ display: "grid", gap: "0.4rem" }}>
     <div style={{ fontSize: "0.82rem", color: (data.expectedNetValue || 0) >= 0 ? C.green : C.red, fontWeight: 600 }}>
-  {(data.expectedNetValue || 0) >= 0 ? "✓" : "✕"} Expected net is {data.expectedNetValue != null ? ((data.expectedNetValue >= 0 ? "+$" : "-$") + safeMoney(Math.abs(data.expectedNetValue))) : "unknown"}
+  {data.expectedNetValue == null ? "—" : data.expectedNetValue >= 0 ? "✓" : "✕"} Expected net is {data.expectedNetValue != null ? ((data.expectedNetValue >= 0 ? "+$" : "-$") + safeMoney(Math.abs(data.expectedNetValue))) : "unknown"}
 </div>
 
     <div style={{ fontSize: "0.82rem", color: (data.psa10Probability || 0) >= 50 ? C.green : C.red, fontWeight: 600 }}>
-      {(data.psa10Probability || 0) >= 50 ? "✓" : "✕"} PSA 10 odds are {data.psa10Probability != null ? data.psa10Probability + "%" : "unknown"}
+      {data.psa10Probability == null ? "—" : data.psa10Probability >= 50 ? "✓" : "✕"} PSA 10 odds are {data.psa10Probability != null ? data.psa10Probability + "%" : "unknown"}
     </div>
 
     <div style={{ fontSize: "0.82rem", color: (profit || 0) >= 0 ? C.green : C.red, fontWeight: 600 }}>
-      {(profit || 0) >= 0 ? "✓" : "✕"} PSA 10 upside is {(profit >= 0 ? "+$" : "-$") + safeMoney(Math.abs(profit))}
+      {data.gradingUpside == null ? "—" : profit >= 0 ? "✓" : "✕"} PSA 10 upside is {data.gradingUpside == null ? "—" : (profit >= 0 ? "+$" : "-$") + safeMoney(Math.abs(profit))}
     </div>
   </div>
 </div>
@@ -1002,7 +996,7 @@ const displayMeta =
             return (
               <div key={b.label} style={{ background: b.featured ? C.goldLight : C.cream, border: "1.5px solid " + (b.featured ? C.gold : C.border), borderRadius: 12, padding: "0.85rem 0.75rem", textAlign: "center" }}>
                 <div style={{ fontSize: "0.65rem", fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.06em", color: b.featured ? C.amber : C.inkSoft, marginBottom: "0.3rem" }}>{b.label}</div>
-                <div style={{ fontFamily: "'Playfair Display', serif", fontSize: "1.3rem", fontWeight: 700, color: b.featured ? C.amber : C.ink }}>{"$" + safeMoney(b.val)}</div>
+                <div style={{ fontFamily: "'Playfair Display', serif", fontSize: "1.3rem", fontWeight: 700, color: b.featured ? C.amber : C.ink }}>{b.val == null ? "—" : "$" + safeMoney(b.val)}</div>
               </div>
             );
           })}
@@ -1016,19 +1010,19 @@ const displayMeta =
   <div style={{ display: "grid", gap: "0.45rem", fontSize: "0.82rem", color: C.inkMid }}>
     <div style={{ display: "flex", justifyContent: "space-between" }}>
       <span>Expected Graded Value</span>
-      <strong style={{ color: C.ink }}>{"$" + safeMoney(data.expectedGradedValue || 0)}</strong>
+      <strong style={{ color: C.ink }}>{data.expectedGradedValue == null ? "—" : "$" + safeMoney(data.expectedGradedValue)}</strong>
     </div>
 
     <div style={{ display: "flex", justifyContent: "space-between" }}>
   <span>Current Raw Value</span>
   <strong style={{ color: C.red }}>
-    {"-$" + safeMoney(data.rawValue ?? 0)}
+    {data.rawValue == null ? "—" : "-$" + safeMoney(data.rawValue)}
   </strong>
 </div>
 
     <div style={{ display: "flex", justifyContent: "space-between" }}>
       <span>PSA Submission Fee</span>
-      <strong style={{ color: C.red }}>{"-$" + safeMoney(data.psaFee || 80)}</strong>
+      <strong style={{ color: C.red }}>{data.financialDecision?.allowed && Number.isFinite(data.psaFee) ? "-$" + safeMoney(data.psaFee) : "Unavailable"}</strong>
     </div>
 
     <div style={{ height: 1, background: C.border, margin: "0.35rem 0" }} />
@@ -1044,7 +1038,7 @@ const displayMeta =
   </div>
 
   <div style={{ fontSize: "0.7rem", color: C.inkSoft, marginTop: "0.6rem", fontStyle: "italic" }}>
-    Provisional modeled economics, not sold-comp verified. PSA 10 and PSA 9 estimates have not been validated against exact-card sold transactions. The current calculation excludes outcomes below PSA 9 and selling expenses.
+    {WITHHELD_MESSAGE}
   </div>
 </div>        
         {/* Best use case */}
@@ -1132,7 +1126,11 @@ export default function App() {
   const [email,           setEmail]           = useState("");
   const [waitlistEmail,   setWaitlistEmail]   = useState("");
   const [loading,         setLoading]         = useState(false);
+  const [identityResult,setIdentityResult] = useState(null);
+  const [activeStage,setActiveStage] = useState('full');
+  const scanInFlight = useRef(false);
   const [results,         setResults]         = useState([]);
+  const [failedScanDiagnostic,setFailedScanDiagnostic] = useState(null);
   const [imageAnalysis,   setImageAnalysis]   = useState(null);   // latest image analysis result
   const [error,           setError]           = useState("");
   const [rateLimitMsg,    setRateLimitMsg]    = useState("");
@@ -1157,7 +1155,8 @@ const emailRef    = useRef(null);
 
   useEffect(function() {
     setHistory(lsGet(LS_HISTORY) || []);
-    setSavedReports(lsGet(LS_SAVED) || []);
+    const stored = lsGet(LS_SAVED);
+    setSavedReports(Array.isArray(stored) ? stored.map(protectFinancialReport) : []);
   }, []);
 
   // Revoke object URLs on unmount to avoid memory leaks
@@ -1167,39 +1166,44 @@ const emailRef    = useRef(null);
     };
   }, [imagePreview]);
 
-  function handleImageSelect(file) {
+  // The uploaded file must be a validated, oriented JPEG before it can be previewed
+  // or submitted. Keep both sides and all processing failures fail-closed.
+  const [processingImages, setProcessingImages] = useState(0);
+  const [photoErrors, setPhotoErrors] = useState({ front: false, back: false });
+  const selectionVersions = useRef({ front: 0, back: 0 });
+
+  async function selectPhoto(file, side) {
     if (!file) return;
-    // Only allow images
-    if (!file.type.startsWith("image/")) { setError("Please select an image file (JPEG, PNG, WebP, etc.)"); return; }
-    // 5 MB client-side guard
-    if (file.size > 5 * 1024 * 1024) { setError("Image must be under 5 MB."); return; }
-    if (imagePreview) URL.revokeObjectURL(imagePreview);
-    setImageFile(file);
-    setImagePreview(URL.createObjectURL(file));
+    const version = ++selectionVersions.current[side];
+    const setFile = side === "front" ? setImageFile : setBackImageFile;
+    const setPreview = side === "front" ? setImagePreview : setBackImagePreview;
+    setFile(null);
+    setPreview(previous => {
+      if (previous) URL.revokeObjectURL(previous);
+      return null;
+    });
+    setPhotoErrors(previous => ({ ...previous, [side]: false }));
+    setProcessingImages(n => n + 1);
     setError("");
+    try {
+      const normalized = await normalizeMobileImage(file);
+      if (selectionVersions.current[side] !== version) return;
+      setFile(normalized);
+      setPreview(URL.createObjectURL(normalized));
+    } catch (error) {
+      if (selectionVersions.current[side] === version) {
+        setPhotoErrors(previous => ({ ...previous, [side]: true }));
+        setError(error instanceof UploadError ? error.message : "Photo processing failed. Please choose another photo.");
+      }
+    } finally {
+      setProcessingImages(n => n - 1);
+    }
   }
-
-  function handleBackImageSelect(file) {
-  if (!file) return;
-
-  // Only allow images
-  if (!file.type.startsWith("image/")) {
-    setError("Please select an image file (JPEG, PNG, WebP, etc.)");
-    return;
-  }
-
-  // 5 MB client-side guard
-  if (file.size > 5 * 1024 * 1024) {
-    setError("Back image must be under 5 MB.");
-    return;
-  }
-
-  if (backImagePreview) URL.revokeObjectURL(backImagePreview);
-
-  setBackImageFile(file);
-  setBackImagePreview(URL.createObjectURL(file));
-  setError("");
-}
+  function handleImageSelect(file) { return selectPhoto(file, "front"); }
+  function handleBackImageSelect(file) { return selectPhoto(file, "back"); }
+  useEffect(() => () => {
+    if (backImagePreview) URL.revokeObjectURL(backImagePreview);
+  }, [backImagePreview]);
 
   function handleImageDrop(e) {
     e.preventDefault();
@@ -1208,6 +1212,8 @@ const emailRef    = useRef(null);
   }
 
   function clearImage() {
+    selectionVersions.current.front++;
+    setPhotoErrors(previous => ({ ...previous, front: false }));
     if (imagePreview) URL.revokeObjectURL(imagePreview);
     setImageFile(null);
     setImagePreview(null);
@@ -1223,6 +1229,7 @@ const emailRef    = useRef(null);
   }
   function clearHistory() { lsSet(LS_HISTORY, []); setHistory([]); }
   function saveReport(data) {
+    data=protectFinancialReport(data);
     setSavedReports(function(prev) {
       const deduped = prev.filter(function(r) { return r.cardTitle !== data.cardTitle; });
       const next = [Object.assign({}, data, { savedAt: Date.now() }), ...deduped].slice(0, 10);
@@ -1242,16 +1249,20 @@ const emailRef    = useRef(null);
     setResults([]); setImageAnalysis(null); setError(""); setRateLimitMsg("");
   }
 
-  async function handleSubmit() {
-    if (!cardName.trim() && !imageFile) return;
+  async function handleSubmit(mode='full') {
+    mode=mode==='identity'?'identity':'full';
+    if(scanInFlight.current||mode==='identity'&&!imageFile)return;
+    if (loading || processingImages || photoErrors.front || photoErrors.back || (!cardName.trim() && !imageFile)) return;
     if (email && !isValidEmail(email)) { setError("Please enter a valid email address."); return; }
-    setLoading(true); setError(""); setRateLimitMsg(""); setEmailConfirm(false); setImageAnalysis(null);
+    scanInFlight.current=true;setActiveStage(mode);if(mode==='identity')setIdentityResult(null);
+    setLoading(true); setError(""); setRateLimitMsg(""); setEmailConfirm(false); setImageAnalysis(null); setFailedScanDiagnostic(null);
 
     try {
-      let res;
+      let result;
       if (imageFile) {
         // Multipart/form-data when image is present
         const formData = new FormData();
+        if(mode==='identity')formData.append("mode","identity");
         formData.append("cardName", cardName.trim());
         formData.append("cardType",  cardType);
         formData.append("cardSet",   cardSet.trim());
@@ -1261,35 +1272,34 @@ const emailRef    = useRef(null);
         if (backImageFile) {
   formData.append("backImage", backImageFile);
 }
-        res = await fetch("/api/predict", { method: "POST", body: formData });
+        await assertUploadBudget(formData);
+        result = await requestPrediction({ method: "POST", body: formData });
       } else {
         // JSON when no image
-        res = await fetch("/api/predict", {
+        result = await requestPrediction({
           method: "POST", headers: { "Content-Type": "application/json" },
           body: JSON.stringify({ cardName: cardName.trim(), cardType, cardSet: cardSet.trim(), condition, email: email.trim() || undefined }),
         });
       }
 
-      const data = await res.json();
-      console.log("PREDICT RESPONSE:", data);
+      const { response: res, data } = result;
+      if(!res.ok){const failed={};rememberScanDiagnostic(failed,res);setFailedScanDiagnostic(failed);}
       if (res.status === 429) { setRateLimitMsg(data.message || "Rate limit exceeded. Please try again later."); setLoading(false); return; }
       if (!res.ok) { setError(data.error || "Something went wrong. Please try again."); setLoading(false); return; }
 
+      if(mode==='identity'){
+        const identified=reportFromResponse(data);rememberScanDiagnostic(identified,res);setIdentityResult(identified);
+        if(data.remaining!=null)setRemaining(data.remaining);
+        return;
+      }
       setResults(function(prev) {
-  const newReport = {
-  ...data.prediction,
-  marketData: data.marketData || null,
-  imageAnalysis: data.imageAnalysis || null,
-  canonicalCard: data.canonicalCard || null,
-  catalogCrossCheck: data.catalogCrossCheck || null,
-  soldIdentityGate: data.soldIdentityGate || null,
-  identityReviewToken: data.identityReviewToken || null,
-};
+  const newReport = reportFromResponse(data);
+  rememberScanDiagnostic(newReport,res);
 
   return [newReport, ...prev].slice(0, 5);
 });
 
-if (data.imageAnalysis) setImageAnalysis(data.imageAnalysis);
+if (data.imageAnalysis) setImageAnalysis(protectFinancialReport(data).imageAnalysis);
       if (data.remaining != null) setRemaining(data.remaining);
       if (data.emailSaved) { setEmailConfirm(true); track("waitlist_signup"); }
       addToHistory(cardName.trim() || "Image upload", cardType, cardSet.trim());
@@ -1301,8 +1311,8 @@ if (data.imageAnalysis) setImageAnalysis(data.imageAnalysis);
 });
     
 
-    } catch { setError("Network error — check your connection and try again."); }
-    finally   { setLoading(false); }
+    } catch (error) { const response=predictionFailureResponse(error);if(response){const failed={};rememberScanDiagnostic(failed,response);setFailedScanDiagnostic(failed);}setError(error instanceof UploadError ? error.message+(error.scanCode?" (Reference: "+error.scanCode+")":"") : "Unexpected report display error. No financial recommendation was generated."); }
+    finally   { scanInFlight.current=false;setLoading(false); }
   }
 
   async function handleWaitlistSubmit() {
@@ -1534,10 +1544,12 @@ if (data.imageAnalysis) setImageAnalysis(data.imageAnalysis);
                 <label style={labelSt}>Card Name</label>
                 <input ref={cardNameRef} value={cardName} onChange={function(e) { setCardName(e.target.value); }} onKeyDown={function(e) { if (e.key === "Enter") handleSubmit(); }} placeholder="e.g. Charizard Holo, LeBron Rookie, Black Lotus" style={inputSt} />
               </div>
-              <button onClick={handleSubmit} disabled={loading || (!cardName.trim() && !imageFile)} style={{ padding: "0.85rem 1.75rem", background: loading || (!cardName.trim() && !imageFile) ? "#94a3b8" : C.ink, color: "#fff", border: "none", borderRadius: 12, fontSize: "1rem", fontWeight: 700, cursor: loading || (!cardName.trim() && !imageFile) ? "not-allowed" : "pointer", whiteSpace: "nowrap", minWidth: 155, display: "flex", alignItems: "center", justifyContent: "center", gap: "0.5rem" }}>
+              <button onClick={()=>handleSubmit()} disabled={loading || processingImages > 0 || photoErrors.front || photoErrors.back || (!cardName.trim() && !imageFile)} style={{ padding: "0.85rem 1.75rem", background: loading || (!cardName.trim() && !imageFile) ? "#94a3b8" : C.ink, color: "#fff", border: "none", borderRadius: 12, fontSize: "1rem", fontWeight: 700, cursor: loading || (!cardName.trim() && !imageFile) ? "not-allowed" : "pointer", whiteSpace: "nowrap", minWidth: 155, display: "flex", alignItems: "center", justifyContent: "center", gap: "0.5rem" }}>
                 {loading ? (<><span style={{ width: 18, height: 18, border: "2px solid rgba(255,255,255,0.4)", borderTopColor: "#fff", borderRadius: "50%", animation: "spin 0.7s linear infinite", flexShrink: 0 }} />Analyzing...</>) : "Analyze My Card"}
               </button>
             </div>
+            <ScanDiagnostics />
+            {failedScanDiagnostic && <ScanDiagnostics report={failedScanDiagnostic} />}
             {/* Condition */}
             <div style={{ marginBottom: "0.9rem" }}>
               <label style={labelSt}>
@@ -1581,23 +1593,23 @@ if (data.imageAnalysis) setImageAnalysis(data.imageAnalysis);
                 >
                   <div style={{ fontSize: "1.5rem", marginBottom: "0.4rem" }}>📷</div>
                   <div style={{ fontSize: "0.85rem", fontWeight: 600, color: C.inkMid, marginBottom: "0.2rem" }}>Upload card photo for AI photo grading</div>
-                  <div style={{ fontSize: "0.75rem", color: C.inkSoft }}>Click to browse or drag and drop · JPEG, PNG, WebP · Max 5 MB</div>
+                  <div style={{ fontSize: "0.75rem", color: C.inkSoft }}>Click to browse or drag and drop · JPEG, PNG, WebP, HEIF/HEIC · Max 25 MB</div>
                 </div>
               )}
               <input
                 ref={fileInputRef}
                 type="file"
-                accept="image/*"
+                accept="image/*,.heic,.heif"
                 style={{ display: "none" }}
-                onChange={function(e) { handleImageSelect(e.target.files && e.target.files[0]); }}
+                onChange={function(e) { const file = e.target.files && e.target.files[0]; e.target.value = ""; handleImageSelect(file); }}
               />
               <input
   ref={backFileInputRef}
   type="file"
-  accept="image/*"
+  accept="image/*,.heic,.heif"
   style={{ display: "none" }}
   onChange={function(e) {
-    handleBackImageSelect(e.target.files && e.target.files[0]);
+    const file = e.target.files && e.target.files[0]; e.target.value = ""; handleBackImageSelect(file);
   }}
 />
             </div>
@@ -1757,6 +1769,12 @@ if (data.imageAnalysis) setImageAnalysis(data.imageAnalysis);
             )}
           </div>
 
+          <div style={{marginTop:16,display:'flex',gap:12,alignItems:'center',flexWrap:'wrap'}}>
+            <button type="button" onClick={()=>handleSubmit('identity')} disabled={loading||processingImages>0||!!photoErrors.front||!!photoErrors.back||!imageFile} style={{padding:'0.85rem 1.75rem',borderRadius:12,border:'1px solid #d2b48c',background:C.ink,color:'#fff',fontWeight:700}}>Identify Card</button>
+            <span style={{fontSize:'0.8rem',color:C.inkSoft}}>Front photo required; back optional. Identification only. Analyze My Card remains the separate full scan.</span>
+          </div>
+          {identityResult&&!loading&&<IdentityResult report={identityResult} onSave={saveReport}/>}
+
           {/* Remaining */}
           {remaining !== null && (
             <p style={{ fontSize: "0.75rem", color: C.inkSoft, textAlign: "center", marginTop: "0.75rem" }}>
@@ -1768,7 +1786,7 @@ if (data.imageAnalysis) setImageAnalysis(data.imageAnalysis);
           {loading && (
             <div style={{ textAlign: "center", padding: "2.5rem 1rem" }}>
               <div style={{ width: 40, height: 40, border: "3px solid " + C.border, borderTopColor: C.gold, borderRadius: "50%", animation: "spin 0.7s linear infinite", margin: "0 auto 1rem" }} />
-              <p style={{ color: C.inkSoft, fontSize: "0.9rem" }}>{imageFile ? "Analyzing card values and photo..." : "Pulling market data and grading intel..."}</p>
+              <p style={{ color: C.inkSoft, fontSize: "0.9rem" }}>{activeStage==='identity'?"Reading printed card identity and checking catalog evidence...":imageFile ? "Analyzing card values and photo..." : "Pulling market data and grading intel..."}</p>
             </div>
           )}
           {/* Rate limit */}
@@ -1782,7 +1800,7 @@ if (data.imageAnalysis) setImageAnalysis(data.imageAnalysis);
           {error && <div style={{ marginTop: "1.25rem", background: C.redLight, border: "1px solid #fca5a5", borderRadius: 12, padding: "1rem 1.25rem", color: C.red, fontSize: "0.875rem" }}>{error}</div>}
 
           {/* Empty state */}
-          {!loading && results.length === 0 && !error && !rateLimitMsg && <EmptyState />}
+          {!loading && !identityResult && results.length === 0 && !error && !rateLimitMsg && <EmptyState />}
 
           {/* Results */}
           {results.length > 0 && !loading && (
@@ -1791,7 +1809,8 @@ if (data.imageAnalysis) setImageAnalysis(data.imageAnalysis);
                 {results.length === 1 ? "Your Report" : "Recent Reports (" + results.length + ")"}
               </div>
               <div style={{ display: "flex", flexDirection: "column", gap: "1.25rem" }}>
-               {results.map(function(r, i) {
+               {results.map(function(saved, i) {
+  const r = protectFinancialReport(saved);
   return (
     <div key={i}>
       <ResultCard
@@ -1801,10 +1820,11 @@ if (data.imageAnalysis) setImageAnalysis(data.imageAnalysis);
         isSaved={isSavedReport(r)}
       />
 
+      <ScanDiagnostics report={saved} />
       {r.imageAnalysis && (
         <>
           <IdentityReviewCard report={r} />
-          <ImageAnalysisCard data={r.imageAnalysis} />
+          <ImageAnalysisCard report={r} />
         </>
       )}
     </div>
@@ -1985,7 +2005,7 @@ if (data.imageAnalysis) setImageAnalysis(data.imageAnalysis);
                   return (
                     <div key={r.cardTitle} style={{ display: "flex", alignItems: "center", gap: "0.75rem", background: C.white, border: "1px solid " + C.border, borderRadius: 12, padding: "0.75rem 1rem" }}>
                       <div style={{ flex: 1, minWidth: 0 }}>
-                        <div style={{ fontSize: "0.875rem", fontWeight: 700, color: C.ink, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{r.cardTitle}</div>
+                        <div style={{ fontSize: "0.875rem", fontWeight: 700, color: C.ink, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{reportTitle(r)}</div>
                         <div style={{ display: "flex", gap: "0.75rem", marginTop: "0.2rem", flexWrap: "wrap" }}>
                           {v && <span style={{ fontSize: "0.68rem", fontWeight: 700, background: v.bg, color: v.color, padding: "0.1rem 0.5rem", borderRadius: 100 }}>{v.label}</span>}
                           {r.psa10Probability != null && <span style={{ fontSize: "0.72rem", color: C.inkSoft }}>~{r.psa10Probability}% PSA 10</span>}
@@ -2000,7 +2020,7 @@ if (data.imageAnalysis) setImageAnalysis(data.imageAnalysis);
     Score {r.gemPredictScore}/99
   </span>
 )}
-{r.marketData?.marketSummary?.rawMedian != null && (
+{r.financialDecision?.allowed && r.marketData?.marketSummary?.rawMedian != null && (
   <span style={{ fontSize: "0.72rem", color: C.green, fontWeight: 700 }}>
     Ask ${safeMoney(r.marketData.marketSummary.rawMedian)}
   </span>
