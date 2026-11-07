@@ -29,7 +29,7 @@ Completed accuracy tests: 0. Historical observations: 5 across 2 cards (excluded
 | GP-ID-005: Pikachu ex 149/128 | pokemon_sir | none | unassessable | unassessable | private_front_photo, back_availability, independent_physical_label_review, foil_and_stamp_photo_review, reviewed_photo_unavailable, reviewed_core_label_unavailable, no_cohort_scan |
 | GP-ID-006: Rosa’s Encouragement 114/088 | pokemon_other_rarity | none | unassessable | unassessable | private_front_back_photos, year_manufacturer_product_review, independent_physical_label_review, exact_printing_review, requested_SIR_slot_not_filled_by_this_reference, reviewed_photo_unavailable, reviewed_core_label_unavailable, no_cohort_scan |
 | GP-ID-007: Snivy 5/25 | pokemon_promo | none | unassessable | unassessable | private_front_back_photos, year_manufacturer_product_review, independent_physical_label_review, exact_printing_review, reviewed_photo_unavailable, reviewed_core_label_unavailable, no_cohort_scan |
-| GP-ID-008: Babe Ruth SV-40 | sports_unclassified | none | unassessable | unassessable | private_front_back_photos, year_manufacturer_product_review, independent_physical_label_review, exact_printing_review, reviewed_photo_unavailable, reviewed_core_label_unavailable, no_cohort_scan |
+| GP-ID-008: Babe Ruth SV-40 | sports_insert | none | unassessable | unassessable | photo_to_scan_linkage_unestablished, photo_dimensions_differ_from_scan, exact_physical_printing_unresolved, reviewed_photo_unavailable, no_cohort_scan |
 | GP-ID-009: 8 Bit Ballers Bryce Harper BB-11 | sports_unclassified | none | unassessable | unassessable | private_front_back_photos, year_manufacturer_product_review, independent_physical_label_review, exact_printing_review, reviewed_photo_unavailable, reviewed_core_label_unavailable, no_cohort_scan |
 | GP-ID-010: It Take Two Sand Glitter 52 | sports_parallel | none | unassessable | unassessable | private_front_back_photos, year_manufacturer_product_review, independent_physical_label_review, exact_printing_review, reviewed_photo_unavailable, reviewed_core_label_unavailable, no_cohort_scan |
 | GP-ID-011: Josh Dix Bowman 1st Green Auto /99 PA-JD | sports_serial_or_auto | none | unassessable | unassessable | private_front_back_photos, year_manufacturer_product_review, independent_physical_label_review, exact_printing_review, reviewed_photo_unavailable, reviewed_core_label_unavailable, no_cohort_scan |
@@ -64,7 +64,8 @@ Completed accuracy tests: 0. Historical observations: 5 across 2 cards (excluded
 | pokemon_sir | 1 | 0 | 0 | 0 |
 | pokemon_other_rarity | 1 | 0 | 0 | 0 |
 | pokemon_promo | 1 | 0 | 0 | 0 |
-| sports_unclassified | 3 | 0 | 0 | 0 |
+| sports_insert | 1 | 0 | 0 | 0 |
+| sports_unclassified | 2 | 0 | 0 | 0 |
 | sports_parallel | 1 | 0 | 0 | 0 |
 | sports_serial_or_auto | 1 | 0 | 0 | 0 |
 

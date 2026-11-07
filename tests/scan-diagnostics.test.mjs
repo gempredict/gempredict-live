@@ -56,7 +56,8 @@ test('complete handler distinguishes missing observations from rejected evidence
 test('front-only and front/back diagnostics use validated images and retain accurate stage counts',async()=>{
  const observation={attribute:'surface',code:'scratches',certainty:'confirmed',evidence:{side:'back',region:[0.1,0.1,0.2,0.2],cue:'surface_line',confidence:0.95}};
  const both=await captured({vision:{...vision,visualObservations:[observation]}});
- assert.deepEqual(both.d.images.front,{presence:'present',validation:'passed',processing:'validated_prepared_upload',width:30,height:40,format:'jpeg'});
+ const {preparedSha256,...imageMetadata}=both.d.images.front;assert.match(preparedSha256,/^[a-f0-9]{64}$/);
+ assert.deepEqual(imageMetadata,{presence:'present',validation:'passed',processing:'validated_prepared_upload',width:30,height:40,format:'jpeg'});
  assert.equal(both.d.model.perSide.back,1);assert.equal(both.d.normalization.states.surface,'confirmed_visible_defect');
  const front=await captured({back:false,vision:{...vision,visualObservations:[observation]}});
  assert.equal(front.d.images.back.presence,'absent');assert.deepEqual(front.d.model.observations[0].reasons,['photo_not_provided']);assert.equal(front.d.normalization.states.surface,'unassessable');

@@ -4,7 +4,7 @@ This is an offline benchmark, not a scanner stage or an accuracy claim. Baseline
 
 ## Current inventory and status
 
-`manifest.json` contains the twelve physical cards reported by the owner. Names and stratum assignments are provisional; none is independently reviewed physical ground truth yet. No real photographs are retained in this workspace. Independent catalog reference facts are stored separately from physical labels.
+`manifest.json` contains the twelve physical cards reported by the owner. Most names and stratum assignments remain provisional. GP-ID-008 now has a photo/checklist-reviewed partial label, while its exact printing and photo-to-scan linkage remain unresolved. Its supplied photos and diagnostic are retained only in the ignored private directory; the other eleven physical labels remain unreviewed. Independent catalog reference facts are stored separately from physical labels.
 
 | ID | Owner-reported card | Evidence / next requirement |
 | --- | --- | --- |
@@ -15,15 +15,15 @@ This is an offline benchmark, not a scanner stage or an accuracy claim. Baseline
 | 005 | Pikachu ex 149/128 | One retained owner-summary observation. Reference facts: 2026 30th Celebration, SIR. Physical-copy review pending. |
 | 006 | Rosa’s Encouragement 114/088 | Pinned TCGdex reference: 2026 Perfect Order, **Ultra Rare**, not SIR. Language/physical printing pending. |
 | 007 | Snivy 5/25 | Product, year, language and foil not independently reviewed. Do not assume one printing from this number alone. |
-| 008 | Babe Ruth SV-40 | Year/product and insert/parallel unresolved. Sports unclassified, not automatically a base card. |
+| 008 | Babe Ruth SV-40 | Reviewed: 2025 Topps Allen & Ginter, Sweet Victory insert. Exact printing and scan linkage unresolved; see BABE_RUTH_FIRST_ATTEMPT.md. |
 | 009 | 8 Bit Ballers Bryce Harper BB-11 | Exact product/year/printing unresolved; insert name does not establish a parallel. |
 | 010 | “It Take Two” Sand Glitter 52 | Preserve original wording. Need subject(s), manufacturer, year, product and exact treatment. |
 | 011 | Josh Dix Bowman 1st Green Auto /99 PA-JD | Need exact product/year, autograph type and full stamped numerator/denominator. PA-JD and the copy serial are separate identifiers. |
 | 012 | Paul Skenes Nice List MNL-11 | Exact year/product/printing unresolved; not automatically base or parallel. |
 
-All twelve need private front/back photographs or a confirmed front-only limitation, independent physical-label review and a new explicitly approved baseline scan. The source-backed facts for six Pokémon references do not by themselves establish the identity of any photographed copy.
+The remaining eleven need private photographs, physical-label review and separately approved baseline scans. Babe Ruth has a completed privately imported attempt and reviewed photos, but the supplied image dimensions differ from the scan metadata and no request-bound image hashes were retained; it cannot count toward accuracy. The source-backed facts for six Pokémon references do not by themselves establish the identity of any photographed copy.
 
-The available inventory is **7 Pokémon / 5 sports**, whereas the original target is 8/4. `target-manifest.json` preserves the original 2 standard, 2 IR, 2 SIR, 2 promo/unusual, 1 sports base, 2 sports parallel, 1 serial/autograph design. `manifest.json` records the actual inventory cohort, explicitly reports the deviation, keeps three sports inserts/unclassified and places Rosa in another-rarity coverage. Completing the original mix requires another SIR, another Pokémon promo/unusual-number example and confirmation/replacement of sports base/parallel selections. Do not report the available cohort as satisfying those strata.
+The available inventory is **7 Pokémon / 5 sports**, whereas the original target is 8/4. `target-manifest.json` preserves the original 2 standard, 2 IR, 2 SIR, 2 promo/unusual, 1 sports base, 2 sports parallel, 1 serial/autograph design. `manifest.json` records the actual inventory cohort, explicitly reports the deviation, keeps Babe Ruth as a reviewed insert and two sports entries unclassified and places Rosa in another-rarity coverage. Completing the original mix requires another SIR, another Pokémon promo/unusual-number example and confirmation/replacement of sports base/parallel selections. Do not report the available cohort as satisfying those strata.
 
 ## Reproduce the initial report
 
@@ -43,9 +43,9 @@ Historical context commits are preserved as `contextCommit`. Their exact deploye
 Keep photos and original exported diagnostics outside Git, or under ignored `benchmarks/identity/private/`. This benchmark never requests owner keys, reads credentials, submits scans, decodes diagnostic tickets or calls a provider. Existing owner-authorized Preview export is the source of any diagnostics; do not bypass its authorization.
 
 1. Review the physical card against independent catalog/checklist references **before** examining model output. Record core fields plus each applicable printing attribute. Record reviewed absence/not-applicable explicitly rather than guessing.
-2. Store a private photo pair and record its SHA-256 values. The manifest's `photos.front.status` becomes `retained_and_reviewed` only after local review. A scan must carry the same front hash and, if used, back hash. Never commit images, base64, EXIF or signed upload URLs.
+2. Store a private photo pair and record its SHA-256 values. The manifest's `photos.front.status` becomes `retained_and_reviewed` only after local review. A scan must carry the same front hash and, if used, back hash, independently retained in its owner-authorized prepared-image diagnostics. Matching operator-supplied hashes alone cannot establish linkage. Never commit images, base64, EXIF or signed upload URLs.
 3. Set ground truth to `independently_reviewed`, with reviewer, review date, `fields` and field-specific independent `sources`. Each known field has `{status:"known", value:...}`. Unknowns remain `{status:"unresolved"}`. Not-applicable requires its own review/support. `referenceFacts` are discovery evidence, not automatically promoted labels. Preserve full collector denominators and sports prefixes.
-4. After separate owner approval, manually run **Identify Card** once in protected Preview. Record the deployed commit, photo pair, scan outcome and any failure. Do not retry automatically or invoke full scan/condition/marketplace.
+4. After separate owner approval, manually run **Identify Card** once in protected Preview. Record the deployed commit, exact prepared photo pair actually submitted, scan outcome and any failure. Original HEIC/JPEG files may differ from prepared upload bytes; do not substitute their hashes. Do not retry automatically or invoke full scan/condition/marketplace.
 5. Save the existing sanitized report/export locally and import it:
 
 ```sh
@@ -53,7 +53,7 @@ node scripts/identity-benchmark.mjs import \
   --input benchmarks/identity/private/export.json \
   --output benchmarks/identity/private/scan-001.json \
   --id RUN-001 --card GP-ID-003 --cohort phase2-initial --attempt 1 \
-  --front-hash YOUR_PRIVATE_PHOTO_SHA256
+  --front-file benchmarks/identity/private/prepared-front.jpeg
 ```
 
 The importer allowlists identity and diagnostic fields, strips unknown payloads, rejects raw provider messages, hashes the capture for provenance and refuses overwriting an existing output. Missing cost/timing/candidates stay unknown. It does not infer language, grade, foil or rarity from a title. Review the resulting selected identity text before any sharing: identity observations are still owner diagnostic information. Private inputs should remain private even after sanitization.
@@ -67,7 +67,7 @@ node scripts/identity-benchmark.mjs report \
   --output benchmarks/identity/private/results
 ```
 
-Record actual billing-backed USD cost and measured request latency only when available; the importer does not substitute CLI runtime, token caps or estimates. Include failed paid attempts. Current Preview diagnostics retain numeric token usage but not complete per-scan billing or duration. Historical partial usage cannot establish total cost. Full candidate lists are not retained by current report exports, so the importer deliberately leaves candidate recall unassessable. Selected references are preserved without being misrepresented as full candidate retrieval.
+Record actual billing-backed USD cost and measured request latency only when available; the importer does not substitute CLI runtime, token caps or estimates. Include failed paid attempts. Current Preview diagnostics retain numeric token usage but not complete per-scan billing or duration. Historical partial usage cannot establish total cost. Legacy exports with no prepared-image digests remain unlinked, including the first Babe Ruth scan. Full candidate lists are not retained by current report exports, so the importer deliberately leaves candidate recall unassessable. Selected references are preserved without being misrepresented as full candidate retrieval.
 
 ## Scoring and denominators
 

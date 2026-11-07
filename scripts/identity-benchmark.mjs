@@ -15,8 +15,9 @@ export function importScanEvidence(raw,{id,cardId,cohortId,attemptIndex,photoHas
  const original=diagnostic?raw.model?.originalIdentity:raw.originalIdentityObservation;
  const candidate=raw.identityVerification?.catalog?.candidate;
  const technical=diagnostic?{validCompletedResponse:raw.stages?.identity==='completed'&&raw.responseStatus===200&&raw.visionStatus==='normalized',httpStatus:raw.responseStatus,failureCode:raw.failureCode,phase:raw.identityValidation?.phase,rule:raw.identityValidation?.rule,stopReason:raw.identityCompletion?.stopReason}:{validCompletedResponse:raw.success===true,httpStatus:raw.success?200:null,failureCode:raw.errorCode||raw.code};
- const usage=raw.identityCompletion?.usage;
- return sanitizeObservation({id,cardId,cohortId,attemptIndex,evidenceDigest,evidenceKind:'live_scan',deploymentCommit:diagnostic?raw.commit:null,scanId:raw.scanId,photoHashes,
+ const u=raw.identityCompletion?.usage;
+ const usage=u?{inputTokens:u.inputTokens,outputTokens:u.outputTokens,cacheReadTokens:u.cacheReadInputTokens,cacheCreationTokens:u.cacheCreationInputTokens}:null;
+ return sanitizeObservation({id,cardId,cohortId,attemptIndex,evidenceDigest,evidenceKind:'live_scan',deploymentCommit:diagnostic?raw.commit:null,scanId:raw.scanId,photoHashes,photoLinkage:{method:diagnostic?'diagnostic_prepared_sha256':null,preparedHashes:{front:diagnostic?raw.images?.front?.preparedSha256:null,back:diagnostic?raw.images?.back?.preparedSha256:null},backRequired:diagnostic?raw.images?.back?.presence==='present':null},
   technical,originalAI:Object.fromEntries(Object.entries(fields).map(([key,field])=>[key,original?.[field]])),modelConfidence:original?.identityConfidence??raw.model?.uncertainty?.identityConfidence,
   canonical:canonical(diagnostic?raw.canonicalIdentity:raw.canonicalCard),
   printedReadings:diagnostic?[...(raw.identity?.printed?.setMarkings||[]).map(r=>({...r,field:'setCode'})),...(raw.model?.uncertainty?.readings||[])]:original?.identityReadings,
@@ -32,7 +33,8 @@ export function main(args){
  const command=args[0],options={};for(let i=1;i<args.length;i+=2){if(!args[i]?.startsWith('--')||args[i+1]==null)throw Error('benchmark_arguments_invalid');options[args[i].slice(2)]=args[i+1];}
  if(command==='import'){
   if(!options.input||!options.output||!options.id||!options.card||!options.cohort||!options.attempt)throw Error('benchmark_import_arguments_required');
-  const result=importScanEvidence(read(options.input),{id:options.id,cardId:options.card,cohortId:options.cohort,attemptIndex:Number(options.attempt),evidenceDigest:createHash('sha256').update(readFileSync(options.input)).digest('hex'),photoHashes:{front:options['front-hash'],back:options['back-hash']}});
+  const photoHash=side=>{const file=options[side+'-file'],declared=options[side+'-hash'];if(!file)return declared;const actual=createHash('sha256').update(readFileSync(file)).digest('hex');if(declared&&declared!==actual)throw Error('benchmark_photo_file_hash_mismatch');return actual;};
+  const result=importScanEvidence(read(options.input),{id:options.id,cardId:options.card,cohortId:options.cohort,attemptIndex:Number(options.attempt),evidenceDigest:createHash('sha256').update(readFileSync(options.input)).digest('hex'),photoHashes:{front:photoHash('front'),back:photoHash('back')}});
   if(!result.id||!result.cardId||!result.cohortId||!result.attemptIndex)throw Error('benchmark_import_identifiers_invalid');
   writeFileSync(options.output,JSON.stringify(result,null,2)+'\n',{flag:'wx',mode:0o600});return;
  }

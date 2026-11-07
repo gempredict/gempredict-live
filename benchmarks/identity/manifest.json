@@ -453,28 +453,129 @@
     },
     {
       "id": "GP-ID-008",
-      "category": "sports_unclassified",
+      "category": "sports_insert",
       "physicalCardId": "owner-card-008",
       "selection": "owner_reported_inventory",
       "displayName": "Babe Ruth SV-40",
       "photos": {
         "front": {
-          "status": "not_retained",
+          "status": "reviewed_private",
           "sha256": null
         },
         "back": {
-          "status": "unknown",
+          "status": "reviewed_private",
           "sha256": null
         }
       },
       "groundTruth": {
-        "status": "unreviewed",
-        "reviewer": null,
-        "reviewedAt": null,
-        "fields": {},
-        "sources": []
+        "status": "independently_reviewed",
+        "reviewer": "Photo and independent checklist review",
+        "reviewedAt": "2026-11-07",
+        "fields": {
+          "subject": {
+            "status": "known",
+            "value": "Babe Ruth"
+          },
+          "year": {
+            "status": "known",
+            "value": "2025"
+          },
+          "manufacturer": {
+            "status": "known",
+            "value": "Topps"
+          },
+          "set": {
+            "status": "known",
+            "value": "Allen & Ginter"
+          },
+          "subset": {
+            "status": "known",
+            "value": "Sweet Victory"
+          },
+          "cardNumber": {
+            "status": "known",
+            "value": "SV-40"
+          },
+          "parallel": {
+            "status": "unresolved"
+          },
+          "finish": {
+            "status": "unresolved"
+          },
+          "stamps": {
+            "status": "unresolved"
+          },
+          "serialNumber": {
+            "status": "unresolved"
+          },
+          "autograph": {
+            "status": "unresolved"
+          },
+          "language": {
+            "status": "unresolved"
+          }
+        },
+        "sources": [
+          {
+            "kind": "independent_catalog",
+            "url": "https://www.tcdb.com/ViewCard.cfm/sid/579607/cid/32681153/2025-Topps-Allen-%26-Ginter---Sweet-Victory-SV-40-Babe-Ruth",
+            "supports": [
+              "subject",
+              "year",
+              "manufacturer",
+              "set",
+              "subset",
+              "cardNumber"
+            ]
+          },
+          {
+            "kind": "independent_catalog",
+            "url": "https://baseballcardpedia.com/index.php/2025_Topps_Allen_%26_Ginter",
+            "supports": [
+              "subject",
+              "year",
+              "manufacturer",
+              "set",
+              "subset",
+              "cardNumber"
+            ]
+          }
+        ]
       },
-      "referenceFacts": null,
+      "referenceFacts": {
+        "subject": "Babe Ruth",
+        "year": "2025",
+        "manufacturer": "Topps",
+        "set": "Allen & Ginter",
+        "subset": "Sweet Victory",
+        "cardNumber": "SV-40",
+        "sources": [
+          {
+            "kind": "independent_catalog",
+            "url": "https://www.tcdb.com/ViewCard.cfm/sid/579607/cid/32681153/2025-Topps-Allen-%26-Ginter---Sweet-Victory-SV-40-Babe-Ruth",
+            "supports": [
+              "subject",
+              "year",
+              "manufacturer",
+              "set",
+              "subset",
+              "cardNumber"
+            ]
+          },
+          {
+            "kind": "independent_catalog",
+            "url": "https://baseballcardpedia.com/index.php/2025_Topps_Allen_%26_Ginter",
+            "supports": [
+              "subject",
+              "year",
+              "manufacturer",
+              "set",
+              "subset",
+              "cardNumber"
+            ]
+          }
+        ]
+      },
       "requiredExactFields": [
         "manufacturer",
         "subset",
@@ -484,12 +585,11 @@
         "autograph"
       ],
       "gaps": [
-        "private_front_back_photos",
-        "year_manufacturer_product_review",
-        "independent_physical_label_review",
-        "exact_printing_review"
+        "photo_to_scan_linkage_unestablished",
+        "photo_dimensions_differ_from_scan",
+        "exact_physical_printing_unresolved"
       ],
-      "categoryBasis": "provisional_owner_label_not_verified"
+      "categoryBasis": "photo_and_independent_checklist_review"
     },
     {
       "id": "GP-ID-009",
@@ -699,7 +799,8 @@
     "pokemon_sir": 1,
     "pokemon_other_rarity": 1,
     "pokemon_promo": 1,
-    "sports_unclassified": 3,
+    "sports_insert": 1,
+    "sports_unclassified": 2,
     "sports_parallel": 1,
     "sports_serial_or_auto": 1
   },

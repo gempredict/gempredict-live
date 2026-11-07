@@ -8,11 +8,22 @@ import {evaluateBenchmark,validateManifest,sanitizeObservation,benchmarkMarkdown
 import {importScanEvidence,main} from '../scripts/identity-benchmark.mjs';
 const root=new URL('../',import.meta.url),load=p=>JSON.parse(readFileSync(new URL(p,root)));
 const baseline='ff3b3a5cf2b4326049ec666af11c44fdfc621cbb';
+test('matching operator-supplied hashes alone do not bind photos to a scan',()=>{
+ const f=fixture();delete f.observation.photoLinkage;const r=evaluateBenchmark(f.manifest,[f.observation]);assert.equal(r.rows[0].photoMatches,false);assert.equal(r.completedAccuracyTests,0);assert.equal(r.metrics.technicalSuccess.numerator,1);
+});
+test('a prepared-image mismatch or absent required back digest blocks accuracy scoring',()=>{
+ const f=fixture();f.observation.photoLinkage.preparedHashes.front='b'.repeat(64);assert.equal(evaluateBenchmark(f.manifest,[f.observation]).rows[0].coreEligible,false);
+ f.observation.photoLinkage.preparedHashes.front='a'.repeat(64);f.observation.photoLinkage.backRequired=true;assert.equal(evaluateBenchmark(f.manifest,[f.observation]).rows[0].coreEligible,false);
+});
+test('importing legacy diagnostics preserves unknown photo linkage and zero cache usage without inference',()=>{
+ const o=importScanEvidence({version:1,environment:'preview',stage:'identity',images:{front:{presence:'present'},back:{presence:'present'}},stages:{identity:'completed'},visionStatus:'normalized',responseStatus:200,identityCompletion:{usage:{inputTokens:4811,outputTokens:351,cacheReadInputTokens:0,cacheCreationInputTokens:0}}},{id:'TEST-LEGACY',cardId:'GP-ID-008',cohortId:'test',attemptIndex:1,photoHashes:{front:'a'.repeat(64),back:'b'.repeat(64)}});
+ assert.equal(o.photoLinkage.preparedHashes.front,null);assert.equal(o.photoLinkage.backRequired,true);assert.equal(o.usage.cacheReadTokens,0);assert.equal(o.usage.cacheCreationTokens,0);assert.equal(o.cost.actualUsd,null);
+});
 test('sports import never fabricates a TCGdex provider or mistakes print run for the copy serial',()=>{
  const o=importScanEvidence({stage:'identity',success:true,canonicalCard:{subject:'Josh Dix',cardNumber:'PA-JD',printRun:'99'}},{id:'O-1',cardId:'GP-ID-011',cohortId:'test',attemptIndex:1});assert.equal(o.catalog.provenance.provider,null);assert.equal(o.canonical.serialNumber,null);assert.equal(o.canonical.printRun,'99');assert.equal(o.canonical.cardNumber,'PA-JD');
 });
 test('owner inventory does not force seven Pokemon and five sports into the original target mix',()=>{
- const m=load('benchmarks/identity/manifest.json');assert.equal(m.cards.filter(c=>c.category.startsWith('pokemon')).length,7);assert.equal(m.cards.filter(c=>c.category.startsWith('sports')).length,5);assert.ok(m.cards.some(c=>c.displayName.includes('Josh Dix')));assert.ok(m.cards.some(c=>c.displayName.includes('Babe Ruth')));assert.ok(m.cards.every(c=>c.groundTruth.status==='unreviewed'));assert.equal(m.cards.find(c=>c.id==='GP-ID-011').groundTruth.fields.serialNumber,undefined);
+ const m=load('benchmarks/identity/manifest.json');assert.equal(m.cards.filter(c=>c.category.startsWith('pokemon')).length,7);assert.equal(m.cards.filter(c=>c.category.startsWith('sports')).length,5);assert.ok(m.cards.some(c=>c.displayName.includes('Josh Dix')));assert.ok(m.cards.some(c=>c.displayName.includes('Babe Ruth')));assert.ok(m.cards.filter(c=>c.id!=='GP-ID-008').every(c=>c.groundTruth.status==='unreviewed'));assert.equal(m.cards.find(c=>c.id==='GP-ID-011').groundTruth.fields.serialNumber,undefined);
 });
 test('Rosa reference is Ultra Rare, never a physically reviewed SIR label',()=>{
  const c=load('benchmarks/identity/manifest.json').cards.find(c=>c.id==='GP-ID-006');assert.equal(c.referenceFacts.rarity,'Ultra Rare');assert.equal(c.category,'pokemon_other_rarity');assert.equal(c.groundTruth.status,'unreviewed');assert.ok(c.referenceFacts.sources[0].revision);
@@ -34,11 +45,11 @@ function fixture(category='pokemon_standard'){
  const truth={status:'independently_reviewed',reviewer:'Offline fixture reviewer',reviewedAt:'2026-11-07',fields:Object.fromEntries(Object.entries(values).map(([k,value])=>[k,{status:'known',value}])),sources:[{kind:'manufacturer_checklist',url:'https://example.test/checklist',supports:Object.keys(values)}],catalogId:'test-133',catalogProvider:'tcgdex'};
  const card={id:'T-1',category,physicalCardId:'synthetic-physical-1',displayName:'Synthetic fixture',selection:'test_only',photos:{front:{status:'retained_and_reviewed',sha256:'a'.repeat(64)},back:{status:'not_retained',sha256:null}},groundTruth:truth,requiredExactFields:['language','rarity','parallel','finish','stamps'],gaps:[]};
  const manifest={version:1,baselineCommit:baseline,cohortId:'unit-only',categoryPlan:{[category]:1},cards:[card]};
- const observation={id:'O-1',cardId:'T-1',cohortId:'unit-only',attemptIndex:1,evidenceKind:'live_scan',photoHashes:{front:'a'.repeat(64)},technical:{validCompletedResponse:true,httpStatus:200},canonical:values,originalAI:values,catalog:{outcome:'supported',candidatesRetained:true,candidates:[{provider:'tcgdex',id:'test-133'}]},claims:{catalogVerified:true},usage:{outputTokens:405},cost:{actualUsd:null},latencyMs:null};
+ const observation={id:'O-1',cardId:'T-1',cohortId:'unit-only',attemptIndex:1,evidenceKind:'live_scan',photoHashes:{front:'a'.repeat(64)},photoLinkage:{method:'diagnostic_prepared_sha256',preparedHashes:{front:'a'.repeat(64)},backRequired:false},technical:{validCompletedResponse:true,httpStatus:200},canonical:values,originalAI:values,catalog:{outcome:'supported',candidatesRetained:true,candidates:[{provider:'tcgdex',id:'test-133'}]},claims:{catalogVerified:true},usage:{outputTokens:405},cost:{actualUsd:null},latencyMs:null};
  return {manifest,card,truth,observation,values};
 }
 test('initial 12 slots preserve requested category mix without manufacturing owner inventory or reviewed labels',()=>{
- const target=load('benchmarks/identity/target-manifest.json');assert.equal(validateManifest(target),target);const m=load('benchmarks/identity/manifest.json');assert.equal(validateManifest(m),m);assert.equal(m.cards.length,12);assert.equal(m.cards.filter(c=>c.physicalCardId).length,12);assert.ok(m.cards.every(c=>c.groundTruth.status==='unreviewed'));assert.ok(m.excludedDisputedFixtures[0].label.includes('Konnor'));
+ const target=load('benchmarks/identity/target-manifest.json');assert.equal(validateManifest(target),target);const m=load('benchmarks/identity/manifest.json');assert.equal(validateManifest(m),m);assert.equal(m.cards.length,12);assert.equal(m.cards.filter(c=>c.physicalCardId).length,12);assert.ok(m.cards.filter(c=>c.id!=='GP-ID-008').every(c=>c.groundTruth.status==='unreviewed'));assert.ok(m.excludedDisputedFixtures[0].label.includes('Konnor'));
 });
 test('historical repeated Zapdos observations are one card and never accuracy trials',()=>{
  const r=evaluateBenchmark(load('benchmarks/identity/manifest.json'),load('benchmarks/identity/historical-observations.json').observations);
@@ -54,7 +65,7 @@ test('missing photograph or unreviewed label cannot count as completed accuracy'
 });
 test('photo hashes bind observations to the reviewed front/back pair',()=>{
  const f=fixture();f.observation.photoHashes.back='b'.repeat(64);assert.equal(evaluateBenchmark(f.manifest,[f.observation]).rows[0].coreEligible,false);
- f.card.photos.back={status:'retained_and_reviewed',sha256:'b'.repeat(64)};assert.equal(evaluateBenchmark(f.manifest,[f.observation]).rows[0].coreEligible,true);
+ f.card.photos.back={status:'retained_and_reviewed',sha256:'b'.repeat(64)};f.observation.photoLinkage.preparedHashes.back='b'.repeat(64);assert.equal(evaluateBenchmark(f.manifest,[f.observation]).rows[0].coreEligible,true);
 });
 test('synthetic and historical evidence never enters measured live cohort even with labels',()=>{
  for(const evidenceKind of ['synthetic','owner_reported_summary']){const f=fixture();f.observation.evidenceKind=evidenceKind;const r=evaluateBenchmark(f.manifest,[f.observation]);assert.equal(r.metrics.technicalSuccess.denominator,0);assert.equal(r.completedAccuracyTests,0);}

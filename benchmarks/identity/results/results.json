@@ -71,8 +71,14 @@
       "coreEligible": 0,
       "exactEligible": 0
     },
+    "sports_insert": {
+      "slots": 1,
+      "attempted": 0,
+      "coreEligible": 0,
+      "exactEligible": 0
+    },
     "sports_unclassified": {
-      "slots": 3,
+      "slots": 2,
       "attempted": 0,
       "coreEligible": 0,
       "exactEligible": 0
@@ -420,7 +426,7 @@
     },
     {
       "cardId": "GP-ID-008",
-      "category": "sports_unclassified",
+      "category": "sports_insert",
       "selection": "owner_reported_inventory",
       "displayName": "Babe Ruth SV-40",
       "physicalCardId": "owner-card-008",
@@ -452,12 +458,10 @@
       ],
       "exactParallelUnresolved": true,
       "gaps": [
-        "private_front_back_photos",
-        "year_manufacturer_product_review",
-        "independent_physical_label_review",
-        "exact_printing_review",
+        "photo_to_scan_linkage_unestablished",
+        "photo_dimensions_differ_from_scan",
+        "exact_physical_printing_unresolved",
         "reviewed_photo_unavailable",
-        "reviewed_core_label_unavailable",
         "no_cohort_scan"
       ],
       "failure": null,
@@ -669,6 +673,14 @@
         "front": null,
         "back": null
       },
+      "photoLinkage": {
+        "method": null,
+        "preparedHashes": {
+          "front": null,
+          "back": null
+        },
+        "backRequired": null
+      },
       "technical": {
         "validCompletedResponse": null,
         "httpStatus": null,
@@ -797,6 +809,14 @@
         "front": null,
         "back": null
       },
+      "photoLinkage": {
+        "method": null,
+        "preparedHashes": {
+          "front": null,
+          "back": null
+        },
+        "backRequired": null
+      },
       "technical": {
         "validCompletedResponse": false,
         "httpStatus": null,
@@ -919,6 +939,14 @@
       "photoHashes": {
         "front": null,
         "back": null
+      },
+      "photoLinkage": {
+        "method": null,
+        "preparedHashes": {
+          "front": null,
+          "back": null
+        },
+        "backRequired": null
       },
       "technical": {
         "validCompletedResponse": true,
@@ -1065,6 +1093,14 @@
         "front": null,
         "back": null
       },
+      "photoLinkage": {
+        "method": null,
+        "preparedHashes": {
+          "front": null,
+          "back": null
+        },
+        "backRequired": null
+      },
       "technical": {
         "validCompletedResponse": null,
         "httpStatus": null,
@@ -1196,6 +1232,14 @@
       "photoHashes": {
         "front": null,
         "back": null
+      },
+      "photoLinkage": {
+        "method": null,
+        "preparedHashes": {
+          "front": null,
+          "back": null
+        },
+        "backRequired": null
       },
       "technical": {
         "validCompletedResponse": null,
