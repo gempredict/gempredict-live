@@ -73,3 +73,35 @@ test('over-budget evidence fails closed and saved reports cannot erase the limit
  const a=inspect(Array.from({length:33},()=>f()));assert.equal(a.conditionEvidenceLimits.observationsExceeded,true);assert.ok(a.visualObservations.every(o=>o.certainty==='unassessable'));assert.equal(inspect(a.visualObservations,a).conditionEvidenceLimits.observationsExceeded,true);
  const b=inspect([f()],{inspectionCoverage:Array.from({length:9},()=>coverage('corners'))});assert.equal(b.conditionEvidenceLimits.coverageExceeded,true);assert.ok(b.visualObservations.every(o=>o.certainty==='unassessable'));assert.ok(b.inspectionCoverage.filter(c=>c.regions.length).every(c=>c.status==='unassessable'));
 });
+
+// Phase 2B: historical categories/states only; no historical coordinates inferred.
+import {conditionReportStateFixture} from './helpers/conditionReportFixture.mjs';
+async function stateReport(cardType='pokemon'){
+ const r=await runScan({fields:{cardType},vision:conditionReportStateFixture()});assert.equal(r.status,200);assert.equal(r.metrics.vision,1);assert.equal(r.metrics.valuation,0);return reportFromResponse(r.payload);
+}
+test('Phase 2B synthetic seven-finding report preserves categories, states and side attribution for both categories',async()=>{
+ for(const category of ['pokemon','sports']){
+  const p=await stateReport(category),a=p.imageAnalysis;
+  assert.equal(a.visualObservations.length,7);assert.equal(a.conditionAssessments.corners.observations.length,3);assert.equal(a.conditionAssessments.edges.observations.length,1);assert.equal(a.conditionAssessments.surface.observations.length,2);
+  assert.ok(a.visualObservations.filter(f=>['corners','edges'].includes(f.attribute)).every(f=>f.certainty==='suspected'&&f.evidence.side==='back'));
+  assert.ok(a.visualObservations.filter(f=>['surface','centering'].includes(f.attribute)).every(f=>f.certainty==='unassessable'));
+  assert.ok(a.inspectionCoverage.every(c=>c.regions.length===0&&c.reason==='coverage_not_established'));assert.deepEqual(a.inspectedSides,['front','back']);assert.equal(a.localizationVerified,false);assert.equal(p.financialDecision.allowed,false);
+ }
+});
+test('Phase 2B rendered actual report shows three possible back-corner findings and explicit unassessable front/back areas',async()=>{
+ const html=renderReports(await stateReport()).lower.replace(/<[^>]*>/g,' ').replace(/\s+/g,' ');
+ assert.equal((html.match(/Back photo: Possible corners whitening/g)||[]).length,3);assert.equal((html.match(/Back photo: Possible edges whitening/g)||[]).length,1);
+ assert.match(html,/Front photo: Unassessable surface/);assert.match(html,/Back photo: Unassessable surface/);assert.match(html,/Front photo: Unassessable centering/);
+ assert.match(html,/Possible defect/);assert.match(html,/resolution limits inspection/);assert.match(html,/Camera angle limits inspection/);assert.match(html,/coverage not established/);assert.match(html,/model proposals/);
+ assert.doesNotMatch(html,/Visible defect observed|No visible defect detected|PSA 10|10 \/ 10|99%|Submit now|Lower Submission Risk/);
+});
+test('Phase 2B saved/restored/copy retains all findings and limitations without inventing coverage or advice',async()=>{
+ const p=await stateReport(),saved=JSON.parse(JSON.stringify(p)),restored=protectFinancialReport(saved);
+ assert.deepEqual(restored.imageAnalysis.visualObservations,p.imageAnalysis.visualObservations);assert.deepEqual(restored.imageAnalysis.inspectionCoverage,p.imageAnalysis.inspectionCoverage);
+ assert.deepEqual(restored.imageAnalysis.imageLimitations,['limited_resolution','perspective']);
+ for(const key of FINANCIAL_FIELDS)assert.equal(restored[key],null);
+ for(const key of ['estimatedGrade','gradeCeiling','overallScore','psa9Probability','psa10Probability','worthGrading'])assert.equal(restored.imageAnalysis[key],null);
+ const copy=protectedCopySummary(restored);assert.equal((copy.match(/back Possible corners whitening/g)||[]).length,3);assert.match(copy,/front Unassessable surface/);assert.match(copy,/back Unassessable surface/);assert.match(copy,/coverage_not_established/);assert.doesNotMatch(copy,/PSA 10|99%|Submit now/);
+ // Limitations must remain explained in the copied report as well as the UI.
+ assert.match(copy,/resolution|limited_resolution/);assert.match(copy,/perspective|Camera angle/);
+});
