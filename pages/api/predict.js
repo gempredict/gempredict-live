@@ -1,3 +1,4 @@
+import {verifyConditionValidation} from '../../lib/conditionValidationServer.mjs';
 import {safeIdentityValidation} from '../../lib/identityValidation.mjs';
 import {identifyFromPhotos} from '../../lib/identityStage.mjs';
 import {VISION_MODEL,visionOutputBudget,parseVisionMessage,retainSportsVisionEvidence} from '../../lib/visionResponsePolicy.mjs';
@@ -722,7 +723,13 @@ if (hasTypedCardName && looksLikeJunk(cardName)) {
   }
 
   // Explicitly isolated mode shares the same parser, image checks and hourly cap.
-  if(fields.mode && !['identity','full'].includes(fields.mode))return res.status(400).json({error:'Unsupported scan mode.'});
+  if(fields.mode && !['identity','full','condition-validation'].includes(fields.mode))return res.status(400).json({error:'Unsupported scan mode.'});
+  let conditionValidation=null;
+  if(fields.mode==='condition-validation'){
+    try{conditionValidation=await verifyConditionValidation(req,fields,imageBuffer,backImageBuffer);}
+    catch{return res.status(403).json({error:'Controlled validation requires current Preview owner authorization and matching exported prepared files.'});}
+    scanDiagnostics?.conditionValidation(conditionValidation);
+  }
   if(fields.mode==='identity'){
     scanDiagnostics?.stage('identity');
     if(!imageBuffer)return res.status(400).json({error:'A front photograph is required to identify a card.'});
@@ -845,7 +852,8 @@ let pokemonIdentity=null;
 let catalogCrossCheck={status:'not_checked',verified:false};
 let catalogTitleCandidate=null;
 if(imageAnalysis&&cardType==='pokemon'){
- pokemonIdentity=await resolvePokemonIdentity(imageAnalysis,fields,{fetchImpl:fetch,clientId:process.env.EBAY_PROD_CLIENT_ID,clientSecret:process.env.EBAY_PROD_CLIENT_SECRET});
+ pokemonIdentity=await resolvePokemonIdentity(imageAnalysis,fields,{fetchImpl:fetch,clientId:process.env.EBAY_PROD_CLIENT_ID,clientSecret:process.env.EBAY_PROD_CLIENT_SECRET,...(conditionValidation?{skipMarketplace:true}:{})});
+ if(conditionValidation&&pokemonIdentity.search?.status==='not_requested')pokemonIdentity.search.reason='owner_condition_validation';
  canonicalCard=pokemonIdentity.canonicalCard;
  catalogCrossCheck=pokemonIdentity.catalogCrossCheck;
  effectiveCardName=canonicalCard?.displayName||effectiveCardName;
@@ -864,7 +872,7 @@ const soldIdentityGate = assessSoldIdentityGate({
     const identityV2 = canonicalIdentityV2({category:cardType === 'pokemon' ? 'pokemon' : cardType === 'sports' ? 'sports' : 'unknown',vision:imageAnalysis||{},catalog:catalogCrossCheck});
     const sportsIdentityAudit = cardType === 'sports' ? auditSportsIdentity(imageAnalysis||{},'unspecified') : null;
     const financialDecision = financialEligibility(identityV2);
-    const prediction = financialDecision.allowed
+    const prediction = !conditionValidation && financialDecision.allowed
       ? await fetchPrediction(effectiveCardName,cardType,effectiveCardSet,condition)
       : {cardTitle:canonicalCard?.displayName||effectiveCardName,cardMeta:effectiveCardSet};
 
@@ -890,6 +898,7 @@ const atlas = null; // Financial recommendations require independent identity an
   let marketData = null;
 
   try {
+    if(conditionValidation)throw new Error('condition_validation_marketplace_disabled');
     const context = internalMarketContext(process.env.NEXT_PUBLIC_SITE_URL,process.env,req.headers);
     scanDiagnostics?.market('routing',context.ok);
     if (!context.ok) throw new Error(context.reason);
@@ -949,8 +958,8 @@ const atlas = null; // Financial recommendations require independent identity an
   } catch (marketErr) {
   marketData = {
     success: false,
-    error: "Market data unavailable",
-    reason: /^(?:production_host_blocked|missing_or_invalid_deployment_origin|mismatched_deployment_origin|preview_protection_token_unavailable|invalid_internal_base_url|missing_internal_base_url|identity_incomplete)$/.test(marketErr.message) ? marketErr.message : "market_request_unavailable",
+    error: conditionValidation?"Marketplace intentionally disabled for controlled validation.":"Market data unavailable",
+    reason: /^(?:production_host_blocked|missing_or_invalid_deployment_origin|mismatched_deployment_origin|preview_protection_token_unavailable|condition_validation_marketplace_disabled|invalid_internal_base_url|missing_internal_base_url|identity_incomplete)$/.test(marketErr.message) ? marketErr.message : "market_request_unavailable",
   };
 }
 
@@ -959,10 +968,11 @@ const atlas = null; // Financial recommendations require independent identity an
 
     return res.status(200).json(protectFinancialReport({
   success: true,
-  scanNotices:[...(!marketData||marketData.success===false?[scanFailure('MARKETPLACE_UNAVAILABLE').payload]:[]),...(pokemonIdentity&&!pokemonIdentity.valuationIdentityGate.allowed?[scanFailure('VERIFICATION_UNRESOLVED').payload]:[])],
+  scanNotices:[...(!conditionValidation&&(!marketData||marketData.success===false)?[scanFailure('MARKETPLACE_UNAVAILABLE').payload]:[]),...(pokemonIdentity&&!pokemonIdentity.valuationIdentityGate.allowed?[scanFailure('VERIFICATION_UNRESOLVED').payload]:[])],
   identityV2,
   graderScenariosV2,
   sportsIdentityAudit,
+  ...(conditionValidation?{conditionValidation}:{}),
   prediction,
   marketData,
   imageAnalysis,

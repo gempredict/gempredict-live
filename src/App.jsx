@@ -1,3 +1,4 @@
+import ControlledValidation from './components/ControlledValidation';
 import IdentityResult from "./components/IdentityResult";
 import {safeScanFailure} from '../lib/scanFailures.mjs';
 import {conditionAssessmentLabels} from '../lib/photoConditionLabels.mjs';
@@ -1257,8 +1258,10 @@ const emailRef    = useRef(null);
     setResults([]); setImageAnalysis(null); setError(""); setRateLimitMsg("");
   }
 
-  async function handleSubmit(mode='full') {
-    mode=mode==='identity'?'identity':'full';
+  async function handleSubmit(mode='full',prepared=null) {
+    const controlled=mode==='condition-validation';
+    mode=controlled?mode:mode==='identity'?'identity':'full';
+    if(controlled&&(!prepared||prepared.front!==imageFile||prepared.back!==backImageFile||prepared.version!==selectionVersions.current.front+':'+selectionVersions.current.back)){setError('Frozen preparation changed. Export and verify again.');return;}
     if(scanInFlight.current||mode==='identity'&&!imageFile)return;
     if (loading || processingImages || photoErrors.front || photoErrors.back || (!cardName.trim() && !imageFile)) return;
     if (email && !isValidEmail(email)) { setError("Please enter a valid email address."); return; }
@@ -1271,14 +1274,15 @@ const emailRef    = useRef(null);
         // Multipart/form-data when image is present
         const formData = new FormData();
         if(mode==='identity')formData.append("mode","identity");
+        if(controlled){formData.append("mode","condition-validation");formData.append("validationManifest",prepared.manifest);}
         formData.append("cardName", cardName.trim());
         formData.append("cardType",  cardType);
         formData.append("cardSet",   cardSet.trim());
         formData.append("condition", condition);
         if (email.trim()) formData.append("email", email.trim());
-        formData.append("image", imageFile);
+        formData.append("image", controlled?prepared.front:imageFile);
         if (backImageFile) {
-  formData.append("backImage", backImageFile);
+  formData.append("backImage", controlled?prepared.back:backImageFile);
 }
         await assertUploadBudget(formData);
         result = await requestPrediction({ method: "POST", body: formData });
@@ -1781,6 +1785,7 @@ if (data.imageAnalysis) setImageAnalysis(protectFinancialReport(data).imageAnaly
             <button type="button" onClick={()=>handleSubmit('identity')} disabled={loading||processingImages>0||!!photoErrors.front||!!photoErrors.back||!imageFile} style={{padding:'0.85rem 1.75rem',borderRadius:12,border:'1px solid #d2b48c',background:C.ink,color:'#fff',fontWeight:700}}>Identify Card</button>
             <span style={{fontSize:'0.8rem',color:C.inkSoft}}>Front photo required; back optional. Identification only. Analyze My Card remains the separate full scan.</span>
           </div>
+          <ControlledValidation front={imageFile} back={backImageFile} busy={loading||processingImages>0||!!photoErrors.front||!!photoErrors.back} getSelectionEpoch={()=>selectionVersions.current.front+':'+selectionVersions.current.back} onSubmit={prepared=>handleSubmit('condition-validation',prepared)}/>
           {identityResult&&!loading&&<IdentityResult report={identityResult} onSave={saveReport}/>}
 
           {/* Remaining */}

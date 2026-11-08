@@ -3,7 +3,7 @@ export const config={api:{bodyParser:{sizeLimit:'10kb'}}};
 export default function handler(req,res){
  res.setHeader('Cache-Control','private, no-store');res.setHeader('Vary','Cookie, Origin');res.setHeader('X-Content-Type-Options','nosniff');
  if(!diagnosticDeployment(req))return res.status(404).json({error:'unavailable'});
- if(req.method==='GET'){const session=diagnosticSession(req);return res.status(200).json({enabled:true,authorized:!!session,expiresAt:session?.exp||null});}
+ if(req.method==='GET'){const session=diagnosticSession(req);return res.status(200).json({enabled:true,authorized:!!session,expiresAt:session?.exp||null,conditionValidationAvailable:true,revision:process.env.VERCEL_GIT_COMMIT_SHA});}
  if(req.method!=='POST')return res.status(405).json({error:'method_not_allowed'});
  if(req.body?.action==='authorize'){
   const cookie=authorizeDiagnosticOwner(req,req.body.key);
