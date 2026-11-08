@@ -106,7 +106,7 @@ test('client-supplied diagnostic bodies and public owner key cannot mint trusted
 });
 test('evidence downgrade and actual rendered display contract are represented without changing the result',async()=>{
  const {r,d}=await captured({vision:{...vision,visualObservations:[{attribute:'corners',code:'whitening',certainty:'confirmed',evidence:{side:'front',region:[0.1,0.1,0.2,0.2],cue:'localized_color_loss',confidence:0.95}}],imageLimitations:['glare']}});
- assert.equal(d.model.observations[0].downgraded,true);assert.deepEqual(d.model.observations[0].reasons,['conflicting_or_insufficient_evidence']);assert.equal(d.finalPresentation.displayLabels.corners,'Possible defect');
+ assert.equal(d.model.observations[0].downgraded,true);assert.deepEqual(d.model.observations[0].reasons,['global_photo_limitation']);assert.equal(d.finalPresentation.displayLabels.corners,'Possible defect');
  assert.match(renderReports(reportFromResponse(r.payload)).lower,/Possible defect/);
 });
 test('configured but unauthenticated and Production scans never receive diagnostic capabilities',async()=>{

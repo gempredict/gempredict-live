@@ -20,13 +20,14 @@ test('distinct same-type corner, edge and scratch locations survive; only identi
  }
 });
 test('different sides remain separate and overlapping clean/damage contradictions cannot confirm',()=>{
- const split=inspect([f('corners','no_defect_observed'),f('corners','whitening','back')]);assert.ok(split.visualObservations.every(o=>o.certainty==='confirmed'));
+ const scope=[coverage('corners','front',[{region:[0,0,1,1],status:'inspected'}])];
+ const split=inspect([f('corners','no_defect_observed'),f('corners','whitening','back')],{inspectionCoverage:scope});assert.ok(split.visualObservations.every(o=>o.certainty==='confirmed'));
  const conflict=inspect([f('corners','no_defect_observed'),f('corners','whitening')]);assert.ok(conflict.visualObservations.every(o=>o.certainty!=='confirmed'));assert.equal(conflict.visualObservations.length,2);
- const separated=inspect([f('corners','no_defect_observed'),f('corners','whitening','front',[.8,.8,.1,.1])]);assert.ok(separated.visualObservations.every(o=>o.certainty==='confirmed'));
+ const separated=inspect([f('corners','no_defect_observed'),f('corners','whitening','front',[.8,.8,.1,.1])],{inspectionCoverage:scope});assert.ok(separated.visualObservations.every(o=>o.certainty==='confirmed'));
 });
 test('localized glare qualifies only overlapping findings and does not obscure the clear back',()=>{
  const rows=[coverage('surface','front',[{region:[0,0,1,1],status:'inspected'}],[{code:'glare',region:[0,0,.4,.4]}])];
- const p=inspect([f('surface','scratches'),f('surface','scratches','front',[.8,.8,.1,.1]),f('surface','scratches','back')],{inspectionCoverage:rows});assert.deepEqual(p.visualObservations.map(o=>o.certainty),['suspected','confirmed','confirmed']);assert.equal(p.inspectionCoverage.find(c=>c.side==='front'&&c.attribute==='surface').regions[0].status,'partial');
+ const p=inspect([f('surface','scratches'),f('surface','scratches','front',[.8,.8,.1,.1]),f('surface','scratches','back')],{inspectionCoverage:rows});assert.deepEqual(p.visualObservations.map(o=>o.certainty),['suspected','confirmed','confirmed']);assert.equal(p.inspectionCoverage.find(c=>c.side==='front'&&c.attribute==='surface').regions[0].effectiveStatus,'partial');
 });
 test('sleeve, blur, resolution and perspective limits remain conservative; model ratios do not establish geometry',()=>{
  for(const code of ['sleeve','blur','limited_resolution','perspective']){

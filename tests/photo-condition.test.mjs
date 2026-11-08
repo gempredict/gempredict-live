@@ -16,7 +16,8 @@ async function report(extra={},options={}){
 }
 test('complete front/back handler preserves localized clean observations as no visible defect, not unassessed or mint',async()=>{
  const visualObservations=['centering','corners','edges','surface'].map((a,i)=>finding(a,'no_defect_observed',i%2?'back':'front'));
- const {p,html,metrics}=await report({visualObservations});
+ const inspectionCoverage=['centering','corners','edges','surface'].map((attribute,i)=>({attribute,side:i%2?'back':'front',regions:[{region:[0,0,1,1],status:'inspected'}],limitations:[]}));
+ const {p,html,metrics}=await report({visualObservations,inspectionCoverage});
  assert.equal(metrics.images,2);assert.match(metrics.visionPrompt,/Image 1.*FRONT/);assert.match(metrics.visionPrompt,/Image 2.*BACK/);
  for(const a of ['centering','corners','edges','surface']){assert.equal(p.imageAnalysis.conditionAssessments[a].state,'no_defect_observed');assert.equal(p.imageAnalysis[a],null);}
  assert.equal((html.match(/No visible defect detected/g)||[]).length,4);
@@ -47,7 +48,7 @@ test('uncertain and glare-limited findings remain possible observations, never c
  assert.match(html,/Possible defect/);assert.match(html,/Possible surface scratches/);assert.match(html,/Glare limits surface inspection/);assert.doesNotMatch(html,/Visible defect observed/);
 });
 test('front clean area and back defect are separate observations; contradictory same-side assertions remain uncertain',async()=>{
- const split=await report({visualObservations:[finding('corners','no_defect_observed','front'),finding('corners','whitening','back')]});
+ const split=await report({visualObservations:[finding('corners','no_defect_observed','front'),finding('corners','whitening','back')],inspectionCoverage:[{attribute:'corners',side:'front',regions:[{region:[0,0,1,1],status:'inspected'}],limitations:[]}]});
  assert.equal(split.p.imageAnalysis.conditionAssessments.corners.state,'confirmed_visible_defect');
  assert.deepEqual(split.p.imageAnalysis.visualObservations.map(f=>f.certainty),['confirmed','confirmed']);
  assert.match(split.html,/Evidence: Front photo, Back photo/);

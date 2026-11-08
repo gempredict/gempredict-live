@@ -392,7 +392,7 @@ export function ImageAnalysisCard({ report }) {
                 {assessment?.sides?.length>0 && <p style={{fontSize:"0.7rem",color:C.inkSoft,margin:"0.35rem 0"}}>Evidence: {assessment.sides.map(side=>side==='front'?'Front photo':'Back photo').join(', ')}</p>}
                 {(data.inspectionCoverage||[]).filter(c=>c.attribute===attr.key).map(c=><p key={c.side} style={{fontSize:"0.7rem",color:C.inkSoft,margin:"0.35rem 0"}}>
                   {c.side==='front'?'Front':'Back'} inspection: {c.reason==='photo_unavailable'?'photograph unavailable':c.regions.length?`${c.status} — ${c.regions.length} reported region(s)`:'coverage not established'}.
-                  {c.regions.map((r,i)=><span key={i}> Region {i+1}: {r.status}; proposed image box [{r.region.join(', ')}].</span>)}
+                  {c.regions.map((r,i)=><span key={i}> Region {i+1}: {r.effectiveStatus||r.status}; proposed image box [{r.region.join(', ')}].</span>)}
                   {c.limitations.map((l,i)=><span key={i}> Limitation: {l.code.replace(/_/g,' ')} ({l.region?'localized region':'this side'}).</span>)}
                 </p>)}
                 <p style={{fontSize:"0.7rem",color:C.inkSoft,margin:"0.35rem 0"}}>Model-reported findings describe photo areas, not independently verified whole-card condition. Locations are model proposals, not verified card geometry.</p>
