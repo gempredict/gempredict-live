@@ -1,3 +1,4 @@
+import * as collector from '../../lib/collectorPresentation.mjs';
 import {safeScanFailure} from '../../lib/scanFailures.mjs';
 import {conditionAssessmentLabels} from '../../lib/photoConditionLabels.mjs';
 // Exercise the actual JSX components with React SSR, no DOM or provider calls.
@@ -18,7 +19,7 @@ function components(file,bindings={}){
  const exports={};vm.runInNewContext(code,{exports,require,React,...bindings});return exports;
 }
 const {default:AtlasPanel}=components('src/components/AtlasPanel.jsx');
-const {ResultCard,ImageAnalysisCard}=components('src/App.jsx',{safeScanFailure,conditionAssessmentLabels,...financial,identitySummary,reportTitle,verificationRows,buildGemPredictScore,AtlasPanel,useState:React.useState});
+const {ResultCard,ImageAnalysisCard}=components('src/App.jsx',{...collector,safeScanFailure,conditionAssessmentLabels,...financial,identitySummary,reportTitle,verificationRows,buildGemPredictScore,AtlasPanel,useState:React.useState});
 export function renderReports(report){
  return {upper:renderToStaticMarkup(React.createElement(ResultCard,{data:report,index:0,onSave(){},isSaved:false})),lower:renderToStaticMarkup(React.createElement(ImageAnalysisCard,{report}))};
 }
@@ -39,7 +40,7 @@ export function renderIdentityResult(report){
 export function appInteraction(bindings={}){
  const slots=[];let index=0;
  const hook=initial=>{const i=index++;if(!(i in slots))slots[i]=typeof initial==='function'?initial():initial;return [slots[i],value=>{slots[i]=typeof value==='function'?value(slots[i]):value;}];};
- const {default:App}=components('src/App.jsx',{...financial,identitySummary,reportTitle,verificationRows,safeScanFailure,conditionAssessmentLabels,buildGemPredictScore,AtlasPanel,IdentityResult:()=>null,ScanDiagnostics:()=>null,ControlledValidation:()=>null,useState:hook,useRef:initial=>hook({current:initial})[0],useEffect(){},track(){},...bindings});
+ const {default:App}=components('src/App.jsx',{...collector,...financial,identitySummary,reportTitle,verificationRows,safeScanFailure,conditionAssessmentLabels,buildGemPredictScore,AtlasPanel,IdentityResult:()=>null,ScanDiagnostics:()=>null,ControlledValidation:()=>null,useState:hook,useRef:initial=>hook({current:initial})[0],useEffect(){},track(){},...bindings});
  function render(){index=0;return App();}
  function nodes(root,predicate){const found=[];function walk(node){if(!node||typeof node!=='object')return;if(Array.isArray(node)){node.forEach(walk);return;}if(predicate(node))found.push(node);walk(node.props?.children);}walk(root);return found;}
  return {render,nodes};

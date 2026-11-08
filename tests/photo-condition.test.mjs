@@ -12,7 +12,7 @@ async function report(extra={},options={}){
  const p=reportFromResponse(r.payload);
  for(const key of FINANCIAL_FIELDS)assert.equal(p[key],null,key);
  assert.equal(p.financialDecision.allowed,false);assert.equal(p.imageAnalysis.estimatedGrade,null);assert.equal(p.imageAnalysis.worthGrading,null);
- return {p,html:clean(renderReports(p).lower),metrics:r.metrics};
+ return {p,html:clean(renderReports(p).lower),primaryHtml:clean(renderReports(p).lower.split('<details>')[0]),metrics:r.metrics};
 }
 test('complete front/back handler preserves localized clean observations as no visible defect, not unassessed or mint',async()=>{
  const visualObservations=['centering','corners','edges','surface'].map((a,i)=>finding(a,'no_defect_observed',i%2?'back':'front'));
@@ -31,8 +31,8 @@ test('complete handler retains qualitative fields without promoting unlocalized 
  assert.match(html,/Glare prevents complete surface inspection/);assert.match(html,/Unable to assess/);
 });
 test('missing observations never inherit model good ratings or invented clean findings',async()=>{
- const {p,html}=await report({visualObservations:[],corners:'good',surface:'excellent'});
- assert.equal((html.match(/Unable to assess/g)||[]).length,4);
+ const {p,html,primaryHtml}=await report({visualObservations:[],corners:'good',surface:'excellent'});
+ assert.equal((primaryHtml.match(/Unable to assess/g)||[]).length,4);
  assert.equal(p.imageAnalysis.visualObservations.length,0);assert.doesNotMatch(html,/No visible defect detected/);
  assert.equal(p.imageAnalysis.overallScore,null);
 });

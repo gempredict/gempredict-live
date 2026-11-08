@@ -1,3 +1,4 @@
+import {collectorIdentityMessage,collectorConditions,collectorLimitations} from '../lib/collectorPresentation.mjs';
 import ControlledValidation from './components/ControlledValidation';
 import IdentityResult from "./components/IdentityResult";
 import {safeScanFailure} from '../lib/scanFailures.mjs';
@@ -229,64 +230,31 @@ function VerificationStatus({report}) {
   </dl>;
 }
 
-export function ImageAnalysisCard({ report }) {
-  const safe = protectFinancialReport(report);
-  const data = safe.imageAnalysis;
-  const observation = safe.originalIdentityObservation || data;
-  if (!data) return null;
-
-  function RatingPill({ rating, label }) {
-    const r = RATING_COLORS[rating] || (rating==="unassessed"?{color:C.inkSoft,bg:C.cream,label:"Unassessed"}:RATING_COLORS.fair);
-    return (
-      <span style={{ display: "inline-block", fontSize: "0.65rem", fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.06em", color: r.color, background: r.bg, padding: "0.15rem 0.5rem", borderRadius: 100 }}>
-        {label || r.label}
-      </span>
-    );
-  }
-
-  const overallR = RATING_COLORS[
-    data.overallScore >= 9 ? "excellent" :
-    data.overallScore >= 7 ? "good" :
-    data.overallScore >= 5 ? "fair" : "poor"
-  ] || RATING_COLORS.fair;
-
-  const worthColor  = data.worthGrading === true ? C.green : data.worthGrading === false ? C.red : C.amber;
-  const worthBg     = data.worthGrading === true ? C.greenLight : data.worthGrading === false ? C.redLight : "#fffbeb";
-  const worthBorder = data.worthGrading === true ? "#86efac" : data.worthGrading === false ? "#fca5a5" : "#fde68a";
-  const worthLabel  = data.worthGrading === true
-  ? "Lower Submission Risk"
-  : data.worthGrading === false
-    ? "High Submission Risk"
-    : "Grading recommendation unavailable";
-
-  const attributes = [
-    { key: "centering", label: "Centering", note: data.centeringNote },
-    { key: "corners",   label: "Corners",   note: data.cornersNote   },
-    { key: "edges",     label: "Edges",     note: data.edgesNote     },
-    { key: "surface",   label: "Surface",   note: data.surfaceNote   },
-  ];
-
-  return (
-    <div style={{ background: C.white, border: "1px solid " + C.border, borderRadius: 18, overflow: "hidden", boxShadow: "0 2px 16px rgba(0,0,0,0.06)", marginTop: "1.25rem", animation: "fadeUp 0.4s ease both" }}>
-      {/* Header */}
-      <div style={{ background: "#0d1117", borderBottom: "1px solid rgba(201,168,76,0.2)", padding: "0.85rem 1.25rem", display: "flex", alignItems: "center", justifyContent: "space-between", flexWrap: "wrap", gap: "0.5rem" }}>
-        <div style={{ display: "flex", alignItems: "center", gap: "0.5rem" }}>
-          <span style={{ fontSize: "1rem" }}>📷</span>
-          <span style={{ fontSize: "0.72rem", fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.09em", color: C.gold }}>
-            AI Photo Grading Analysis
-          </span>
-          <span style={{ fontSize: "0.6rem", fontWeight: 700, background: C.gold, color: C.ink, padding: "0.1rem 0.4rem", borderRadius: 4, letterSpacing: "0.06em" }}>BETA</span>
-        </div>
-        <div style={{ display: "flex", alignItems: "center", gap: "0.6rem" }}>
-          <span style={{ fontSize: "0.72rem", color: "rgba(255,255,255,0.4)" }}>Est. Grade:</span>
-          <span style={{ fontSize: "0.82rem", fontWeight: 700, color: C.gold }}>{data.estimatedGrade || "—"}</span>
-        </div>
-      </div>
-
-            <div style={{padding:"1rem 1.25rem 0"}}>
-        <h3 style={{margin:"0 0 0.5rem",color:C.ink}}>{reportTitle(safe)}</h3>
-        <VerificationStatus report={safe} />
-      </div>
+export function ImageAnalysisCard({report}) {
+ const safe=protectFinancialReport(report),data=safe.imageAnalysis,observation=safe.originalIdentityObservation||data;
+ if(!data)return null;
+ const overview=collectorConditions(data),limitations=collectorLimitations(data);
+ function RatingPill({label}){return <span>{label}</span>;}
+ const attributes=['centering','corners','edges','surface'].map(key=>({key,label:key[0].toUpperCase()+key.slice(1),note:data[key+'Note']}));
+ return <section aria-label="Photo condition report" style={{background:C.white,border:'1px solid '+C.border,borderRadius:18,padding:'1.1rem 1.25rem',marginTop:20}}>
+  <p style={{color:C.gold,fontWeight:700}}>AI Photo Grading Analysis · Photo observations</p>
+  <h3 style={{margin:'0.4rem 0'}}>{reportTitle(safe)}</h3>
+  <p>{collectorIdentityMessage(safe)}</p>
+  {(safe.catalogComparison?.initialConflicts||[]).some(f=>['year','brandSet'].includes(f))&&safe.coreCatalogIdentity?.supported&&<p>Catalog evidence corrected the original AI proposal. The disagreement is retained in Technical Details.</p>}
+  <p>These photo observations do not establish a grade, whole-card cleanliness or a submission recommendation.</p>
+  <div className="gp-vision-grid" style={{display:'grid',gridTemplateColumns:'repeat(auto-fit, minmax(min(100%, 180px), 1fr))',gap:12,margin:'1rem 0'}}>
+   {overview.map(a=><div key={a.key} style={{padding:12,borderRadius:10,background:C.cream}}><strong>{a.name}</strong><p style={{margin:'0.4rem 0'}}>{a.state}</p></div>)}
+  </div>
+  <h4>Important observations</h4>
+  {overview.flatMap(a=>a.observations.map((o,i)=><p key={a.key+i}>{o.side==='front'?'Front photo':o.side==='back'?'Back photo':'Photograph not established'} · {a.name}: {o.text}</p>))}
+  {!overview.some(a=>a.observations.length)&&<p>No supported regional condition observations are available.</p>}
+  {limitations.map((text,i)=><p key={i} role="status">{text}</p>)}
+  {(data.modelPhotoNotes||[]).map((note,i)=><p key={'note'+i}>Model photo note — unverified ({note.side==='front'?'Front photo':note.side==='back'?'Back photo':'Photo side not established'}): {note.text}</p>)}
+  {(data.conditionEvidenceLimits?.observationsExceeded||data.conditionEvidenceLimits?.coverageExceeded)&&<p>The response exceeded the evidence limits; retained observations remain unassessable.</p>}
+  <p>Grading recommendations and financial estimates remain withheld.</p>
+  <details><summary style={{cursor:'pointer',fontWeight:700}}>Technical Details</summary>
+   <VerificationStatus report={safe}/>
+   <p>{data.imageSummary}</p><p>{data.gradingRisk}</p><p>Unassessed attributes are not proof of clean condition.</p>
       {/* Original observation is secondary and never supplies the heading. */}
       {(observation.identifiedSubject ||
         observation.identifiedBrandSet ||
@@ -355,26 +323,6 @@ export function ImageAnalysisCard({ report }) {
         </details>
       )}
 
-      <div style={{ padding: "1.1rem 1.25rem" }}>
-        {/* Image summary */}
-        <p style={{ fontSize: "0.875rem", color: C.inkMid, lineHeight: 1.7, marginBottom: "1rem", fontStyle: "italic" }}>
-          {data.imageSummary}
-        </p>
-
-        {/* Worth grading verdict from image */}
-        <div style={{ background: worthBg, border: "1px solid " + worthBorder, borderRadius: 10, padding: "0.7rem 1rem", marginBottom: "1rem", display: "flex", alignItems: "flex-start", gap: "0.6rem" }}>
-          <span style={{ fontSize: "0.85rem", color: worthColor, fontWeight: 800, flexShrink: 0 }}>
-            {data.worthGrading === true ? "✓" : data.worthGrading === false ? "✕" : "~"}
-          </span>
-          <div>
-            <div style={{ fontSize: "0.7rem", fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.07em", color: worthColor, marginBottom: "0.2rem" }}>
-              {worthLabel}{data.worthGrading != null ? " — based on visible grading risk" : ""}
-            </div>
-            <div style={{ fontSize: "0.84rem", color: C.inkMid }}>{data.worthGradingReason}</div>
-          </div>
-        </div>
-
-        {(data.conditionEvidenceLimits?.observationsExceeded||data.conditionEvidenceLimits?.coverageExceeded)&&<p style={{fontSize:"0.78rem",color:C.inkSoft}}>The response exceeded the bounded evidence format. Retained findings remain unassessable; inspection coverage is incomplete.</p>}
         {/* 4 attribute ratings */}
         <div className="gp-vision-grid" style={{ marginBottom: "1rem" }}>
           {attributes.map(function(attr) {
@@ -405,107 +353,10 @@ export function ImageAnalysisCard({ report }) {
             );
           })}
         </div>
-        <div style={{ background: C.cream, border: "1px solid " + C.border, borderRadius: 10, padding: "0.8rem 1rem", marginBottom: "1rem" }}>
-  <div style={{ fontSize: "0.65rem", fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.08em", color: C.inkSoft, marginBottom: "0.35rem" }}>
-    Grade Ceiling
-  </div>
-  <div style={{ fontSize: "0.9rem", fontWeight: 700, color: C.ink }}>
-    {data.gradeCeiling || data.estimatedGrade || "Unknown"}
-  </div>
-</div>
 
-<div style={{ background: "#fff7ed", border: "1px solid #fed7aa", borderRadius: 10, padding: "0.8rem 1rem", marginBottom: "1rem" }}>
-  <div style={{ fontSize: "0.65rem", fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.08em", color: "#c2410c", marginBottom: "0.35rem" }}>
-    Primary Grade Limiter
-  </div>
-  <div style={{ fontSize: "0.84rem", color: C.inkMid, lineHeight: 1.6 }}>
-    {data.primaryLimiter || "Unassessed from the available photos."}
-  </div>
-</div>
-
-<div style={{ background: C.cream, border: "1px solid " + C.border, borderRadius: 10, padding: "0.8rem 1rem", marginBottom: "1rem" }}>
-  <div style={{ fontSize: "0.65rem", fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.08em", color: C.inkSoft, marginBottom: "0.35rem" }}>
-    Confidence Level
-  </div>
-  <div style={{ fontSize: "0.9rem", fontWeight: 700, color: C.ink }}>
-    {data.confidenceLevel || "Unassessed"}
-  </div>
-</div>
-        <div style={{ background: "#fefce8", border: "1px solid #fde68a", borderRadius: 10, padding: "0.8rem 1rem", marginBottom: "1rem" }}>
-  <div style={{ fontSize: "0.65rem", fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.08em", color: "#a16207", marginBottom: "0.35rem" }}>
-    Major Grade Cap
-  </div>
-  <div style={{ fontSize: "0.84rem", color: C.inkMid, lineHeight: 1.6 }}>
-    {data.majorGradeCap || data.primaryLimiter || "A grade ceiling has not been established."}
-  </div>
-</div>
-<div style={{ background: C.cream, border: "1px solid " + C.border, borderRadius: 10, padding: "0.8rem 1rem", marginBottom: "1rem" }}>
-  <div style={{ fontSize: "0.65rem", fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.08em", color: C.inkSoft, marginBottom: "0.35rem" }}>
-    Most Likely Outcome
-  </div>
-
-  <div style={{ fontSize: "0.9rem", fontWeight: 700, color: C.ink, marginBottom: "0.35rem" }}>
-    {data.mostLikelyGradeRange || "Uncertain"}
-  </div>
-
-  <div style={{ fontSize: "0.84rem", color: C.inkMid, lineHeight: 1.6 }}>
-    {data.psa10Upside}
-  </div>
-</div>
-
-{data.gemRiskFactors && data.gemRiskFactors.length > 0 && (
-  <div style={{ background: "#fff8e7", border: "1px solid #f5d487", borderRadius: 10, padding: "0.8rem 1rem", marginBottom: "1rem" }}>
-    <div style={{ fontSize: "0.65rem", fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.08em", color: "#8a6a00", marginBottom: "0.45rem" }}>
-      Photo Inspection Concerns
-    </div>
-
-    <ul style={{ margin: 0, paddingLeft: "1rem" }}>
-      {data.gemRiskFactors.map(function(risk, i) {
-        return (
-          <li key={i} style={{ fontSize: "0.82rem", color: C.inkMid, marginBottom: "0.3rem", lineHeight: 1.5 }}>
-            {risk}
-          </li>
-        );
-      })}
-    </ul>
-  </div>
-)}
-<div style={{ background: C.cream, border: "1px solid " + C.border, borderRadius: 10, padding: "0.8rem 1rem", marginBottom: "1rem" }}>
-  <div style={{ fontSize: "0.65rem", fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.08em", color: C.inkSoft, marginBottom: "0.35rem" }}>
-    Minor Concerns
-  </div>
-  <div style={{ fontSize: "0.84rem", color: C.inkMid, lineHeight: 1.6 }}>
-    {data.minorConcerns || "Unassessed from the available photos."}
-  </div>
-</div>
-
-        {/* Overall score bar */}
-        <div style={{ background: C.cream, borderRadius: 10, padding: "0.85rem 1rem", marginBottom: "1rem" }}>
-          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "0.45rem" }}>
-            <span style={{ fontSize: "0.72rem", fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.05em", color: C.inkSoft }}>Estimated PSA Grade</span>
-            <span style={{ fontFamily: "'Playfair Display', serif", fontSize: "1.3rem", fontWeight: 700, color: overallR.color }}>
-              {data.overallScore != null ? data.overallScore + " / 10" : "—"}
-            </span>
-          </div>
-          {data.overallScore != null && (
-            <div style={{ background: C.border, borderRadius: 100, height: 8, overflow: "hidden" }}>
-              <div style={{ height: "100%", borderRadius: 100, background: overallR.color, width: (data.overallScore * 10) + "%", transition: "width 0.9s cubic-bezier(.4,0,.2,1)" }} />
-            </div>
-          )}
-        </div>
-
-        {/* Grading risk */}
-        <div style={{ background: C.cream, border: "1px solid " + C.border, borderRadius: 10, padding: "0.75rem 1rem" }}>
-          <div style={{ fontSize: "0.65rem", fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.08em", color: C.inkSoft, marginBottom: "0.35rem" }}>Grading Risk</div>
-          <p style={{ fontSize: "0.84rem", color: C.inkMid, lineHeight: 1.65, margin: 0 }}>{data.gradingRisk}</p>
-        </div>
-
-        <p style={{ fontSize: "0.7rem", color: C.inkSoft, marginTop: "0.9rem", fontStyle: "italic" }}>
-          Photo analysis is based on visible card condition only. Lighting, angle, and image quality affect accuracy. Always verify in person before submitting.
-        </p>
-      </div>
-    </div>
-  );
+   <pre style={{whiteSpace:'pre-wrap',overflowWrap:'anywhere',fontSize:12}}>{JSON.stringify({visualObservations:data.visualObservations,inspectionCoverage:data.inspectionCoverage,conditionEvidenceLimits:data.conditionEvidenceLimits,catalogComparison:safe.catalogComparison},null,2)}</pre>
+  </details>
+ </section>;
 }
 
 // ─── Sub-components ───────────────────────────────────────────────────────────
@@ -554,7 +405,7 @@ export function ResultCard({ data, index, onSave, isSaved }) {
   ? data.marketData.marketSummary
   : null;
   const displayTitle = reportTitle(data);
-  const displayMeta = data.pokemonIdentityStatus?.catalogVerified
+  const displayMeta = data.coreCatalogIdentity?.supported||data.pokemonIdentityStatus?.catalogVerified
     ? "Catalog-supported identity · Physical printing not verified"
     : (data.cardMeta || "Identity unverified");
   const bullets  = getVerdictBullets(data);
@@ -590,7 +441,7 @@ export function ResultCard({ data, index, onSave, isSaved }) {
   {displayMeta}
 </div>
           <div style={{ fontSize: "0.68rem", color: C.inkSoft, marginTop: "0.35rem", fontStyle: "italic" }}>
-            {data.pokemonIdentityStatus ? identitySummary(data) : 'Unverified identity proposal; valuation and grading recommendations withheld.'}
+            <details><summary>Technical Details</summary>{data.pokemonIdentityStatus ? identitySummary(data) : 'Unverified identity proposal; valuation and grading recommendations withheld.'}</details>
           </div>
         </div>
         <div style={{ textAlign: "center", flexShrink: 0 }}>
@@ -602,7 +453,7 @@ export function ResultCard({ data, index, onSave, isSaved }) {
       </div>
 
       <div style={{ padding: "1.1rem 1.25rem" }}>
-      <VerificationStatus report={data} />
+      <p>{collectorIdentityMessage(data)}</p><details><summary>Technical Details</summary><VerificationStatus report={data}/></details>
       {(Array.isArray(data.scanNotices)?data.scanNotices:[]).map(safeScanFailure).filter(notice=>['MARKETPLACE_UNAVAILABLE','VERIFICATION_UNRESOLVED'].includes(notice?.code)).map(notice=><p key={notice.code} role="status" style={{fontSize:"0.75rem",color:C.inkSoft}}>{notice.error}</p>)}
       <div
   style={{
