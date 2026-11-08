@@ -54,3 +54,13 @@ export function controlledValidationInteraction(props,bindings){
  const nodes=(root,predicate)=>{const out=[];const walk=n=>{if(!n||typeof n!=='object')return;if(Array.isArray(n)){n.forEach(walk);return;}if(predicate(n))out.push(n);walk(n.props?.children);};walk(root);return out;};
  return {render(){index=0;const tree=Control(props);const effects=queued;queued=[];effects.forEach(fn=>fn());return tree;},nodes,props};
 }
+
+// Local-only economics UI: drive real input callbacks without a browser/provider.
+export async function scenarioCalculatorInteraction(){
+ const economics=await import('../../lib/gradingScenarios.mjs');
+ const slots=[];let index=0;
+ const useState=initial=>{const i=index++;if(!(i in slots))slots[i]=typeof initial==='function'?initial():initial;return [slots[i],v=>{slots[i]=typeof v==='function'?v(slots[i]):v;}];};
+ const {default:View}=components('src/components/GradingScenarioCalculator.jsx',{...economics,useState});
+ const nodes=(root,predicate)=>{const out=[];const walk=n=>{if(!n||typeof n!=='object')return;if(Array.isArray(n)){n.forEach(walk);return;}if(predicate(n))out.push(n);walk(n.props?.children);};walk(root);return out;};
+ return {render(){index=0;return View();},nodes,html(tree){return renderToStaticMarkup(tree);}};
+}

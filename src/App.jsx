@@ -1636,6 +1636,7 @@ if (data.imageAnalysis) setImageAnalysis(protectFinancialReport(data).imageAnaly
             <button type="button" onClick={()=>handleSubmit('identity')} disabled={loading||processingImages>0||!!photoErrors.front||!!photoErrors.back||!imageFile} style={{padding:'0.85rem 1.75rem',borderRadius:12,border:'1px solid #d2b48c',background:C.ink,color:'#fff',fontWeight:700}}>Identify Card</button>
             <span style={{fontSize:'0.8rem',color:C.inkSoft}}>Front photo required; back optional. Identification only. Analyze My Card remains the separate full scan.</span>
           </div>
+          <p><a href="/grading-economics">Grading Economics — manual scenario calculator</a></p>
           <ControlledValidation front={imageFile} back={backImageFile} busy={loading||processingImages>0||!!photoErrors.front||!!photoErrors.back} getSelectionEpoch={()=>selectionVersions.current.front+':'+selectionVersions.current.back} onSubmit={prepared=>handleSubmit('condition-validation',prepared)}/>
           {identityResult&&!loading&&<IdentityResult report={identityResult} onSave={saveReport}/>}
 
