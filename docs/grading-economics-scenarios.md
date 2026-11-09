@@ -2,11 +2,13 @@
 
 Route: `/grading-economics`. This separate local-state calculator supports PSA,
 Beckett/BGS, CGC, SGC and TAG. Provider names identify scenarios, not interchangeable
-grades or endorsements. No fee schedule, tier eligibility, turnaround guarantee,
-market price or probability is supplied. Inputs start blank. A deliberate example
+grades or endorsements. The optional Phase 3D dated public fee reference supplies submission fees only after
+explicit submission eligibility checks. No turnaround guarantee, market price or
+probability is supplied. Inputs start blank. A deliberate example
 button supplies explicitly assumed synthetic values. Manual edits are user-supplied,
-not verified. Verified-schedule claims are rejected until a separately reviewed,
-dated schedule integration exists. No state is persisted or passed to scan reports.
+not verified. Arbitrary verified-schedule claims remain rejected. Published references are bound
+to the bundled reviewed tier, date, revision, currency and eligibility; manual fee
+overrides remain user-supplied. See grading-service-reference.md. No state is persisted or passed to scan reports.
 Identity, condition, report authorization and financialSafety remain unchanged.
 
 ## Arithmetic and scope

@@ -1,0 +1,1110 @@
+{
+  "schemaVersion": 1,
+  "revision": "2026-11-08.1",
+  "reviewAfterDays": 30,
+  "scope": "US direct raw-card grading; no autograph authentication, crossover, reholder, promotions or computed membership discounts",
+  "sources": {
+    "psa": {
+      "url": "https://www.psacard.com/services/tradingcardgrading",
+      "notes": "US card grading, including TCG and sports; excludes dual autograph services. Turnaround is an estimate. Page has a conflicting Value pause banner; dated update takes precedence."
+    },
+    "psa-update": {
+      "url": "https://www.psacard.com/info/submission-updates",
+      "notes": "Effective October 29, 2026: Value reopens; Bulk remains paused, Collectors Club only. Standard/Priority estimates updated."
+    },
+    "bgs": {
+      "url": "https://beckett.com/grading",
+      "notes": "US card grading; TCG and sports. Autograph +$5, oversized +$8 not included. Limits, membership and minimum not specified here. Availability reflects buttons, not checkout confirmation."
+    },
+    "cgc": {
+      "url": "https://www.cgccards.com/submit/services-fees/cgc-grading/",
+      "notes": "US direct Collector submissions; TCG and sports. Bulk minimum 25. Associate/Premium 10%, Elite 20% discounts not applied. Higher assessed value may increase tier charges. Turnaround estimates only."
+    },
+    "sgc": {
+      "url": "https://www.gosgc.com/card-grading/services-pricing",
+      "notes": "Official indexed table only; live page unreadable. Standard-size raw grading, excluding reholders. Do not represent indexed prices as current checkout offers."
+    },
+    "tag": {
+      "url": "https://help.taggrading.com/en/articles/10692075-what-are-tag-s-available-grading-services",
+      "notes": "Article schedule as of October 21, 2026. Values are included coverage, not declared-value eligibility limits. VALUE/BASE fees absent. Estimates only."
+    },
+    "tag-eligibility": {
+      "url": "https://taggrading.com/pages/currently-grading",
+      "notes": "Standard size, at most 50pt, 1989 onward; no memorabilia. Pokemon: English, Japanese, Simplified/Traditional Chinese accepted; other listed languages excluded. One category per service."
+    },
+    "tag-pricing": {
+      "url": "https://taggrading.com/pages/pricing",
+      "notes": "Limited availability, dynamic prices not readable; no value upcharges. Return shipping at checkout; not included."
+    }
+  },
+  "tiers": [
+    {
+      "id": "psa-value",
+      "provider": "PSA",
+      "tier": "Value",
+      "submissionFee": "39.99",
+      "currency": "USD",
+      "serviceType": "raw_card_grading",
+      "categories": [
+        "pokemon",
+        "sports"
+      ],
+      "maxDeclaredValue": 500,
+      "minDeclaredValue": null,
+      "includedCoverage": null,
+      "minimumCards": null,
+      "membership": "not_stated",
+      "availability": "listed",
+      "verificationStatus": "reviewed_public_source",
+      "turnaroundBusinessDays": "90\u2013100",
+      "effectiveDate": "2026-10-29",
+      "checkedOn": "2026-11-08",
+      "sourceIds": [
+        "psa",
+        "psa-update"
+      ],
+      "upchargePolicy": "not_established",
+      "notes": null
+    },
+    {
+      "id": "psa-standard",
+      "provider": "PSA",
+      "tier": "Standard",
+      "submissionFee": "59.99",
+      "currency": "USD",
+      "serviceType": "raw_card_grading",
+      "categories": [
+        "pokemon",
+        "sports"
+      ],
+      "maxDeclaredValue": 1000,
+      "minDeclaredValue": null,
+      "includedCoverage": null,
+      "minimumCards": null,
+      "membership": "not_stated",
+      "availability": "listed",
+      "verificationStatus": "reviewed_public_source",
+      "turnaroundBusinessDays": "70\u201380",
+      "effectiveDate": "2026-10-29",
+      "checkedOn": "2026-11-08",
+      "sourceIds": [
+        "psa",
+        "psa-update"
+      ],
+      "upchargePolicy": "not_established",
+      "notes": null
+    },
+    {
+      "id": "psa-priority",
+      "provider": "PSA",
+      "tier": "Priority",
+      "submissionFee": "79.99",
+      "currency": "USD",
+      "serviceType": "raw_card_grading",
+      "categories": [
+        "pokemon",
+        "sports"
+      ],
+      "maxDeclaredValue": 1500,
+      "minDeclaredValue": null,
+      "includedCoverage": null,
+      "minimumCards": null,
+      "membership": "not_stated",
+      "availability": "listed",
+      "verificationStatus": "reviewed_public_source",
+      "turnaroundBusinessDays": "50\u201360",
+      "effectiveDate": "2026-10-29",
+      "checkedOn": "2026-11-08",
+      "sourceIds": [
+        "psa",
+        "psa-update"
+      ],
+      "upchargePolicy": "not_established",
+      "notes": null
+    },
+    {
+      "id": "psa-express",
+      "provider": "PSA",
+      "tier": "Express",
+      "submissionFee": "199.00",
+      "currency": "USD",
+      "serviceType": "raw_card_grading",
+      "categories": [
+        "pokemon",
+        "sports"
+      ],
+      "maxDeclaredValue": 2500,
+      "minDeclaredValue": null,
+      "includedCoverage": null,
+      "minimumCards": null,
+      "membership": "not_stated",
+      "availability": "listed",
+      "verificationStatus": "reviewed_public_source",
+      "turnaroundBusinessDays": "20\u201330",
+      "effectiveDate": null,
+      "checkedOn": "2026-11-08",
+      "sourceIds": [
+        "psa"
+      ],
+      "upchargePolicy": "not_established",
+      "notes": null
+    },
+    {
+      "id": "psa-super-express",
+      "provider": "PSA",
+      "tier": "Super Express",
+      "submissionFee": "349.00",
+      "currency": "USD",
+      "serviceType": "raw_card_grading",
+      "categories": [
+        "pokemon",
+        "sports"
+      ],
+      "maxDeclaredValue": 5000,
+      "minDeclaredValue": null,
+      "includedCoverage": null,
+      "minimumCards": null,
+      "membership": "not_stated",
+      "availability": "listed",
+      "verificationStatus": "reviewed_public_source",
+      "turnaroundBusinessDays": "10\u201315",
+      "effectiveDate": null,
+      "checkedOn": "2026-11-08",
+      "sourceIds": [
+        "psa"
+      ],
+      "upchargePolicy": "not_established",
+      "notes": null
+    },
+    {
+      "id": "psa-premier",
+      "provider": "PSA",
+      "tier": "Premier",
+      "submissionFee": "599.00",
+      "currency": "USD",
+      "serviceType": "raw_card_grading",
+      "categories": [
+        "pokemon",
+        "sports"
+      ],
+      "maxDeclaredValue": 10000,
+      "minDeclaredValue": null,
+      "includedCoverage": null,
+      "minimumCards": null,
+      "membership": "not_stated",
+      "availability": "listed",
+      "verificationStatus": "reviewed_public_source",
+      "turnaroundBusinessDays": "7\u201310",
+      "effectiveDate": null,
+      "checkedOn": "2026-11-08",
+      "sourceIds": [
+        "psa"
+      ],
+      "upchargePolicy": "not_established",
+      "notes": null
+    },
+    {
+      "id": "psa-premium-1",
+      "provider": "PSA",
+      "tier": "Premium 1",
+      "submissionFee": "999.00",
+      "currency": "USD",
+      "serviceType": "raw_card_grading",
+      "categories": [
+        "pokemon",
+        "sports"
+      ],
+      "maxDeclaredValue": 25000,
+      "minDeclaredValue": null,
+      "includedCoverage": null,
+      "minimumCards": null,
+      "membership": "not_stated",
+      "availability": "listed",
+      "verificationStatus": "reviewed_public_source",
+      "turnaroundBusinessDays": "5\u20137",
+      "effectiveDate": null,
+      "checkedOn": "2026-11-08",
+      "sourceIds": [
+        "psa"
+      ],
+      "upchargePolicy": "not_established",
+      "notes": null
+    },
+    {
+      "id": "psa-premium-2",
+      "provider": "PSA",
+      "tier": "Premium 2",
+      "submissionFee": "1999.00",
+      "currency": "USD",
+      "serviceType": "raw_card_grading",
+      "categories": [
+        "pokemon",
+        "sports"
+      ],
+      "maxDeclaredValue": 50000,
+      "minDeclaredValue": null,
+      "includedCoverage": null,
+      "minimumCards": null,
+      "membership": "not_stated",
+      "availability": "listed",
+      "verificationStatus": "reviewed_public_source",
+      "turnaroundBusinessDays": "5\u20137",
+      "effectiveDate": null,
+      "checkedOn": "2026-11-08",
+      "sourceIds": [
+        "psa"
+      ],
+      "upchargePolicy": "not_established",
+      "notes": null
+    },
+    {
+      "id": "psa-premium-3",
+      "provider": "PSA",
+      "tier": "Premium 3",
+      "submissionFee": "2999.00",
+      "currency": "USD",
+      "serviceType": "raw_card_grading",
+      "categories": [
+        "pokemon",
+        "sports"
+      ],
+      "maxDeclaredValue": 100000,
+      "minDeclaredValue": null,
+      "includedCoverage": null,
+      "minimumCards": null,
+      "membership": "not_stated",
+      "availability": "listed",
+      "verificationStatus": "reviewed_public_source",
+      "turnaroundBusinessDays": "5\u20137",
+      "effectiveDate": null,
+      "checkedOn": "2026-11-08",
+      "sourceIds": [
+        "psa"
+      ],
+      "upchargePolicy": "not_established",
+      "notes": null
+    },
+    {
+      "id": "psa-premium-5",
+      "provider": "PSA",
+      "tier": "Premium 5",
+      "submissionFee": "4999.00",
+      "currency": "USD",
+      "serviceType": "raw_card_grading",
+      "categories": [
+        "pokemon",
+        "sports"
+      ],
+      "maxDeclaredValue": 250000,
+      "minDeclaredValue": null,
+      "includedCoverage": null,
+      "minimumCards": null,
+      "membership": "not_stated",
+      "availability": "listed",
+      "verificationStatus": "reviewed_public_source",
+      "turnaroundBusinessDays": "5\u20137",
+      "effectiveDate": null,
+      "checkedOn": "2026-11-08",
+      "sourceIds": [
+        "psa"
+      ],
+      "upchargePolicy": "not_established",
+      "notes": null
+    },
+    {
+      "id": "psa-premium-10",
+      "provider": "PSA",
+      "tier": "Premium 10",
+      "submissionFee": null,
+      "currency": "USD",
+      "serviceType": "raw_card_grading",
+      "categories": [
+        "pokemon",
+        "sports"
+      ],
+      "maxDeclaredValue": null,
+      "minDeclaredValue": null,
+      "includedCoverage": null,
+      "minimumCards": null,
+      "membership": "not_stated",
+      "availability": "listed",
+      "verificationStatus": "reviewed_public_source",
+      "turnaroundBusinessDays": "5\u20137",
+      "effectiveDate": null,
+      "checkedOn": "2026-11-08",
+      "sourceIds": [
+        "psa"
+      ],
+      "upchargePolicy": "not_established",
+      "notes": "9999 base through 350000; +399 per additional 10000 or fraction. Manual quote required."
+    },
+    {
+      "id": "psa-value-bulk",
+      "provider": "PSA",
+      "tier": "Value Bulk",
+      "submissionFee": null,
+      "currency": "USD",
+      "serviceType": "raw_card_grading",
+      "categories": [
+        "pokemon",
+        "sports"
+      ],
+      "maxDeclaredValue": null,
+      "minDeclaredValue": null,
+      "includedCoverage": null,
+      "minimumCards": null,
+      "membership": "collectors_club",
+      "availability": "paused",
+      "verificationStatus": "reviewed_public_source",
+      "turnaroundBusinessDays": null,
+      "effectiveDate": null,
+      "checkedOn": "2026-11-08",
+      "sourceIds": [
+        "psa-update"
+      ],
+      "upchargePolicy": "not_established",
+      "notes": null
+    },
+    {
+      "id": "bgs-base-no-subgrades",
+      "provider": "BGS",
+      "tier": "Base \u2014 without subgrades",
+      "submissionFee": "14.95",
+      "currency": "USD",
+      "serviceType": "raw_card_grading",
+      "categories": [
+        "pokemon",
+        "sports"
+      ],
+      "maxDeclaredValue": null,
+      "minDeclaredValue": null,
+      "includedCoverage": null,
+      "minimumCards": null,
+      "membership": "not_stated",
+      "availability": "sold_out",
+      "verificationStatus": "reviewed_public_source",
+      "turnaroundBusinessDays": "90+",
+      "effectiveDate": null,
+      "checkedOn": "2026-11-08",
+      "sourceIds": [
+        "bgs"
+      ],
+      "upchargePolicy": "not_established",
+      "notes": null
+    },
+    {
+      "id": "bgs-base-subgrades",
+      "provider": "BGS",
+      "tier": "Base \u2014 subgrades",
+      "submissionFee": "17.95",
+      "currency": "USD",
+      "serviceType": "raw_card_grading",
+      "categories": [
+        "pokemon",
+        "sports"
+      ],
+      "maxDeclaredValue": null,
+      "minDeclaredValue": null,
+      "includedCoverage": null,
+      "minimumCards": null,
+      "membership": "not_stated",
+      "availability": "sold_out",
+      "verificationStatus": "reviewed_public_source",
+      "turnaroundBusinessDays": "90+",
+      "effectiveDate": null,
+      "checkedOn": "2026-11-08",
+      "sourceIds": [
+        "bgs"
+      ],
+      "upchargePolicy": "not_established",
+      "notes": null
+    },
+    {
+      "id": "bgs-standard",
+      "provider": "BGS",
+      "tier": "Standard",
+      "submissionFee": "34.95",
+      "currency": "USD",
+      "serviceType": "raw_card_grading",
+      "categories": [
+        "pokemon",
+        "sports"
+      ],
+      "maxDeclaredValue": null,
+      "minDeclaredValue": null,
+      "includedCoverage": null,
+      "minimumCards": null,
+      "membership": "not_stated",
+      "availability": "sold_out",
+      "verificationStatus": "reviewed_public_source",
+      "turnaroundBusinessDays": "45",
+      "effectiveDate": null,
+      "checkedOn": "2026-11-08",
+      "sourceIds": [
+        "bgs"
+      ],
+      "upchargePolicy": "not_established",
+      "notes": null
+    },
+    {
+      "id": "bgs-express",
+      "provider": "BGS",
+      "tier": "Express",
+      "submissionFee": "79.95",
+      "currency": "USD",
+      "serviceType": "raw_card_grading",
+      "categories": [
+        "pokemon",
+        "sports"
+      ],
+      "maxDeclaredValue": null,
+      "minDeclaredValue": null,
+      "includedCoverage": null,
+      "minimumCards": null,
+      "membership": "not_stated",
+      "availability": "listed",
+      "verificationStatus": "reviewed_public_source",
+      "turnaroundBusinessDays": "15",
+      "effectiveDate": null,
+      "checkedOn": "2026-11-08",
+      "sourceIds": [
+        "bgs"
+      ],
+      "upchargePolicy": "not_established",
+      "notes": null
+    },
+    {
+      "id": "bgs-priority",
+      "provider": "BGS",
+      "tier": "Priority",
+      "submissionFee": "124.95",
+      "currency": "USD",
+      "serviceType": "raw_card_grading",
+      "categories": [
+        "pokemon",
+        "sports"
+      ],
+      "maxDeclaredValue": null,
+      "minDeclaredValue": null,
+      "includedCoverage": null,
+      "minimumCards": null,
+      "membership": "not_stated",
+      "availability": "sold_out",
+      "verificationStatus": "reviewed_public_source",
+      "turnaroundBusinessDays": "5",
+      "effectiveDate": null,
+      "checkedOn": "2026-11-08",
+      "sourceIds": [
+        "bgs"
+      ],
+      "upchargePolicy": "not_established",
+      "notes": null
+    },
+    {
+      "id": "cgc-bulk",
+      "provider": "CGC",
+      "tier": "Bulk",
+      "submissionFee": "17.00",
+      "currency": "USD",
+      "serviceType": "raw_card_grading",
+      "categories": [
+        "pokemon",
+        "sports"
+      ],
+      "maxDeclaredValue": 500,
+      "minDeclaredValue": null,
+      "includedCoverage": null,
+      "minimumCards": 25,
+      "membership": "collector_account",
+      "availability": "listed",
+      "verificationStatus": "reviewed_public_source",
+      "turnaroundBusinessDays": "150",
+      "effectiveDate": null,
+      "checkedOn": "2026-11-08",
+      "sourceIds": [
+        "cgc"
+      ],
+      "upchargePolicy": "higher_assessed_value_may_move_tier",
+      "notes": null
+    },
+    {
+      "id": "cgc-economy",
+      "provider": "CGC",
+      "tier": "Economy",
+      "submissionFee": "20.00",
+      "currency": "USD",
+      "serviceType": "raw_card_grading",
+      "categories": [
+        "pokemon",
+        "sports"
+      ],
+      "maxDeclaredValue": 1000,
+      "minDeclaredValue": null,
+      "includedCoverage": null,
+      "minimumCards": null,
+      "membership": "collector_account",
+      "availability": "listed",
+      "verificationStatus": "reviewed_public_source",
+      "turnaroundBusinessDays": "90",
+      "effectiveDate": null,
+      "checkedOn": "2026-11-08",
+      "sourceIds": [
+        "cgc"
+      ],
+      "upchargePolicy": "higher_assessed_value_may_move_tier",
+      "notes": null
+    },
+    {
+      "id": "cgc-standard",
+      "provider": "CGC",
+      "tier": "Standard",
+      "submissionFee": "55.00",
+      "currency": "USD",
+      "serviceType": "raw_card_grading",
+      "categories": [
+        "pokemon",
+        "sports"
+      ],
+      "maxDeclaredValue": 3000,
+      "minDeclaredValue": null,
+      "includedCoverage": null,
+      "minimumCards": null,
+      "membership": "collector_account",
+      "availability": "listed",
+      "verificationStatus": "reviewed_public_source",
+      "turnaroundBusinessDays": "10",
+      "effectiveDate": null,
+      "checkedOn": "2026-11-08",
+      "sourceIds": [
+        "cgc"
+      ],
+      "upchargePolicy": "higher_assessed_value_may_move_tier",
+      "notes": null
+    },
+    {
+      "id": "cgc-express",
+      "provider": "CGC",
+      "tier": "Express",
+      "submissionFee": "100.00",
+      "currency": "USD",
+      "serviceType": "raw_card_grading",
+      "categories": [
+        "pokemon",
+        "sports"
+      ],
+      "maxDeclaredValue": 10000,
+      "minDeclaredValue": null,
+      "includedCoverage": null,
+      "minimumCards": null,
+      "membership": "collector_account",
+      "availability": "listed",
+      "verificationStatus": "reviewed_public_source",
+      "turnaroundBusinessDays": "5",
+      "effectiveDate": null,
+      "checkedOn": "2026-11-08",
+      "sourceIds": [
+        "cgc"
+      ],
+      "upchargePolicy": "higher_assessed_value_may_move_tier",
+      "notes": null
+    },
+    {
+      "id": "cgc-walkthrough",
+      "provider": "CGC",
+      "tier": "WalkThrough",
+      "submissionFee": "300.00",
+      "currency": "USD",
+      "serviceType": "raw_card_grading",
+      "categories": [
+        "pokemon",
+        "sports"
+      ],
+      "maxDeclaredValue": 100000,
+      "minDeclaredValue": null,
+      "includedCoverage": null,
+      "minimumCards": null,
+      "membership": "collector_account",
+      "availability": "listed",
+      "verificationStatus": "reviewed_public_source",
+      "turnaroundBusinessDays": "2",
+      "effectiveDate": null,
+      "checkedOn": "2026-11-08",
+      "sourceIds": [
+        "cgc"
+      ],
+      "upchargePolicy": "higher_assessed_value_may_move_tier",
+      "notes": null
+    },
+    {
+      "id": "cgc-unlimited",
+      "provider": "CGC",
+      "tier": "Unlimited Value",
+      "submissionFee": null,
+      "currency": "USD",
+      "serviceType": "raw_card_grading",
+      "categories": [
+        "pokemon",
+        "sports"
+      ],
+      "maxDeclaredValue": null,
+      "minDeclaredValue": null,
+      "includedCoverage": null,
+      "minimumCards": null,
+      "membership": "collector_account",
+      "availability": "listed",
+      "verificationStatus": "reviewed_public_source",
+      "turnaroundBusinessDays": "2",
+      "effectiveDate": null,
+      "checkedOn": "2026-11-08",
+      "sourceIds": [
+        "cgc"
+      ],
+      "upchargePolicy": "higher_assessed_value_may_move_tier",
+      "notes": "300 + 1% FMV; manual quote required."
+    },
+    {
+      "id": "cgc-jumbo",
+      "provider": "CGC",
+      "tier": "Jumbo Card",
+      "submissionFee": "20.00",
+      "currency": "USD",
+      "serviceType": "special_format",
+      "categories": [
+        "pokemon",
+        "sports"
+      ],
+      "maxDeclaredValue": null,
+      "minDeclaredValue": null,
+      "includedCoverage": null,
+      "minimumCards": null,
+      "membership": "collector_account",
+      "availability": "listed",
+      "verificationStatus": "reviewed_public_source",
+      "turnaroundBusinessDays": "120",
+      "effectiveDate": null,
+      "checkedOn": "2026-11-08",
+      "sourceIds": [
+        "cgc"
+      ],
+      "upchargePolicy": "higher_assessed_value_may_move_tier",
+      "notes": null
+    },
+    {
+      "id": "cgc-coin",
+      "provider": "CGC",
+      "tier": "TCG / sports / non-sports coin",
+      "submissionFee": "20.00",
+      "currency": "USD",
+      "serviceType": "special_format",
+      "categories": [
+        "pokemon",
+        "sports"
+      ],
+      "maxDeclaredValue": null,
+      "minDeclaredValue": null,
+      "includedCoverage": null,
+      "minimumCards": null,
+      "membership": "collector_account",
+      "availability": "listed",
+      "verificationStatus": "reviewed_public_source",
+      "turnaroundBusinessDays": "120",
+      "effectiveDate": null,
+      "checkedOn": "2026-11-08",
+      "sourceIds": [
+        "cgc"
+      ],
+      "upchargePolicy": "higher_assessed_value_may_move_tier",
+      "notes": null
+    },
+    {
+      "id": "sgc-standard-1500",
+      "provider": "SGC",
+      "tier": "Standard \u22641500",
+      "submissionFee": "50.00",
+      "currency": "USD",
+      "serviceType": "raw_card_grading",
+      "categories": [
+        "pokemon",
+        "sports"
+      ],
+      "maxDeclaredValue": 1500,
+      "minDeclaredValue": null,
+      "includedCoverage": null,
+      "minimumCards": null,
+      "membership": "not_stated",
+      "availability": "unverified",
+      "verificationStatus": "indexed_only_live_unverified",
+      "turnaroundBusinessDays": "40+",
+      "effectiveDate": null,
+      "checkedOn": "2026-11-08",
+      "sourceIds": [
+        "sgc"
+      ],
+      "upchargePolicy": "not_established",
+      "notes": null
+    },
+    {
+      "id": "sgc-standard-3500",
+      "provider": "SGC",
+      "tier": "Standard \u22643500",
+      "submissionFee": "85.00",
+      "currency": "USD",
+      "serviceType": "raw_card_grading",
+      "categories": [
+        "pokemon",
+        "sports"
+      ],
+      "maxDeclaredValue": 3500,
+      "minDeclaredValue": null,
+      "includedCoverage": null,
+      "minimumCards": null,
+      "membership": "not_stated",
+      "availability": "unverified",
+      "verificationStatus": "indexed_only_live_unverified",
+      "turnaroundBusinessDays": "40+",
+      "effectiveDate": null,
+      "checkedOn": "2026-11-08",
+      "sourceIds": [
+        "sgc"
+      ],
+      "upchargePolicy": "not_established",
+      "notes": null
+    },
+    {
+      "id": "sgc-expedited-3500",
+      "provider": "SGC",
+      "tier": "Expedited \u22643500",
+      "submissionFee": "150.00",
+      "currency": "USD",
+      "serviceType": "raw_card_grading",
+      "categories": [
+        "pokemon",
+        "sports"
+      ],
+      "maxDeclaredValue": 3500,
+      "minDeclaredValue": null,
+      "includedCoverage": null,
+      "minimumCards": null,
+      "membership": "not_stated",
+      "availability": "unverified",
+      "verificationStatus": "indexed_only_live_unverified",
+      "turnaroundBusinessDays": "2\u20133",
+      "effectiveDate": null,
+      "checkedOn": "2026-11-08",
+      "sourceIds": [
+        "sgc"
+      ],
+      "upchargePolicy": "not_established",
+      "notes": null
+    },
+    {
+      "id": "sgc-expedited-7500",
+      "provider": "SGC",
+      "tier": "Expedited \u22647500",
+      "submissionFee": "250.00",
+      "currency": "USD",
+      "serviceType": "raw_card_grading",
+      "categories": [
+        "pokemon",
+        "sports"
+      ],
+      "maxDeclaredValue": 7500,
+      "minDeclaredValue": null,
+      "includedCoverage": null,
+      "minimumCards": null,
+      "membership": "not_stated",
+      "availability": "unverified",
+      "verificationStatus": "indexed_only_live_unverified",
+      "turnaroundBusinessDays": "2\u20133",
+      "effectiveDate": null,
+      "checkedOn": "2026-11-08",
+      "sourceIds": [
+        "sgc"
+      ],
+      "upchargePolicy": "not_established",
+      "notes": null
+    },
+    {
+      "id": "sgc-expedited-20000",
+      "provider": "SGC",
+      "tier": "Expedited \u226420000",
+      "submissionFee": "500.00",
+      "currency": "USD",
+      "serviceType": "raw_card_grading",
+      "categories": [
+        "pokemon",
+        "sports"
+      ],
+      "maxDeclaredValue": 20000,
+      "minDeclaredValue": null,
+      "includedCoverage": null,
+      "minimumCards": null,
+      "membership": "not_stated",
+      "availability": "unverified",
+      "verificationStatus": "indexed_only_live_unverified",
+      "turnaroundBusinessDays": "2\u20133",
+      "effectiveDate": null,
+      "checkedOn": "2026-11-08",
+      "sourceIds": [
+        "sgc"
+      ],
+      "upchargePolicy": "not_established",
+      "notes": null
+    },
+    {
+      "id": "sgc-expedited-50000",
+      "provider": "SGC",
+      "tier": "Expedited \u226450000",
+      "submissionFee": "1000.00",
+      "currency": "USD",
+      "serviceType": "raw_card_grading",
+      "categories": [
+        "pokemon",
+        "sports"
+      ],
+      "maxDeclaredValue": 50000,
+      "minDeclaredValue": null,
+      "includedCoverage": null,
+      "minimumCards": null,
+      "membership": "not_stated",
+      "availability": "unverified",
+      "verificationStatus": "indexed_only_live_unverified",
+      "turnaroundBusinessDays": "2\u20133",
+      "effectiveDate": null,
+      "checkedOn": "2026-11-08",
+      "sourceIds": [
+        "sgc"
+      ],
+      "upchargePolicy": "not_established",
+      "notes": null
+    },
+    {
+      "id": "sgc-expedited-100000",
+      "provider": "SGC",
+      "tier": "Expedited \u2264100000",
+      "submissionFee": "2000.00",
+      "currency": "USD",
+      "serviceType": "raw_card_grading",
+      "categories": [
+        "pokemon",
+        "sports"
+      ],
+      "maxDeclaredValue": 100000,
+      "minDeclaredValue": null,
+      "includedCoverage": null,
+      "minimumCards": null,
+      "membership": "not_stated",
+      "availability": "unverified",
+      "verificationStatus": "indexed_only_live_unverified",
+      "turnaroundBusinessDays": "2\u20133",
+      "effectiveDate": null,
+      "checkedOn": "2026-11-08",
+      "sourceIds": [
+        "sgc"
+      ],
+      "upchargePolicy": "not_established",
+      "notes": null
+    },
+    {
+      "id": "sgc-expedited-high",
+      "provider": "SGC",
+      "tier": "Expedited >100000",
+      "submissionFee": null,
+      "currency": "USD",
+      "serviceType": "raw_card_grading",
+      "categories": [
+        "pokemon",
+        "sports"
+      ],
+      "maxDeclaredValue": null,
+      "minDeclaredValue": null,
+      "includedCoverage": null,
+      "minimumCards": null,
+      "membership": "not_stated",
+      "availability": "unverified",
+      "verificationStatus": "indexed_only_live_unverified",
+      "turnaroundBusinessDays": "2\u20133",
+      "effectiveDate": null,
+      "checkedOn": "2026-11-08",
+      "sourceIds": [
+        "sgc"
+      ],
+      "upchargePolicy": "not_established",
+      "notes": "3750 base; +375 per additional 10000 above 100000. Manual quote required."
+    },
+    {
+      "id": "tag-value",
+      "provider": "TAG",
+      "tier": "VALUE",
+      "submissionFee": null,
+      "currency": "USD",
+      "serviceType": "raw_card_grading",
+      "categories": [
+        "pokemon",
+        "sports"
+      ],
+      "maxDeclaredValue": null,
+      "minDeclaredValue": null,
+      "includedCoverage": 250,
+      "minimumCards": 10,
+      "membership": "not_stated",
+      "availability": "listed",
+      "verificationStatus": "reviewed_public_source",
+      "turnaroundBusinessDays": "90",
+      "effectiveDate": "2026-10-21",
+      "checkedOn": "2026-11-08",
+      "sourceIds": [
+        "tag",
+        "tag-eligibility",
+        "tag-pricing"
+      ],
+      "upchargePolicy": "no_value_upcharges",
+      "notes": "Confirm live capacity and physical card eligibility; coverage is not a value cap."
+    },
+    {
+      "id": "tag-base",
+      "provider": "TAG",
+      "tier": "BASE",
+      "submissionFee": null,
+      "currency": "USD",
+      "serviceType": "raw_card_grading",
+      "categories": [
+        "pokemon",
+        "sports"
+      ],
+      "maxDeclaredValue": null,
+      "minDeclaredValue": null,
+      "includedCoverage": 500,
+      "minimumCards": 5,
+      "membership": "not_stated",
+      "availability": "listed",
+      "verificationStatus": "reviewed_public_source",
+      "turnaroundBusinessDays": "60",
+      "effectiveDate": "2026-10-21",
+      "checkedOn": "2026-11-08",
+      "sourceIds": [
+        "tag",
+        "tag-eligibility",
+        "tag-pricing"
+      ],
+      "upchargePolicy": "no_value_upcharges",
+      "notes": "Confirm live capacity and physical card eligibility; coverage is not a value cap."
+    },
+    {
+      "id": "tag-standard",
+      "provider": "TAG",
+      "tier": "STANDARD",
+      "submissionFee": "59.95",
+      "currency": "USD",
+      "serviceType": "raw_card_grading",
+      "categories": [
+        "pokemon",
+        "sports"
+      ],
+      "maxDeclaredValue": null,
+      "minDeclaredValue": null,
+      "includedCoverage": 1000,
+      "minimumCards": null,
+      "membership": "not_stated",
+      "availability": "listed",
+      "verificationStatus": "reviewed_public_source",
+      "turnaroundBusinessDays": "45",
+      "effectiveDate": "2026-10-21",
+      "checkedOn": "2026-11-08",
+      "sourceIds": [
+        "tag",
+        "tag-eligibility",
+        "tag-pricing"
+      ],
+      "upchargePolicy": "no_value_upcharges",
+      "notes": "Confirm live capacity and physical card eligibility; coverage is not a value cap."
+    },
+    {
+      "id": "tag-priority",
+      "provider": "TAG",
+      "tier": "PRIORITY",
+      "submissionFee": "79.95",
+      "currency": "USD",
+      "serviceType": "raw_card_grading",
+      "categories": [
+        "pokemon",
+        "sports"
+      ],
+      "maxDeclaredValue": null,
+      "minDeclaredValue": null,
+      "includedCoverage": 1500,
+      "minimumCards": null,
+      "membership": "not_stated",
+      "availability": "listed",
+      "verificationStatus": "reviewed_public_source",
+      "turnaroundBusinessDays": "30",
+      "effectiveDate": "2026-10-21",
+      "checkedOn": "2026-11-08",
+      "sourceIds": [
+        "tag",
+        "tag-eligibility",
+        "tag-pricing"
+      ],
+      "upchargePolicy": "no_value_upcharges",
+      "notes": "Confirm live capacity and physical card eligibility; coverage is not a value cap."
+    },
+    {
+      "id": "tag-express",
+      "provider": "TAG",
+      "tier": "EXPRESS",
+      "submissionFee": "149.95",
+      "currency": "USD",
+      "serviceType": "raw_card_grading",
+      "categories": [
+        "pokemon",
+        "sports"
+      ],
+      "maxDeclaredValue": null,
+      "minDeclaredValue": null,
+      "includedCoverage": 2500,
+      "minimumCards": null,
+      "membership": "not_stated",
+      "availability": "listed",
+      "verificationStatus": "reviewed_public_source",
+      "turnaroundBusinessDays": "10",
+      "effectiveDate": "2026-10-21",
+      "checkedOn": "2026-11-08",
+      "sourceIds": [
+        "tag",
+        "tag-eligibility",
+        "tag-pricing"
+      ],
+      "upchargePolicy": "no_value_upcharges",
+      "notes": "Confirm live capacity and physical card eligibility; coverage is not a value cap."
+    },
+    {
+      "id": "tag-premier",
+      "provider": "TAG",
+      "tier": "PREMIER",
+      "submissionFee": "299.95",
+      "currency": "USD",
+      "serviceType": "raw_card_grading",
+      "categories": [
+        "pokemon",
+        "sports"
+      ],
+      "maxDeclaredValue": null,
+      "minDeclaredValue": null,
+      "includedCoverage": 5000,
+      "minimumCards": null,
+      "membership": "not_stated",
+      "availability": "listed",
+      "verificationStatus": "reviewed_public_source",
+      "turnaroundBusinessDays": "3\u20135",
+      "effectiveDate": "2026-10-21",
+      "checkedOn": "2026-11-08",
+      "sourceIds": [
+        "tag",
+        "tag-eligibility",
+        "tag-pricing"
+      ],
+      "upchargePolicy": "no_value_upcharges",
+      "notes": "Confirm live capacity and physical card eligibility; coverage is not a value cap."
+    }
+  ]
+}
