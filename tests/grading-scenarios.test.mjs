@@ -49,16 +49,16 @@ test('scenario calculations are immutable and cannot authorize protected reports
  const identity={subject:'Synthetic card',cardNumber:'PA-JD'},condition={visualObservations:[],inspectedSides:['front']};const safe=protectFinancialReport({canonicalCard:identity,identityV2:{category:'sports'},imageAnalysis:condition,manualScenario:r,financialDecision:{allowed:true},rawValue:999});assert.deepEqual(safe.canonicalCard,identity);assert.equal(safe.financialDecision.allowed,false);for(const k of FINANCIAL_FIELDS)assert.equal(safe[k],null);assert.equal(safe.imageAnalysis.worthGrading,null);assert.equal(r.kind,'manual_hypothetical_grading_scenario');
 });
 
-test('actual calculator renders blank scenarios, loads explicit synthetic example and recalculates editable inputs',async()=>{
+test('actual PSA workflow loads explicit synthetic inputs and recalculates editable prices without active other providers',async()=>{
  const {scenarioCalculatorInteraction}=await import('./helpers/renderReports.mjs');
  const ui=await scenarioCalculatorInteraction();let tree=ui.render();
- assert.match(ui.html(tree),/Scenario Calculator/);assert.match(ui.html(tree),/Unavailable/);
- assert.equal(ui.nodes(tree,n=>n.type==='input'&&n.props.value==='250').length,0);
- ui.nodes(tree,n=>n.type==='button'&&n.props.children==='Load synthetic arithmetic example')[0].props.onClick();
- tree=ui.render();let html=ui.html(tree);
- for(const label of ['Synthetic example loaded','$85.00','$155.56','$158.89','51.52%','Beckett/BGS'])assert.ok(html.includes(label),label);
- const price=ui.nodes(tree,n=>n.type==='input'&&n.props.value==='250')[0];price.props.onChange({target:{value:'50'}});
- tree=ui.render();assert.ok(ui.html(tree).includes('-$95.00'));
- ui.nodes(tree,n=>n.type==='input'&&n.props.value==='50')[0].props.onChange({target:{value:''}});
- html=ui.html(ui.render());assert.ok(html.includes('Unavailable'));assert.ok(html.includes('User-supplied — not verified'));
+ const button=text=>ui.nodes(tree,n=>n.type==='button'&&(typeof n.props.children==='string'?n.props.children:n.props.children?.join?.('')).includes(text))[0];
+ assert.match(ui.html(tree),/Scenario Calculator/);assert.equal(ui.nodes(tree,n=>n.type==='input'&&n.props.value==='250').length,0);
+ button('Load synthetic example').props.onClick();tree=ui.render();button('Continue to PSA Grading').props.onClick();tree=ui.render();
+ const price=ui.nodes(tree,n=>n.type==='input'&&n.props['aria-label']==='PSA 10 hypothetical resale price')[0];price.props.onChange({target:{value:'50'}});
+ tree=ui.render();button('See Your Economics').props.onClick();tree=ui.render();let html=ui.html(tree);
+ for(const label of ['Synthetic example loaded','-$95.00','$155.56','$158.89','PSA 8','PSA 9','PSA 10'])assert.ok(html.includes(label),label);
+ assert.ok(!/Beckett|BGS|CGC|SGC|TAG/.test(html));
+ button('Adjust assumptions').props.onClick();tree=ui.render();ui.nodes(tree,n=>n.type==='input'&&n.props['aria-label']==='PSA 10 hypothetical resale price')[0].props.onChange({target:{value:''}});
+ tree=ui.render();button('See Your Economics').props.onClick();tree=ui.render();assert.ok(ui.html(tree).includes('Unavailable'));
 });

@@ -1,7 +1,8 @@
 # Manual grading economics foundation
 
-Route: `/grading-economics`. This separate local-state calculator supports PSA,
-Beckett/BGS, CGC, SGC and TAG. Provider names identify scenarios, not interchangeable
+Route: `/grading-economics`. The Phase 3E collector interface is PSA-first; the
+underlying isolated calculator still supports PSA, Beckett/BGS, CGC, SGC and TAG.
+See phase3e-psa-collector-experience.md for the three-step workflow. Provider names identify scenarios, not interchangeable
 grades or endorsements. The optional Phase 3D dated public fee reference supplies submission fees only after
 explicit submission eligibility checks. No turnaround guarantee, market price or
 probability is supplied. Inputs start blank. A deliberate example

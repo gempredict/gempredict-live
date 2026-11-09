@@ -38,19 +38,18 @@ test('published fee is bound to provider, tier, eligibility, revision and amount
  assert.equal(calculateGradingScenario(e.common,{...s,costs:{gradingFee:s.costs.gradingFee}},now).gradingInvestmentCents,null);
  assert.equal(r.recommendation,null);assert.equal(r.expectedValue,null);assert.equal(r.verifiedMarketValue,false);
 });
-test('actual rendered calculator selects reference, requires eligibility, applies only fee, preserves override and unknown costs',async()=>{
+test('actual PSA workflow preserves published fee eligibility, fee provenance and manual overrides',async()=>{
  const ui=await scenarioCalculatorInteraction();let tree=ui.render();
- const all=()=>ui.nodes(tree,n=>n.type==='select');
- all().find(n=>n.props.children?.[1]?.some?.(x=>x.props?.value==='cgc-bulk')).props.onChange({target:{value:'cgc-bulk'}});
- tree=ui.render();assert.ok(ui.html(tree).includes('membership or account required'));
- const label=text=>ui.nodes(tree,n=>n.type==='label'&&typeof n.props.children?.[0]==='string'&&n.props.children[0].startsWith(text))[0];
- function input(text,value){const node=label(text);const el=ui.nodes(node,n=>n.type==='input'||n.type==='select')[0];el.props.onChange({target:{value}});tree=ui.render();}
- input('Submission category','pokemon');input('Cards in this service submission','25');input('Declared card value','400');
- for(const n of ui.nodes(tree,n=>n.type==='input'&&n.props.type==='checkbox'))n.props.onChange({target:{checked:true}});
- tree=ui.render();const apply=ui.nodes(tree,n=>n.type==='button'&&n.props.children==='Use published grading fee')[0];assert.equal(apply.props.disabled,false);apply.props.onClick();
- tree=ui.render();assert.ok(ui.html(tree).includes('Submission fee from dated reference'));assert.ok(ui.html(tree).includes('Unavailable'));
- const fee=ui.nodes(tree,n=>n.type==='input'&&n.props.value==='17.00')[0];assert.ok(fee);fee.props.onChange({target:{value:'19'}});
- tree=ui.render();assert.ok(ui.html(tree).includes('differs from the published reference'));
+ ui.nodes(tree,n=>n.type==='button'&&n.props.children?.includes?.('Continue to PSA Grading'))[0].props.onClick();tree=ui.render();
+ const input=(name,value,checked)=>{ui.nodes(tree,n=>n.props?.['aria-label']===name)[0].props.onChange({target:{value,checked}});tree=ui.render();};
+ input('PSA service tier','psa-standard');assert.ok(ui.html(tree).includes('Review and confirm submission requirements'));
+ input('Submission category','pokemon');input('Cards in this service submission','1');input('Declared card value (USD assumption)','1001');input('Submission requirements confirmed',undefined,true);
+ let apply=ui.nodes(tree,n=>n.type==='button'&&n.props.children==='Use published grading fee')[0];assert.equal(apply.props.disabled,true);
+ input('Declared card value (USD assumption)','400');apply=ui.nodes(tree,n=>n.type==='button'&&n.props.children==='Use published grading fee')[0];assert.equal(apply.props.disabled,false);apply.props.onClick();tree=ui.render();
+ assert.ok(ui.html(tree).includes('Published fee reference'));assert.equal(ui.nodes(tree,n=>n.props?.['aria-label']==='Submission fee per card')[0].props.value,'59.99');
+ assert.equal(ui.nodes(tree,n=>n.props?.['aria-label']==='Insurance — batch total')[0].props.value,'');
+ input('Submission fee per card','19');assert.ok(ui.html(tree).includes('differs from the published reference'));
+ input('PSA service tier','psa-value-bulk');assert.ok(ui.html(tree).includes('paused when checked'));
 });
 
 test('an unpublished fee cannot be labeled a numeric mismatch; immutable reference cannot be edited in place',()=>{
