@@ -6,7 +6,7 @@ import {verificationRows,reportTitle} from '../lib/reportVerification.mjs';
 import {renderReports} from './helpers/renderReports.mjs';
 // A deliberately conflicting synthetic model proposal, not a retained live payload.
 const conflicting={...vision,identifiedBrandSet:'Scarlet & Violet / Prismatic Evolutions'};
-const clean=html=>html.replace(/<[^>]*>/g,' ').replace(/\s+/g,' ');
+const clean=html=>html.replace(/<style[\s\S]*?<\/style>/g,'').replace(/<[^>]*>/g,' ').replace(/\s+/g,' ');
 function checkRendering(report){
  const {upper,lower}=renderReports(report);const title=reportTitle(report);
  assert.ok(upper.includes(title));assert.ok(lower.includes(title));

@@ -1,3 +1,5 @@
+import GradingScenarioCalculator from './components/GradingScenarioCalculator';
+import {unifiedReportPresentation} from '../lib/unifiedReportPresentation.mjs';
 import {collectorIdentityMessage,collectorConditions,collectorLimitations} from '../lib/collectorPresentation.mjs';
 import ControlledValidation from './components/ControlledValidation';
 import IdentityResult from "./components/IdentityResult";
@@ -230,16 +232,16 @@ function VerificationStatus({report}) {
   </dl>;
 }
 
-export function ImageAnalysisCard({report}) {
+export function ImageAnalysisCard({report,embedded=false}) {
  const safe=protectFinancialReport(report),data=safe.imageAnalysis,observation=safe.originalIdentityObservation||data;
  if(!data)return null;
  const overview=collectorConditions(data),limitations=collectorLimitations(data);
  function RatingPill({label}){return <span>{label}</span>;}
  const attributes=['centering','corners','edges','surface'].map(key=>({key,label:key[0].toUpperCase()+key.slice(1),note:data[key+'Note']}));
- return <section aria-label="Photo condition report" style={{background:C.white,border:'1px solid '+C.border,borderRadius:18,padding:'1.1rem 1.25rem',marginTop:20}}>
-  <p style={{color:C.gold,fontWeight:700}}>AI Photo Grading Analysis · Photo observations</p>
+ return <section aria-label="Photo condition report" style={{background:C.white,border:'1px solid '+C.border,borderRadius:18,padding:'1.1rem 1.25rem',marginTop:embedded?0:20}}>
+  {!embedded&&<><p style={{color:C.gold,fontWeight:700}}>AI Photo Grading Analysis · Photo observations</p>
   <h3 style={{margin:'0.4rem 0'}}>{reportTitle(safe)}</h3>
-  <p>{collectorIdentityMessage(safe)}</p>
+  <p>{collectorIdentityMessage(safe)}</p></>}
   {(safe.catalogComparison?.initialConflicts||[]).some(f=>['year','brandSet'].includes(f))&&safe.coreCatalogIdentity?.supported&&<p>Catalog evidence corrected the original AI proposal. The disagreement is retained in Technical Details.</p>}
   <p>These photo observations do not establish a grade, whole-card cleanliness or a submission recommendation.</p>
   <div className="gp-vision-grid" style={{display:'grid',gridTemplateColumns:'repeat(auto-fit, minmax(min(100%, 180px), 1fr))',gap:12,margin:'1rem 0'}}>
@@ -337,7 +339,7 @@ export function ImageAnalysisCard({report}) {
                 </div>
                 {assessment?.observations?.length ? assessment.observations.map((observation,i)=><p key={i} style={{fontSize:"0.78rem",color:C.inkMid,lineHeight:1.55,margin:0}}>
                   {observation.side==='front'?'Front photo: ':observation.side==='back'?'Back photo: ':'Photo side not established: '}{observation.text}{observation.region&&<span> Model-proposed photo region [{observation.region.join(', ')}].</span>}
-                </p>) : <p style={{ fontSize: "0.78rem", color: C.inkMid, lineHeight: 1.55, margin: 0 }}>{attr.note || "—"}</p>}
+                </p>) : <p style={{ fontSize: "0.78rem", color: C.inkMid, lineHeight: 1.55, margin: 0 }}>{"Unassessed: Not assessed from the photo — no qualified regional observation available."}</p>}
                 {assessment?.sides?.length>0 && <p style={{fontSize:"0.7rem",color:C.inkSoft,margin:"0.35rem 0"}}>Evidence: {assessment.sides.map(side=>side==='front'?'Front photo':'Back photo').join(', ')}</p>}
                 {(data.inspectionCoverage||[]).filter(c=>c.attribute===attr.key).map(c=><p key={c.side} style={{fontSize:"0.7rem",color:C.inkSoft,margin:"0.35rem 0"}}>
                   {c.side==='front'?'Front':'Back'} inspection: {c.reason==='photo_unavailable'?'photograph unavailable':c.regions.length?`${c.status} — ${c.regions.length} reported region(s)`:'coverage not established'}.
@@ -380,7 +382,7 @@ function EmptyState() {
         Your grading report will appear here
       </div>
       <div style={{ fontSize: "0.85rem", color: C.inkSoft, fontWeight: 300, marginBottom: "1rem" }}>
-        Search a card above to see raw value, PSA grade estimates, grading upside, and a recommendation.
+        Identify a card and review qualified photo observations. Market comparisons and grading recommendations remain unavailable without verified evidence.
       </div>
       <div style={{ display: "flex", gap: "0.5rem", justifyContent: "center", flexWrap: "wrap" }}>
         {["Compare raw vs graded value", "Estimate PSA 10 upside", "Avoid wasted grading fees"].map(function(b) {
@@ -397,584 +399,29 @@ function EmptyState() {
 
 export function ResultCard({ data, index, onSave, isSaved }) {
   data = protectFinancialReport(data);
-  const gpScore = buildGemPredictScore(data);
-  const unifiedScore = gpScore?.score ?? null;
-  const verdict  = VERDICTS[data.verdict] || VERDICTS.maybe;
-  const profit   = typeof data.gradingUpside === "number" ? data.gradingUpside : 0;
-  const marketSummary = data.marketData && data.marketData.marketSummary
-  ? data.marketData.marketSummary
-  : null;
-  const displayTitle = reportTitle(data);
-  const displayMeta = data.coreCatalogIdentity?.supported||data.pokemonIdentityStatus?.catalogVerified
-    ? "Catalog-supported identity · Physical printing not verified"
-    : (data.cardMeta || "Identity unverified");
-  const bullets  = getVerdictBullets(data);
-  const useCase  = VERDICT_USE_CASE[data.verdict] || VERDICT_USE_CASE.maybe;
-  const [copied, setCopied] = useState(false);
-  const [shared, setShared] = useState(false);
-  const [feedback, setFeedback] = useState(null);
-
-  function handleCopy() {
-    try { navigator.clipboard.writeText(buildCopySummary(data)); } catch {}
-    setCopied(true); setTimeout(function() { setCopied(false); }, 2000);
-  }
-  function handleShare() {
-    const summary = buildCopySummary(data);
-    if (navigator.share) { navigator.share({ title: "GemPredict Report", text: summary }).catch(function() {}); }
-    else { try { navigator.clipboard.writeText(summary); } catch {} }
-    setShared(true); setTimeout(function() { setShared(false); }, 2000);
-  }
-
-  return (
-    <div style={{ background: C.white, border: "1px solid " + C.border, borderRadius: 18, overflow: "hidden", boxShadow: "0 2px 16px rgba(0,0,0,0.06)", animation: "fadeUp 0.4s " + (index * 0.07) + "s ease both" }}>
-      {/* Header */}
-      <div style={{ background: verdict.bg, borderBottom: "1px solid " + verdict.border, padding: "1rem 1.25rem", display: "flex", justifyContent: "space-between", alignItems: "flex-start", flexWrap: "wrap", gap: "0.75rem" }}>
-        <div>
-          <div style={{ display: "flex", alignItems: "center", gap: "0.5rem", marginBottom: "0.25rem" }}>
-            <div style={{ fontSize: "0.65rem", fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.08em", color: verdict.color }}>Grading Decision Report</div>
-            <span style={{ fontSize: "0.6rem", fontWeight: 700, background: C.ink, color: C.gold, padding: "0.1rem 0.4rem", borderRadius: 4, letterSpacing: "0.06em" }}>BETA</span>
-          </div>
-          <div style={{ fontFamily: "'Playfair Display', serif", fontSize: "1.1rem", fontWeight: 700, color: C.ink }}>
-  {displayTitle}
-</div>
-<div style={{ fontSize: "0.75rem", color: C.inkSoft, marginTop: "0.15rem" }}>
-  {displayMeta}
-</div>
-          <div style={{ fontSize: "0.68rem", color: C.inkSoft, marginTop: "0.35rem", fontStyle: "italic" }}>
-            <details><summary>Technical Details</summary>{data.pokemonIdentityStatus ? identitySummary(data) : 'Unverified identity proposal; valuation and grading recommendations withheld.'}</details>
-          </div>
-        </div>
-        <div style={{ textAlign: "center", flexShrink: 0 }}>
-          <div style={{ background: verdict.color, color: "#fff", fontSize: "0.875rem", fontWeight: 800, padding: "0.45rem 1rem", borderRadius: 100, whiteSpace: "nowrap" }}>{verdict.label}</div>
-          {data.psa10Probability != null && (
-            <div style={{ fontSize: "0.7rem", color: verdict.color, fontWeight: 600, marginTop: "0.3rem" }}>~{data.psa10Probability}% PSA 10</div>
-          )}
-        </div>
-      </div>
-
-      <div style={{ padding: "1.1rem 1.25rem" }}>
-      <p>{collectorIdentityMessage(data)}</p><details><summary>Technical Details</summary><VerificationStatus report={data}/></details>
-      {(Array.isArray(data.scanNotices)?data.scanNotices:[]).map(safeScanFailure).filter(notice=>['MARKETPLACE_UNAVAILABLE','VERIFICATION_UNRESOLVED'].includes(notice?.code)).map(notice=><p key={notice.code} role="status" style={{fontSize:"0.75rem",color:C.inkSoft}}>{notice.error}</p>)}
-      <div
-  style={{
-    background: "#0d1117",
-    color: "#fff",
-    borderRadius: 16,
-    padding: "1.4rem",
-    marginBottom: "1.25rem",
-    textAlign: "center",
-  }}
->
-  <div
-    style={{
-      fontSize: "0.72rem",
-      letterSpacing: "0.12em",
-      textTransform: "uppercase",
-      color: "#c9a84c",
-      fontWeight: 700,
-    }}
-  >
-    GemPredict Score™
-  </div>
-
-  <div
-    style={{
-      fontSize: "3rem",
-      fontWeight: 900,
-      lineHeight: 1,
-      marginTop: ".5rem",
-    }}
-  >
-    {gpScore?.score ?? "—"}
-  </div>
-
-  <div
-    style={{
-      fontSize: "1.4rem",
-      color: "#FFD700",
-      marginTop: ".5rem",
-    }}
-  >
-    {gpScore?.score != null && "★".repeat((gpScore?.stars || 0))}
-    {gpScore?.score != null && "☆".repeat(5 - (gpScore?.stars || 0))}
-  </div>
-
-  <div
-    style={{
-      marginTop: ".6rem",
-      fontWeight: 600,
-      color: "#ddd",
-    }}
-  >
-    {gpScore?.recommendation || "Verification required before scoring"}
-  </div>
-</div>
-
-<AtlasPanel atlas={data.atlas} />
-
-        <div
-  style={{
-    background: "#f8f6f2",
-    border: "1px solid " + C.border,
-    borderRadius: 14,
-    padding: "1rem",
-    marginBottom: "1rem",
-    textAlign: "center",
-  }}
->
-  <div
-  style={{
-      fontSize: "0.72rem",
-      fontWeight: 700,
-      letterSpacing: "0.12em",
-      textTransform: "uppercase",
-      color: C.inkSoft,
-      marginBottom: "0.4rem",
-  }}
->
-  SHOULD YOU GRADE THIS?
-</div>
-{unifiedScore != null && (
-  <div
-    style={{
-      display: "inline-block",
-      background: C.goldLight,
-      border: "1px solid " + C.gold,
-      borderRadius: 999,
-      padding: "0.35rem 0.9rem",
-      marginBottom: "0.8rem",
-    }}
-  >
-    <span
-      style={{
-        fontSize: "0.68rem",
-        fontWeight: 700,
-        textTransform: "uppercase",
-        letterSpacing: "0.08em",
-        color: C.amber,
-      }}
-    >
-      GemPredict Score
-    </span>
-
-    <div
-      style={{
-        fontSize: "1.6rem",
-        fontWeight: 800,
-        color: C.amber,
-        lineHeight: 1.1,
-      }}
-    >
-      {unifiedScore}/100
-    </div>
-    <div
-  style={{
-    marginTop: "0.35rem",
-    fontSize: "0.72rem",
-    color: C.inkMid,
-    lineHeight: 1.35,
-    maxWidth: 260,
-  }}
->
-  {unifiedScore >= 85
-    ? "🟢 Strong Grade Candidate"
-    : unifiedScore >= 70
-    ? "🟡 Good Candidate"
-    : unifiedScore >= 55
-    ? "🟠 Consider It"
-    : "🔴 Keep Raw"}
-</div>
-
-<div
-  style={{
-    marginTop: "0.35rem",
-    fontSize: "0.65rem",
-    color: C.inkSoft,
-    lineHeight: 1.4,
-    maxWidth: 260,
-  }}
->
-  Measures grading attractiveness using market strength,
-  PSA 10 odds, expected profit, and confidence.
-</div>
-  </div>
-)}
-          <div
-  style={{
-    fontSize: "1.75rem",
-    fontWeight: 800,
-    color: verdict.color,
-    marginBottom: "0.35rem",
-  }}
->
-  {verdict.label}
-</div>
-
-  <div
-  style={{
-    display: "grid",
-    gridTemplateColumns: "repeat(5,1fr)",
-    gap: "0.75rem",
-  }}
->
-  <div>
-    <div style={{ fontSize: "0.62rem", color: C.inkSoft }}>
-      Most Likely Outcome
-    </div>
-    <div style={{ fontWeight: 700 }}>
-      {data.imageAnalysis?.mostLikelyGradeRange || "See Analysis"}
-    </div>
-  </div>
-
-  <div>
-    <div style={{ fontSize: "0.62rem", color: C.inkSoft }}>
-      PSA 10 Odds
-    </div>
-    <div style={{ fontWeight: 700 }}>
-      {data.psa10Probability != null ? data.psa10Probability + "%" : "—"}
-    </div>
-  </div>
-
-  <div>
-    <div style={{ fontSize: "0.62rem", color: C.inkSoft }}>
-      Expected Net
-    </div>
-    <div
-      style={{
-        fontWeight: 700,
-        color: (data.expectedNetValue || 0) >= 0 ? C.green : C.red,
-      }}
-    >
-      {data.expectedNetValue != null
-        ? ((data.expectedNetValue >= 0 ? "+$" : "-$") + safeMoney(Math.abs(data.expectedNetValue)))
-        : "—"}
-    </div>
-  </div>
-
-  <div>
-  <div style={{ fontSize: "0.62rem", color: C.inkSoft }}>
-    Decision Confidence
-  </div>
-
-  <div style={{ fontWeight: 700, marginBottom: "0.25rem" }}>
-    {data.decisionConfidence != null ? data.decisionConfidence + "%" : "—"}
-  </div>
-
-  <div style={{ background: C.border, borderRadius: 100, height: 6, overflow: "hidden" }}>
-    <div
-      style={{
-        height: "100%",
-        width: (data.decisionConfidence || 0) + "%",
-        background: verdict.color,
-        borderRadius: 100,
-      }}
-    />
-  </div>
-</div>
-
-  <div>
-    <div style={{ fontSize: "0.62rem", color: C.inkSoft }}>
-      Potential Upside
-    </div>
-    <div
-      style={{
-        fontWeight: 700,
-        color: profit >= 0 ? C.green : C.red,
-      }}
-    >
-      {data.gradingUpside == null ? "—" : (profit >= 0 ? "+$" : "-$") + safeMoney(Math.abs(profit))}
-    </div>
-  </div>
-</div>
-        </div>
-        {marketSummary && (
-  <div style={{ background: C.cream, border: "1px solid " + C.border, borderRadius: 12, padding: "0.9rem 1rem", marginBottom: "1rem" }}>
-    <div style={{ fontSize: "0.65rem", fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.08em", color: C.inkSoft, marginBottom: "0.65rem" }}>
-     Candidate Asking Listings — Identity Unverified
-    </div>
-
-    <div style={{ display: "grid", gridTemplateColumns: "repeat(2,1fr)", gap: "0.65rem", textAlign: "center" }}>
-      <div>
-        <div style={{ fontSize: "0.62rem", color: C.inkSoft }}>Median Asking Price</div>
-        <div style={{ fontFamily: "'Playfair Display', serif", fontSize: "1.25rem", fontWeight: 700, color: C.ink }}>
-          {data.financialDecision?.allowed && marketSummary.rawMedian != null ? "$" + safeMoney(marketSummary.rawMedian) : "—"}
-        </div>
-      </div>
-      <div>
-  <div style={{ fontSize: "0.62rem", color: C.inkSoft }}>
-    Asking Price Range
-  </div>
-  <div style={{ fontFamily: "'Playfair Display', serif", fontSize: "1.05rem", fontWeight: 700, color: C.ink }}>
-    {data.financialDecision?.allowed && marketSummary.rawTypicalRangeLow != null &&
-     marketSummary.rawTypicalRangeHigh != null
-      ? "$" +
-        safeMoney(marketSummary.rawTypicalRangeLow) +
-        " - $" +
-        safeMoney(marketSummary.rawTypicalRangeHigh)
-      : "—"}
-  </div>
-</div>
-
-      <div>
-        <div style={{ fontSize: "0.62rem", color: C.inkSoft }}>Comparable Listings</div>
-        <div style={{ fontFamily: "'Playfair Display', serif", fontSize: "1.25rem", fontWeight: 700, color: C.ink }}>
-          {marketSummary.rawUsedCount != null && marketSummary.rawComparableCount != null
-  ? marketSummary.rawUsedCount + " / " + marketSummary.rawComparableCount
-  : "—"}
-        </div>
-      </div>
-
-      <div>
-        <div style={{ fontSize: "0.62rem", color: C.inkSoft }}>Listing Match Score</div>
-        <div style={{ fontFamily: "'Playfair Display', serif", fontSize: "1.25rem", fontWeight: 700, color: C.green }}>
-          {data.financialDecision?.allowed && marketSummary.marketConfidence != null ? marketSummary.marketConfidence + "%" : "—"}
-        </div>
-      </div>
-    </div>
-
-    <div style={{ fontSize: "0.7rem", color: C.inkSoft, marginTop: "0.65rem", fontStyle: "italic" }}>
-      Active eBay asking prices, not completed sales or verified fair market value. These candidate asking listings do not establish the exact physical card or authorize grading economics.
-      <div style={{marginTop:"0.5rem",fontStyle:"normal"}}>
-        eBay matching: {data.marketData?.count ?? 0} returned · {marketSummary.rawComparableCount ?? 0} accepted · {marketSummary.rejectedCount ?? 0} rejected.
-        {!marketSummary.evidenceSufficient && <strong> Insufficient exact-card listings for a reliable asking-price estimate.</strong>}
-      </div>
-      {data.marketData?.queryAttempts?.length>0 && <details style={{marginTop:"0.4rem",fontStyle:"normal"}}>
-        <summary style={{cursor:"pointer"}}>Search coverage ({data.marketData.queryAttempts.length} queries)</summary>
-        {data.marketData.queryAttempts.map((attempt,i)=><div key={i} style={{fontSize:"0.65rem",marginTop:4}}>{attempt.query}: {attempt.found} found, {attempt.accepted} accepted, {attempt.rejected} rejected</div>)}
-      </details>}
-      {data.marketData?.rejectedItems?.length>0 && <details style={{marginTop:"0.4rem",fontStyle:"normal"}}>
-        <summary style={{cursor:"pointer"}}>Rejected listing examples</summary>
-        {data.marketData.rejectedItems.slice(0,5).map((item,i)=><div key={item.itemId||i} style={{fontSize:"0.65rem",marginTop:5}}>{item.title} — {(item.rejectionReasons||[]).join(", ")}</div>)}
-      </details>}
-      {data.marketData?.rawComparableItems?.length > 0 && (
-  <div style={{ marginTop: "0.85rem", borderTop: "1px solid " + C.border, paddingTop: "0.75rem" }}>
-    <div style={{ fontSize: "0.65rem", fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.08em", color: C.inkSoft, marginBottom: "0.55rem" }}>
-     Candidate Listings — Not Verified Comparables
-    </div>
-    <div>
-  <div style={{ fontSize: "0.62rem", color: C.inkSoft }}>Outliers Removed</div>
-  <div style={{ fontFamily: "'Playfair Display', serif", fontSize: "1.25rem", fontWeight: 700, color: C.ink }}>
-    {marketSummary.rawOutlierCount != null ? marketSummary.rawOutlierCount : "—"}
-  </div>
-</div>
-
-    <div style={{ display: "grid", gap: "0.5rem" }}>
-      {data.marketData.rawComparableItems.slice(0, 3).map(function(item, idx) {
-        return (
-          <div key={item.itemId || idx} style={{ background: C.white, border: "1px solid " + C.border, borderRadius: 10, padding: "0.65rem 0.75rem" }}>
-            <div style={{ display: "flex", justifyContent: "space-between", gap: "0.75rem", alignItems: "flex-start" }}>
-              <div style={{ flex: 1 }}>
-  <a
-  href={item.itemWebUrl}
-  target="_blank"
-  rel="noopener noreferrer"
-  style={{
-  display: "inline-block",
-  fontSize: "0.78rem",
-  color: C.green,
-  lineHeight: 1.35,
-  textDecoration: "underline",
-  cursor: "pointer",
-}}
-
->
-  {item.title}
-  <span style={{ color: C.inkSoft, marginLeft: 5 }}>↗</span>
-</a>
-  <div style={{ fontSize: "0.64rem", color: C.inkSoft, marginTop: "0.25rem" }}>
-    {item.matchScore >= 140
-  ? "Local candidate match"
-  : item.matchScore >= 90
-  ? "Local candidate match"
-  : "Weak Match"}
-  </div>
-  {item.matchReasons && item.matchReasons.length > 0 && (
-  <div
-    style={{
-      fontSize: "0.62rem",
-      color: C.inkSoft,
-      marginTop: "0.25rem",
-      lineHeight: 1.4,
-    }}
-  >
-    {item.matchReasons.slice(0, 3).map(function(reason, i) {
-      return (
-        <div key={i}>✓ {reason}</div>
-      );
-    })}
-  </div>
-)}
-              </div>
-              <div style={{ fontWeight: 800, color: C.green, whiteSpace: "nowrap" }}>
-                {item.priceValue != null ? "$" + safeMoney(item.priceValue) : "—"}
-              </div>
-            </div>
-          </div>
-        );
-      })}
-    </div>
-  </div>
-)}
-    </div>
-  </div>
-)}
-       {/* Why this decision */}
-<div style={{ background: C.white, border: "1px solid " + C.border, borderRadius: 12, padding: "0.9rem 1rem", marginBottom: "1rem" }}>
-  <div style={{ fontSize: "0.65rem", fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.08em", color: C.inkSoft, marginBottom: "0.6rem" }}>
-    Why This Decision?
-  </div>
-
-  <div style={{ fontSize: "0.84rem", color: C.inkMid, lineHeight: 1.6, marginBottom: "0.6rem" }}>
-    {verdict.explain}
-  </div>
-
-  <div style={{ display: "grid", gap: "0.4rem" }}>
-    <div style={{ fontSize: "0.82rem", color: (data.expectedNetValue || 0) >= 0 ? C.green : C.red, fontWeight: 600 }}>
-  {data.expectedNetValue == null ? "—" : data.expectedNetValue >= 0 ? "✓" : "✕"} Expected net is {data.expectedNetValue != null ? ((data.expectedNetValue >= 0 ? "+$" : "-$") + safeMoney(Math.abs(data.expectedNetValue))) : "unknown"}
-</div>
-
-    <div style={{ fontSize: "0.82rem", color: (data.psa10Probability || 0) >= 50 ? C.green : C.red, fontWeight: 600 }}>
-      {data.psa10Probability == null ? "—" : data.psa10Probability >= 50 ? "✓" : "✕"} PSA 10 odds are {data.psa10Probability != null ? data.psa10Probability + "%" : "unknown"}
-    </div>
-
-    <div style={{ fontSize: "0.82rem", color: (profit || 0) >= 0 ? C.green : C.red, fontWeight: 600 }}>
-      {data.gradingUpside == null ? "—" : profit >= 0 ? "✓" : "✕"} PSA 10 upside is {data.gradingUpside == null ? "—" : (profit >= 0 ? "+$" : "-$") + safeMoney(Math.abs(profit))}
-    </div>
-  </div>
-</div>
-        {/* Value grid */}
-        <div className="gp-value-grid" style={{ marginBottom: "0.9rem" }}>
-          {[
-            {
-  label: "Raw Value (Modeled)",
-  val: data.rawValue,
-  featured: false
-},
-            { label: "PSA 9 Value", val: data.psa9Value,  featured: false },
-            { label: "PSA 10",      val: data.psa10Value, featured: true  },
-          ].map(function(b) {
-            return (
-              <div key={b.label} style={{ background: b.featured ? C.goldLight : C.cream, border: "1.5px solid " + (b.featured ? C.gold : C.border), borderRadius: 12, padding: "0.85rem 0.75rem", textAlign: "center" }}>
-                <div style={{ fontSize: "0.65rem", fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.06em", color: b.featured ? C.amber : C.inkSoft, marginBottom: "0.3rem" }}>{b.label}</div>
-                <div style={{ fontFamily: "'Playfair Display', serif", fontSize: "1.3rem", fontWeight: 700, color: b.featured ? C.amber : C.ink }}>{b.val == null ? "—" : "$" + safeMoney(b.val)}</div>
-              </div>
-            );
-          })}
-        </div>
-       {/* Expected Grading Economics */}
-<div style={{ background: C.cream, border: "1px solid " + C.border, borderRadius: 12, padding: "0.9rem 1rem", marginBottom: "0.9rem" }}>
-  <div style={{ fontSize: "0.65rem", fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.08em", color: C.inkSoft, marginBottom: "0.7rem" }}>
-    Expected Grading Economics
-  </div>
-
-  <div style={{ display: "grid", gap: "0.45rem", fontSize: "0.82rem", color: C.inkMid }}>
-    <div style={{ display: "flex", justifyContent: "space-between" }}>
-      <span>Expected Graded Value</span>
-      <strong style={{ color: C.ink }}>{data.expectedGradedValue == null ? "—" : "$" + safeMoney(data.expectedGradedValue)}</strong>
-    </div>
-
-    <div style={{ display: "flex", justifyContent: "space-between" }}>
-  <span>Current Raw Value</span>
-  <strong style={{ color: C.red }}>
-    {data.rawValue == null ? "—" : "-$" + safeMoney(data.rawValue)}
-  </strong>
-</div>
-
-    <div style={{ display: "flex", justifyContent: "space-between" }}>
-      <span>PSA Submission Fee</span>
-      <strong style={{ color: C.red }}>{data.financialDecision?.allowed && Number.isFinite(data.psaFee) ? "-$" + safeMoney(data.psaFee) : "Unavailable"}</strong>
-    </div>
-
-    <div style={{ height: 1, background: C.border, margin: "0.35rem 0" }} />
-
-    <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-      <span style={{ fontWeight: 700, color: C.ink }}>Expected Net</span>
-      <strong style={{ fontFamily: "'Playfair Display', serif", fontSize: "1.15rem", color: (data.expectedNetValue || 0) >= 0 ? C.green : C.red }}>
-        {data.expectedNetValue != null
-          ? ((data.expectedNetValue >= 0 ? "+$" : "-$") + safeMoney(Math.abs(data.expectedNetValue)))
-          : "—"}
-      </strong>
-    </div>
-  </div>
-
-  <div style={{ fontSize: "0.7rem", color: C.inkSoft, marginTop: "0.6rem", fontStyle: "italic" }}>
-    {WITHHELD_MESSAGE}
-  </div>
-</div>        
-        {/* Best use case */}
-        <div style={{ background: verdict.bg, border: "1px solid " + verdict.border, borderRadius: 10, padding: "0.65rem 0.9rem", marginBottom: data.action ? "0.9rem" : "0" }}>
-          <span style={{ fontSize: "0.65rem", fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.07em", color: verdict.color }}>Best Use Case: </span>
-          <span style={{ fontSize: "0.82rem", color: C.inkMid }}>{useCase}</span>
-        </div>
-        {/* Action */}
-        {data.action && (
-          <div style={{ background: verdict.bg, border: "1px solid " + verdict.border, borderRadius: 10, padding: "0.7rem 0.9rem", display: "flex", gap: "0.5rem", alignItems: "flex-start", marginBottom: "1rem" }}>
-            <span style={{ color: verdict.color, fontWeight: 700, flexShrink: 0 }}>→</span>
-            <div>
-              <div style={{ fontSize: "0.65rem", fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.06em", color: verdict.color, marginBottom: "0.15rem" }}>Recommended Action</div>
-              <div style={{ fontSize: "0.875rem", color: C.ink, fontWeight: 500 }}>{data.action}</div>
-            </div>
-          </div>
-        )}
-        {/* Action row */}
-        <div style={{ display: "flex", gap: "0.5rem", flexWrap: "wrap", paddingTop: "0.75rem", borderTop: "1px solid " + C.border }}>
-          <button onClick={handleCopy} style={{ fontSize: "0.75rem", fontWeight: 600, padding: "0.35rem 0.8rem", borderRadius: 100, border: "1px solid " + C.border, background: copied ? C.greenLight : C.white, color: copied ? C.green : C.inkMid, cursor: "pointer" }}>
-            {copied ? "✓ Copied" : "Copy Summary"}
-          </button>
-          <button onClick={function() { onSave(data); }} style={{ fontSize: "0.75rem", fontWeight: 600, padding: "0.35rem 0.8rem", borderRadius: 100, border: "1px solid " + C.border, background: isSaved ? C.goldLight : C.white, color: isSaved ? C.amber : C.inkMid, cursor: "pointer" }}>
-            {isSaved ? "✓ Saved" : "Save Report"}
-          </button>
-          <button onClick={handleShare} style={{ fontSize: "0.75rem", fontWeight: 600, padding: "0.35rem 0.8rem", borderRadius: 100, border: "1px solid " + C.border, background: shared ? C.greenLight : C.white, color: shared ? C.green : C.inkMid, cursor: "pointer" }}>
-            {shared ? "✓ Copied" : "Share"}
-          </button>
-        </div>
-        <div
-  style={{
-    marginTop: "0.85rem",
-    padding: "0.75rem 0.85rem",
-    background: C.cream,
-    border: "1px solid " + C.border,
-    borderRadius: 12,
-  }}
->
-  <div style={{ fontSize: "0.72rem", fontWeight: 700, color: C.ink, marginBottom: "0.45rem" }}>
-    Was this card identification useful?
-  </div>
-  <div style={{ display: "flex", gap: "0.5rem", flexWrap: "wrap" }}>
-    <button
-      onClick={function() { setFeedback("yes"); }}
-      style={{ fontSize: "0.75rem", fontWeight: 700, padding: "0.4rem 0.75rem", borderRadius: 100, border: "1px solid " + C.border, background: C.white, color: C.green, cursor: "pointer" }}
-    >
-      👍 Yes
-    </button>
-    <button
-      onClick={function() { setFeedback("review"); }}
-      style={{ fontSize: "0.75rem", fontWeight: 700, padding: "0.4rem 0.75rem", borderRadius: 100, border: "1px solid " + C.border, background: C.white, color: C.red, cursor: "pointer" }}
-    >
-      👎 Needs review
-    </button>
-  </div>
-  {feedback && (
-  <div
-    style={{
-      fontSize: "0.72rem",
-      color: feedback === "yes" ? C.green : C.amber,
-      marginTop: "0.6rem",
-      fontWeight: 700,
-    }}
-  >
-    {feedback === "yes"
-      ? "✓ Thanks! Your feedback helps improve GemPredict."
-      : "✓ Thanks! We'll review this identification."}
-  </div>
-)}
-</div>
-        <div style={{ fontSize: "0.7rem", color: C.inkSoft, marginTop: "0.75rem", fontStyle: "italic" }}>
-           GemPredict is in beta. Market values are estimates from live comparable listings and should be verified before buying, selling, or grading.
-        </div>
-      </div>
-    </div>
-  );
+  const view=unifiedReportPresentation(data);
+  const [copied,setCopied]=useState(false),[shared,setShared]=useState(false),[feedback,setFeedback]=useState(null);
+  function handleCopy(){try{navigator.clipboard.writeText(buildCopySummary(data));}catch{}setCopied(true);setTimeout(()=>setCopied(false),2000);}
+  function handleShare(){const summary=buildCopySummary(data);if(navigator.share)navigator.share({title:'GemPredict Report',text:summary}).catch(()=>{});else{try{navigator.clipboard.writeText(summary);}catch{}}setShared(true);setTimeout(()=>setShared(false),2000);}
+  return <article className="gp-unified" aria-label="Unified card analysis report">
+   <style>{`.gp-unified{font-family:Arial,Helvetica,sans-serif;border:1px solid #c9a84c66;border-radius:20px;overflow:hidden;background:#f5f3ee;color:#0e0f0c;box-shadow:0 12px 35px #00000010}.gp-unified *{box-sizing:border-box}.gp-u-header{background:#10140f;color:#fff;padding:28px}.gp-u-eyebrow{font-size:11px;text-transform:uppercase;letter-spacing:.13em;color:#c9a84c;margin:0 0 12px;font-weight:700}.gp-u-header h2{font-family:Georgia,serif;font-size:clamp(24px,4vw,34px);line-height:1.25;margin:0 0 12px;overflow-wrap:anywhere}.gp-u-header p{font-size:13px;margin:8px 0;color:#dddccf}.gp-u-body{padding:24px}.gp-u-section{padding:22px 0;border-bottom:1px solid #e2dfd8}.gp-u-section:first-child{padding-top:0}.gp-u-section h3{font-family:Georgia,serif;font-size:23px;margin:0 0 12px}.gp-u-section p{font-size:14px;line-height:1.6}.gp-u-fields,.gp-u-sales{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px}.gp-u-fields div,.gp-u-sale{padding:14px;background:white;border:1px solid #e2dfd8;border-radius:10px;min-width:0}.gp-u-fields dt{font-size:11px;color:#62655b}.gp-u-fields dd{font-size:14px;margin:4px 0 0;overflow-wrap:anywhere}.gp-u-sale h4{font-size:15px;margin:0 0 12px}.gp-u-sale strong{display:block;font-size:20px;color:#62655b}.gp-u-sale p{font-size:12px;margin-bottom:0}.gp-u-badge{display:inline-block;border:1px solid #c9a84c66;border-radius:25px;padding:5px 11px;color:#e0c77f;font-size:11px}.gp-unified details{margin-top:16px}.gp-unified summary{cursor:pointer;font-size:13px;font-weight:600;padding:8px 0}.gp-u-note{background:#fcf6e7;border-left:3px solid #c9a84c;padding:12px 15px;border-radius:0 8px 8px 0}.gp-u-actions{display:flex;gap:10px;flex-wrap:wrap;padding-top:22px}.gp-u-actions button,.gp-u-feedback button{min-height:44px;padding:10px 16px;background:white;border:1px solid #b9b7ad;border-radius:9px;font-weight:600;color:#20221c;cursor:pointer}.gp-u-actions button:focus-visible,.gp-unified summary:focus-visible{outline:3px solid #c9a84c;outline-offset:3px}.gp-u-feedback{font-size:12px;padding-top:18px}.gp-u-feedback button{padding:6px 10px;margin-right:8px;font-size:12px}.gp-u-description{max-width:65ch}.gp-unified .econ-embedded{padding:0;min-height:0;background:transparent}.gp-unified .econ-embedded .econ-progress{margin-top:16px}.gp-unified .econ-embedded .econ-panel{padding:20px;box-shadow:none}.gp-unified .econ-embedded .econ-footer{display:block}@media(max-width:620px){.gp-u-header{padding:22px 18px}.gp-u-body{padding:18px}.gp-u-fields{grid-template-columns:repeat(2,minmax(0,1fr))}.gp-u-sales{grid-template-columns:1fr}.gp-u-section h3{font-size:21px}.gp-unified .econ-embedded .econ-panel{padding:16px}}`}</style>
+   <header className="gp-u-header"><div className="gp-u-eyebrow">GemPredict · Card Analysis Report</div><h2>{reportTitle(data)}</h2><span className="gp-u-badge">{view.identityLabel==='Identification proposal'?'Identity unverified · Identification proposal':view.identityLabel}</span><p>{view.category} · Exact printing unresolved</p></header>
+   <div className="gp-u-body">
+    <section className="gp-u-section" aria-label="Card identification"><h3>Your card</h3><p className="gp-u-description">{collectorIdentityMessage(data)}</p>{view.categoryConflict&&<p className="gp-u-note">Category information conflicts. Review the identification; contradictory category details are excluded from this summary.</p>}<dl className="gp-u-fields">{view.fields.map(f=><div key={f.label}><dt>{f.label}</dt><dd>{f.value}</dd></div>)}</dl>
+     <p className="gp-u-description">Catalog support, photo observations and physical-printing verification are separate. No rarity or parallel is inferred from a generic foil description.</p>
+     <details><summary>Identity &amp; provenance details</summary><VerificationStatus report={data}/><p style={{fontSize:12,overflowWrap:'anywhere'}}>{identitySummary(data)}</p></details>{data.stage==='identity'&&<details><summary>Printed identity evidence &amp; original observation</summary><IdentityResult report={data}/></details>}
+     {data.imageAnalysis&&<details><summary>Review or correct identification</summary><IdentityReviewCard report={data}/></details>}
+    </section>
+    <section className="gp-u-section" aria-label="Condition evidence"><h3>Photo condition</h3>{data.imageAnalysis?<ImageAnalysisCard report={data} embedded/>:<p>{data.stage==='identity'?'Condition analysis: not requested.':'No photographic condition assessment is available.'} Identification alone does not establish condition.</p>}</section>
+    <section className="gp-u-section" aria-label="Completed sales evidence"><h3>Completed-sale comparisons</h3><p>Qualified completed-sale evidence is not connected. Asking listings, ended listings and unconfirmed offers are not completed-sale prices.</p><div className="gp-u-sales">{view.sales.map(s=><div className="gp-u-sale" key={s.group}><h4>{s.group}</h4><strong>{s.status}</strong><p>{s.sample}</p></div>)}</div><p style={{fontSize:12}}>Sample size, sale-date range and price dispersion are unavailable. No market median or resale estimate is generated.</p></section>
+    <section className="gp-u-section" aria-label="eBay discovery"><h3>Marketplace evidence</h3><p>eBay: {view.discovery.status}{view.discovery.returnedCount!==null?' · '+view.discovery.returnedCount+' returned discovery records':''}.</p><p>{view.printingStatus}</p><p>No candidate listing price is used as a valuation or graded comparable.</p>
+     {(Array.isArray(data.scanNotices)?data.scanNotices:[]).map(safeScanFailure).filter(n=>['MARKETPLACE_UNAVAILABLE','VERIFICATION_UNRESOLVED'].includes(n?.code)).map(n=><p key={n.code} role="status">{n.error}</p>)}
+    </section>
+    <section className="gp-u-section" aria-label="Grading economics"><h3>Grading economics</h3><p className="gp-u-note">{WITHHELD_MESSAGE}</p><p><strong>PSA Submission Fee</strong> Unavailable in automatic report economics. Select a dated service reference only within a manual scenario below.</p><details><summary>Explore manual PSA scenarios</summary><p>Optional assumptions only. Nothing you enter here changes the identification, condition findings, completed-sale evidence or protected saved report.</p><GradingScenarioCalculator embedded/></details></section>
+    <div className="gp-u-actions"><button type="button" onClick={handleCopy}>{copied?'✓ Copied':'Copy Summary'}</button><button type="button" onClick={()=>onSave?.(data)}>{isSaved?'✓ Saved':'Save Report'}</button><button type="button" onClick={handleShare}>{shared?'✓ Copied':'Share'}</button></div>
+    <div className="gp-u-feedback"><p>Was this card identification useful?</p><button type="button" onClick={()=>setFeedback('yes')}>👍 Yes</button><button type="button" onClick={()=>setFeedback('review')}>👎 Needs review</button>{feedback&&<p>{feedback==='yes'?'Thanks. Feedback recorded for this view.':'Thanks. Review the identification before using it.'}</p>}</div>
+   </div>
+  </article>;
 }
 
 // ─── Main App ─────────────────────────────────────────────────────────────────
@@ -1360,8 +807,8 @@ if (data.imageAnalysis) setImageAnalysis(protectFinancialReport(data).imageAnaly
         <div style={{ maxWidth: 860, margin: "0 auto", display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(220px, 1fr))", gap: "1rem" }}>
           {[
             { icon: "✅", title: "Clear Verdict", body: "Grade, Skip, or Maybe — one unambiguous answer per card." },
-            { icon: "📊", title: "Realistic Values", body: "Raw vs PSA 9 vs PSA 10 — actual market range estimates, not hype." },
-            { icon: "🎯", title: "Risk Analysis", body: "Know your true PSA 10 odds before you spend on submission fees." },
+            { icon: "📊", title: "Realistic Values", body: "Completed-sale values stay unavailable until qualified evidence is connected." },
+            { icon: "🎯", title: "Risk Analysis", body: "See photo limitations before considering a grading submission." },
           ].map(function(item) {
             return (
               <div key={item.title} style={{ background: C.white, border: "1px solid " + C.border, borderRadius: 14, padding: "1.25rem 1.1rem", display: "flex", gap: "0.75rem", alignItems: "flex-start" }}>
@@ -1381,7 +828,7 @@ if (data.imageAnalysis) setImageAnalysis(protectFinancialReport(data).imageAnaly
         <div style={{ maxWidth: 980, margin: "0 auto" }}>
           <h2 style={{ fontFamily: "'Playfair Display', serif", fontSize: "2rem", fontWeight: 900, letterSpacing: "-0.02em", marginBottom: "0.35rem" }}>Analyze My Card</h2>
           <p style={{ fontSize: "0.9rem", color: C.inkSoft, fontWeight: 300, marginBottom: "0.5rem" }}>
-            Enter any card below. Get a Grade / Skip verdict with raw, PSA 9, PSA 10 values, and real grading upside.
+            Identify your card and review photo observations. Any manual grading scenarios remain hypothetical.
           </p>
           <p style={{ fontSize: "0.78rem", color: C.inkSoft, fontStyle: "italic", marginBottom: "1.75rem", maxWidth: 720 }}>
             Most raw cards don't gem. This helps you find the ones that do.
@@ -1605,7 +1052,7 @@ if (data.imageAnalysis) setImageAnalysis(protectFinancialReport(data).imageAnaly
   </ul>
 </div>
             {/* Examples */}
-            <p style={{ fontSize: "0.72rem", color: C.inkSoft, marginBottom: "0.75rem" }}>AI estimates raw value, PSA 9, PSA 10, grading upside, and recommendation.</p>
+            <p style={{ fontSize: "0.72rem", color: C.inkSoft, marginBottom: "0.75rem" }}>Review identification and photo evidence. Real-market valuations and grading recommendations are unavailable.</p>
             <div style={{ display: "flex", gap: "0.5rem", flexWrap: "wrap", alignItems: "center" }}>
               <span style={{ fontSize: "0.72rem", color: C.inkSoft, fontWeight: 600 }}>Try:</span>
               {EXAMPLES.map(function(ex, i) {
@@ -1638,7 +1085,7 @@ if (data.imageAnalysis) setImageAnalysis(protectFinancialReport(data).imageAnaly
           </div>
           <p><a href="/grading-economics">Grading Economics — manual scenario calculator</a></p>
           <ControlledValidation front={imageFile} back={backImageFile} busy={loading||processingImages>0||!!photoErrors.front||!!photoErrors.back} getSelectionEpoch={()=>selectionVersions.current.front+':'+selectionVersions.current.back} onSubmit={prepared=>handleSubmit('condition-validation',prepared)}/>
-          {identityResult&&!loading&&<IdentityResult report={identityResult} onSave={saveReport}/>}
+          {identityResult&&!loading&&<ResultCard data={identityResult} index={0} onSave={saveReport} isSaved={isSavedReport(identityResult)}/>}
 
           {/* Remaining */}
           {remaining !== null && (
@@ -1686,12 +1133,7 @@ if (data.imageAnalysis) setImageAnalysis(protectFinancialReport(data).imageAnaly
       />
 
       <ScanDiagnostics report={saved} />
-      {r.imageAnalysis && (
-        <>
-          <IdentityReviewCard report={r} />
-          <ImageAnalysisCard report={r} />
-        </>
-      )}
+      {/* Identification review and <ImageAnalysisCard> now live inside ResultCard. */}
     </div>
   );
 })}
@@ -1699,14 +1141,14 @@ if (data.imageAnalysis) setImageAnalysis(protectFinancialReport(data).imageAnaly
 
               
               <p style={{ fontSize: "0.72rem", color: C.inkSoft, textAlign: "center", marginTop: "1.25rem" }}>
-                AI estimates based on collector market data. Not affiliated with PSA. Always verify with current listings.
+                Photo findings are limited to the supplied images. Market evidence and grading recommendations remain withheld. Not affiliated with PSA.
               </p>
               {/* What Next */}
               <div style={{ marginTop: "1.75rem", background: C.cream, border: "1.5px solid " + C.border, borderRadius: 18, padding: "1.75rem 1.5rem" }}>
                 <p style={{ fontSize: "0.68rem", fontWeight: 700, letterSpacing: "0.1em", textTransform: "uppercase", color: C.gold, marginBottom: "0.4rem" }}>What Next?</p>
                 <h3 style={{ fontFamily: "'Playfair Display', serif", fontSize: "1.2rem", fontWeight: 900, letterSpacing: "-0.01em", color: C.ink, marginBottom: "0.5rem" }}>Keep grading smarter.</h3>
                 <p style={{ fontSize: "0.875rem", color: C.inkMid, fontWeight: 300, lineHeight: 1.75, marginBottom: "1.25rem", maxWidth: 480 }}>
-                  Use GemPredict to compare more cards before you submit to PSA. The best grading profits usually come from the cards most collectors overlook.
+                  Inspect another card, review its identity and photo limitations, or explore your own clearly labeled cost assumptions.
                 </p>
                 <div style={{ display: "flex", gap: "0.75rem", flexWrap: "wrap" }}>
                   <button onClick={function() { var el = document.getElementById("tool"); if (el) el.scrollIntoView({ behavior: "smooth", block: "start" }); setTimeout(function() { if (cardNameRef.current) cardNameRef.current.focus(); }, 400); }} style={{ padding: "0.75rem 1.4rem", background: C.ink, color: "#fff", border: "none", borderRadius: 100, fontSize: "0.875rem", fontWeight: 700, cursor: "pointer" }}>
@@ -1744,7 +1186,7 @@ if (data.imageAnalysis) setImageAnalysis(protectFinancialReport(data).imageAnaly
             </div>
           )}
 
-          {/* What To Grade Next */}
+          {/* Saved Card Reports */}
 {savedReports.length > 0 && (
   <div style={{ marginTop: "1.75rem" }}>
     <div
@@ -1757,7 +1199,7 @@ if (data.imageAnalysis) setImageAnalysis(protectFinancialReport(data).imageAnaly
         marginBottom: "0.75rem",
       }}
     >
-      What To Grade Next
+      Saved Card Reports
     </div>
 
     <div
@@ -1953,7 +1395,7 @@ if (data.imageAnalysis) setImageAnalysis(protectFinancialReport(data).imageAnaly
     <div>✅ Comparable Listings</div>
     <div>✅ Image Analysis</div>
     <div>✅ Saved Reports</div>
-    <div>✅ What To Grade Next</div>
+    <div>✅ Saved Card Reports</div>
     <div>✅ Listing Match Score Engine</div>
   </div>
 
@@ -2145,13 +1587,13 @@ if (data.imageAnalysis) setImageAnalysis(protectFinancialReport(data).imageAnaly
         <p style={eyebrowSt}>FAQ</p>
         <h2 style={sectionH2St}>Frequently Asked Questions</h2>
         <div style={{ marginTop: "2rem", borderTop: "1px solid " + C.border }}>
-          <FAQItem q="How accurate is GemPredict?" a="GemPredict provides AI-based grading ROI estimates using known collector market behavior and pricing patterns. Always verify against live sold listings before submitting expensive cards." />
+          <FAQItem q="How accurate is GemPredict?" a="GemPredict separates identification, qualified photo observations and manual hypothetical economics. Real-market values and grading recommendations remain withheld until the required evidence is available." />
           <FAQItem q="Does GemPredict guarantee a PSA grade?" a="No. GemPredict is a decision-support tool, not a grading company. Final grades always depend on PSA's physical inspection of the actual card submitted." />
           <FAQItem q="Can I use this for sports cards too?" a="Yes. GemPredict supports Pokemon, sports cards, Magic: The Gathering, Yu-Gi-Oh!, Dragon Ball, One Piece, and other major TCG categories." />
-          <FAQItem q="Why does PSA 10 probability matter?" a="The biggest grading profits usually come from PSA 10s. A card with weak gem-rate odds can quickly become a bad submission — even if the PSA 10 value looks attractive." />
-          <FAQItem q="What does the condition estimate do?" a="The condition estimate (Risky, Strong Copy, or Gem Candidate) helps GemPredict calibrate PSA 10 probability and grading upside more realistically. A played card and a gem candidate of the same card have very different submission economics." />
-          <FAQItem q="How does photo analysis work?" a="If you upload a card photo, GemPredict sends it to Claude Vision which inspects centering, corners, edges, and surface quality against PSA grading criteria. It returns an estimated grade range and a worth-grading verdict based on what's visible in the image. Image quality and lighting affect accuracy." />
-          <FAQItem q="Will photo grading be added as a full feature?" a="Yes. AI Photo Grading is planned for a future release — estimating PSA 10 potential from front and back card images, covering centering, corners, edges, and surface quality." />
+          <FAQItem q="Why does PSA 10 probability matter?" a="GemPredict does not predict PSA grade probabilities. You can explore hypothetical outcomes using your own costs and resale assumptions." />
+          <FAQItem q="What does the condition estimate do?" a="Photo findings describe supported visible regions and limitations. They are not a calibrated grade or probability; missing evidence remains unassessed." />
+          <FAQItem q="How does photo analysis work?" a="Photo analysis proposes card identity and localized visual observations. Independent catalog checks and condition-evidence validation qualify the report. Glare, angle and resolution can prevent assessment; no numerical grade or submission verdict is supplied." />
+          <FAQItem q="Will photo grading be added as a full feature?" a="Front and back photo observations are available now. Grading predictions would require separately validated calibration and are not enabled." />
         </div>
       </div>
 

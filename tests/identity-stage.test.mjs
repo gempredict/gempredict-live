@@ -73,7 +73,7 @@ test('owner-authorized diagnostics distinguish identity stages and provider fail
  const production=await identify({env:{...env,VERCEL_ENV:'production'},headers:req.headers});assert.equal(production.responseHeaders[TICKET_HEADER],undefined);
 });
 test('UI exposes a separate identity action through the protected multipart transport and guards duplicate clicks',()=>{
- const source=fs.readFileSync('src/App.jsx','utf8');for(const text of ['Identify Card',"handleSubmit('identity')","formData.append(\"mode\",\"identity\")",'scanInFlight.current','assertUploadBudget(formData)','requestPrediction({ method: "POST", body: formData })','<IdentityResult report={identityResult}','<ResultCard','<ImageAnalysisCard'])assert.ok(source.includes(text),text);
+ const source=fs.readFileSync('src/App.jsx','utf8');for(const text of ['Identify Card',"handleSubmit('identity')","formData.append(\"mode\",\"identity\")",'scanInFlight.current','assertUploadBudget(formData)','requestPrediction({ method: "POST", body: formData })','<ResultCard data={identityResult}','<ResultCard','<ImageAnalysisCard'])assert.ok(source.includes(text),text);
  const prompt=buildIdentityPrompt({cardType:'sports',hasBack:false});assert.ok(prompt.length<2600);assert.match(prompt,/alphanumeric/);assert.match(prompt,/Copyright text is not proof/);
 });
 test('verification runtime failure retains successful observation with an explicit runtime notice',async()=>{
@@ -98,7 +98,7 @@ test('actual upload and Identify Card callbacks submit only identity mode once, 
  h.nodes(tree,n=>n.type==='input'&&n.props.type==='file')[0].props.onChange({target:{files:[file],value:'front'}});await new Promise(setImmediate);
  tree=h.render();const button=h.nodes(tree,n=>n.type==='button'&&n.props.children==='Identify Card')[0];assert.equal(button.props.disabled,false);
  const pending=button.props.onClick();await button.props.onClick();await new Promise(setImmediate);assert.equal(calls,1);release();await pending;
- tree=h.render();const result=h.nodes(tree,n=>n.props?.report?.stage==='identity')[0];assert.ok(result);assert.equal(result.props.report.pokemonIdentityStatus.catalogVerified,true);assert.equal(result.props.report.imageAnalysis,null);assert.ok(result.props.report.cardTitle);assert.equal(result.props.report.rawValue,null);
+ tree=h.render();const result=h.nodes(tree,n=>n.props?.data?.stage==='identity')[0];assert.ok(result);assert.equal(result.props.data.pokemonIdentityStatus.catalogVerified,true);assert.equal(result.props.data.imageAnalysis,null);assert.ok(result.props.data.cardTitle);assert.equal(result.props.data.rawValue,null);
 });
 test('dense front/back identity JSON retains all twelve readings, uncertainty and separate rarity status',async()=>{
  const values={subject:'Zapdos',cardNumber:'133/128',setCode:'30C EN',language:'EN',rarityMark:'Illustration mark uncertain',copyrightYear:'©2026'};

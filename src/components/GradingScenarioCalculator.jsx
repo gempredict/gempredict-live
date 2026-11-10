@@ -11,7 +11,8 @@ const css=`
 @media(max-width:620px){.economics{padding:0 16px 24px}.econ-header{padding:18px 0}.econ-brand{font-size:22px}.econ-back{font-size:12px}.econ-hero{padding:30px 0 24px}.econ-progress{gap:8px;margin-bottom:22px}.econ-progress button{font-size:11px;gap:6px}.econ-number{width:23px;height:23px}.econ-panel{padding:22px 18px;border-radius:16px}.econ-grid,.econ-outcomes,.econ-lower{grid-template-columns:1fr}.econ-price-grid{grid-template-columns:1fr}.econ-summary{padding:22px 18px;gap:15px}.econ-summary strong{font-size:26px}.econ-outcome{padding:22px}.econ-difference{font-size:36px}.econ-footer{display:block}.econ-navigation .econ-button{flex:1;padding:11px 12px}}
 `;
 
-export default function GradingScenarioCalculator(){
+export default function GradingScenarioCalculator({embedded=false}={}){
+ const Container=embedded?'section':'main';
  const [step,setStep]=useState(0),[common,setCommon]=useState({currency:'USD'}),[submission,setSubmission]=useState(initialSubmission),[prices,setPrices]=useState({}),[description,setDescription]=useState(''),[lower,setLower]=useState(false),[example,setExample]=useState(false),[advanced,setAdvanced]=useState({raw:false,psa:false,financial:false});
  const money=c=>c==null?'Unavailable':new Intl.NumberFormat('en-US',{style:'currency',currency:common.currency}).format(c/100);
  const resultFor=grade=>calculateGradingScenario(common,{...submission,grade:grade+' (hypothetical)',gradedSalePrice:prices[grade]??''});
@@ -38,9 +39,9 @@ export default function GradingScenarioCalculator(){
   {common.currency===tier?.currency&&tier?.maxDeclaredValue!=null&&r.inputs.gradedSalePrice.amount>tier.maxDeclaredValue*100&&<p className="econ-message">Your assumed resale price exceeds this tier’s value cap. Review the tier and potential upcharges; the published base fee may not cover this outcome.</p>}
  </article>;
  function loadExample(){const e=syntheticScenarioExample();setCommon(e.common);setSubmission({...e.scenarios[0],grade:undefined,gradedSalePrice:undefined,feeReferenceId:undefined});setPrices({'8':'100','9':'140','10':'250'});setDescription('Synthetic collector card — demonstration only');setExample(true);}
- return <main className="economics"><style>{css}</style><div className="econ-shell">
-  <header className="econ-header"><a className="econ-brand" href="/">Gem<span>Predict</span></a><a className="econ-back" href="/">← Back to scanner</a></header>
-  <div className="econ-hero"><p className="econ-eyebrow">Grading Economics · Scenario Calculator</p><h1>A clearer view<br/>before you grade.</h1><p className="econ-intro">Explore what a PSA submission could mean for your card. Your prices, your costs, clearly compared.</p></div>
+ return <Container className={embedded?"economics econ-embedded":"economics"}><style>{css}</style><div className="econ-shell">
+  {!embedded&&<><header className="econ-header"><a className="econ-brand" href="/">Gem<span>Predict</span></a><a className="econ-back" href="/">← Back to scanner</a></header>
+  <div className="econ-hero"><p className="econ-eyebrow">Grading Economics · Scenario Calculator</p><h1>A clearer view<br/>before you grade.</h1><p className="econ-intro">Explore what a PSA submission could mean for your card. Your prices, your costs, clearly compared.</p></div></>}
   <nav aria-label="Economics steps"><ol className="econ-progress">{steps.map((name,i)=><li key={name}><button type="button" aria-current={step===i?'step':undefined} onClick={()=>setStep(i)}><span className="econ-number">{i+1}</span>{name}</button></li>)}</ol></nav>
   {example&&<div className="econ-example" role="status"><strong>Synthetic example loaded.</strong> All example prices and costs are invented for arithmetic demonstration, not real sales or published fee quotes.</div>}
   <section className="econ-panel" aria-label={steps[step]}>
@@ -81,5 +82,5 @@ export default function GradingScenarioCalculator(){
    <div className="econ-navigation">{step>0?<button className="econ-button secondary" type="button" onClick={()=>setStep(step-1)}>Back</button>:<span/>}{step<2?<button className="econ-button" type="button" onClick={()=>setStep(step+1)}>{step===0?'Continue to PSA Grading':'See Your Economics'} →</button>:<button className="econ-button secondary" type="button" onClick={()=>setStep(1)}>Adjust assumptions</button>}</div>
   </section>
   <footer className="econ-footer"><p>Manual scenarios only · No predictions, verified resale values or submission advice. Separate from scan reports.</p><button className="econ-link-button" type="button" onClick={loadExample}>Load synthetic example</button></footer>
- </div></main>;
+ </div></Container>;
 }
