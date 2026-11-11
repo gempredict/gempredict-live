@@ -120,3 +120,52 @@ test('actual diagnostic control hides download for denied/unauthorized states an
  assert.match(await renderDiagnosticControl({enabled:true,authorized:true},report),/Download Scan Diagnostics/);
  assert.equal(await renderDiagnosticControl({enabled:true,authorized:true},JSON.parse(JSON.stringify(report))),'');
 });
+
+import {diagnosticExpiry,EXPIRY_HEADER} from '../lib/scanDiagnosticsAuth.mjs';
+import {prepareDiagnosticExport} from '../lib/diagnosticExport.mjs';
+import {controlledDiagnosticInteraction} from './helpers/renderReports.mjs';
+const syntheticHandle=(expiresAt=100000+300000)=>({ticket:'synthetic-ticket',scanId:'11111111-1111-4111-8111-111111111111',controlled:true,expiresAt,attemptId:'22222222-2222-4222-8222-222222222222',preparedHashes:{front:'a'.repeat(64),back:'b'.repeat(64)}});
+const syntheticExport=h=>({version:1,scanId:h.scanId,environment:'preview',stage:'full',responseStatus:200,conditionValidation:{attemptId:h.attemptId,preparedImagesMatched:true,marketplace:'not_requested'},images:{front:{preparedSha256:h.preparedHashes.front},back:{preparedSha256:h.preparedHashes.back}},model:{originalIdentity:{identifiedSubject:'Fraxure'},observations:[]},canonicalIdentity:{subject:'Fraxure'}});
+test('server response exposes the actual bounded diagnostic expiry without extending session or ticket lifetime',async()=>{
+ assert.equal(diagnosticExpiry({exp:1500},1000),1500);assert.equal(diagnosticExpiry({exp:9999999},1000),301000);
+ const at=Date.now(),{r,c,ticket,id}=await captured();const expires=Number(r.responseHeaders[EXPIRY_HEADER]);assert.ok(expires>at&&expires<=Date.now()+300000);assert.ok(expires<=diagnosticSession(request(c),env).exp);assert.equal(readDiagnosticTicket(request(c),ticket,id,env,expires),null);
+});
+test('controlled response metadata remains volatile, including an explicit missing-handle state',()=>{
+ const report={},h=syntheticHandle();rememberScanDiagnostic(report,{headers:{get:k=>({'X-GemPredict-Diagnostic-Ticket':h.ticket,'X-GemPredict-Diagnostic-Scan':h.scanId,'X-GemPredict-Diagnostic-Expires':String(h.expiresAt)})[k]}},{controlled:true,manifest:{attemptId:h.attemptId,files:{front:{sha256:h.preparedHashes.front},back:{sha256:h.preparedHashes.back}}}});
+ assert.equal(scanDiagnosticAccess(report).expiresAt,h.expiresAt);assert.equal(scanDiagnosticAccess(report).controlled,true);assert.equal(JSON.stringify(report),'{}');assert.equal(scanDiagnosticAccess(JSON.parse(JSON.stringify(report))),null);
+ const missing={};rememberScanDiagnostic(missing,{headers:{get:()=>null}},{controlled:true});assert.equal(scanDiagnosticAccess(missing).controlled,true);assert.equal(scanDiagnosticAccess(missing).ticket,null);
+});
+test('explicit export fetch is same-origin, validates exact scan/pair and preserves downloaded JSON bytes',async()=>{
+ const h=syntheticHandle(),raw=JSON.stringify(syntheticExport(h),null,2)+'\n';let calls=0;
+ const blob=await prepareDiagnosticExport(h,{now:()=>100001,fetchImpl:async(url,options)=>{calls++;assert.equal(url,'/api/scan-diagnostics');assert.equal(options.credentials,'same-origin');assert.equal(options.redirect,'error');assert.equal(options.cache,'no-store');assert.deepEqual(JSON.parse(options.body),{action:'download',ticket:h.ticket,scanId:h.scanId});return new Response(raw,{status:200});}});
+ assert.equal(await blob.text(),raw);assert.equal(calls,1);
+ for(const patch of [{scanId:'33333333-3333-4333-8333-333333333333'},{images:{front:{preparedSha256:'c'.repeat(64)}}},{conditionValidation:{attemptId:'other'}}])await assert.rejects(prepareDiagnosticExport(h,{now:()=>100001,fetchImpl:async()=>new Response(JSON.stringify({...syntheticExport(h),...patch}))}),/does not match/);
+ let forbidden=0;await assert.rejects(prepareDiagnosticExport(h,{now:()=>h.expiresAt,fetchImpl:async()=>{forbidden++;}}),/expired/);assert.equal(forbidden,0);
+ await assert.rejects(prepareDiagnosticExport(h,{now:()=>100001,fetchImpl:async()=>new Response('{}',{status:403})}),/cannot restore/);
+ await assert.rejects(prepareDiagnosticExport(h,{now:()=>100001,fetchImpl:async()=>new Response('{}',{status:500})}),/request failed/);
+});
+async function captureUi({expires=400000,ownerExpires=900000,prepare}={}){
+ let clock=100000,fetches=0,downloads=0;const events={},timers=[];class Clock extends Date{static now(){return clock;}}
+ const target=prefix=>({addEventListener(n,f){events[prefix+n]=f;},removeEventListener(n){delete events[prefix+n];}});
+ const h=controlledDiagnosticInteraction(syntheticHandle(expires),{Date:Clock,window:target('window.'),document:target('document.'),AbortController,setInterval(fn){timers.push(fn);return fn;},clearInterval(){},setTimeout(fn){timers.push(fn);return fn;},clearTimeout(){},fetch:async()=>({ok:true,json:async()=>({enabled:true,authorized:true,expiresAt:ownerExpires})}),prepareDiagnosticExport:async(...args)=>{fetches++;return prepare?prepare(...args):new Blob(['synthetic export']);},initiateDiagnosticDownload(){downloads++;}});
+ let tree;function render(){tree=h.render();return tree;}const nodes=p=>h.nodes(tree,p);const button=()=>nodes(n=>n.type==='button'&&n.props.children==='Download Scan Diagnostics')[0];function text(){let s='';const walk=n=>{if(typeof n==='string'||typeof n==='number')s+=n+' ';else if(Array.isArray(n))n.forEach(walk);else if(n?.props)walk(n.props.children);};walk(tree);return s;}
+ render();await new Promise(setImmediate);render();return {h,render,button,text,nodes,events,timers,advance(ms){clock+=ms;},counts:()=>({fetches,downloads}),async settle(){await new Promise(setImmediate);render();}};
+}
+test('controlled capture UI requires a fresh second tap, locks repeat taps and preserves controls on Files return',async()=>{
+ let resolve;const pending=new Promise(r=>{resolve=r;});const u=await captureUi({prepare:()=>pending});assert.match(u.text(),/Controlled Scan Complete/);assert.match(u.text(),/300\s+seconds remaining/);
+ u.button().props.onClick();u.button().props.onClick();u.render();assert.equal(u.button().props.disabled,true);assert.equal(u.counts().fetches,1);resolve(new Blob(['synthetic']));await u.settle();assert.match(u.text(),/second tap/);assert.equal(u.counts().downloads,0);
+ u.button().props.onClick();u.button().props.onClick();u.render();assert.equal(u.counts().downloads,1);assert.match(u.text(),/saving is not confirmed/);
+ u.events['window.focus']();u.events['document.visibilitychange']();u.render();assert.match(u.text(),/Download initiated/);u.timers.at(-1)();u.render();u.button().props.onClick();u.render();assert.equal(u.counts().downloads,2);assert.equal(u.counts().fetches,1);
+ u.h.unmount();
+});
+test('controlled capture distinguishes expiry, owner expiry and persistent export failure without resubmitting a scan',async()=>{
+ const expired=await captureUi();expired.button().props.onClick();await expired.settle();expired.advance(300001);expired.events['window.focus']();expired.render();expired.render();assert.match(expired.text(),/Expired — the server export window has ended/);assert.equal(expired.button().props.disabled,true);assert.equal(expired.counts().downloads,0);expired.h.unmount();
+ const owner=await captureUi({ownerExpires:100100});owner.advance(101);owner.events['document.visibilitychange']();owner.render();assert.match(owner.text(),/Owner authorization expired/);assert.equal(owner.button().props.disabled,true);owner.h.unmount();
+ const bad=await captureUi({prepare:async()=>{throw Error('Synthetic export request failed; retry export only.');}});bad.button().props.onClick();await bad.settle();bad.render();bad.events['window.focus']();bad.render();assert.match(bad.text(),/Synthetic export request failed/);assert.equal(bad.counts().downloads,0);assert.equal(bad.button().props.disabled,false);bad.h.unmount();
+});
+test('actual App places controlled diagnostic capture above its report without attaching evidence to saved reports',async()=>{
+ const source=fs.readFileSync('src/App.jsx','utf8');const reportBlock=source.slice(source.indexOf('{results.map(function(saved'));
+ assert.ok(reportBlock.indexOf('<ScanDiagnostics report={saved} prominent scrollToCapture={i===0} />')<reportBlock.indexOf('<ResultCard'));
+ const {renderDiagnosticControl}=await import('./helpers/renderReports.mjs');const normal={};assert.equal(await renderDiagnosticControl({enabled:true,authorized:true},normal),'');
+ // Existing actual App callback and report privacy/financial tests also run in the complete suite.
+});

@@ -19,8 +19,8 @@ import {identitySummary} from '../../lib/pokemonReportIdentity.mjs';
 import {reportTitle,verificationRows} from '../../lib/reportVerification.mjs';
 import {buildGemPredictScore} from '../../lib/gemPredictScore.js';
 const require=createRequire(import.meta.url);
-function components(file,bindings={}){
- const source=fs.readFileSync(new URL('../../'+file,import.meta.url),'utf8').replace(/^import[\s\S]*?;\s*$/gm,'');
+function components(file,bindings={},extra=''){
+ const source=fs.readFileSync(new URL('../../'+file,import.meta.url),'utf8').replace(/^import[\s\S]*?;\s*$/gm,'')+'\n'+extra;
  const {code}=transformSync(source,{filename:file,jsc:{parser:{syntax:'ecmascript',jsx:true},transform:{react:{runtime:'automatic'}}},module:{type:'commonjs'}});
  const exports={};vm.runInNewContext(code,{exports,require,React,...bindings});return exports;
 }
@@ -95,4 +95,13 @@ export function photoInteraction(photos,bindings={}){
 export function renderDemoAction(access){
  let n=0;const {default:View}=components('src/components/DemoReportAction.jsx',{useState:initial=>[n++===0?access:initial,()=>{}],useEffect(){}});
  return renderToStaticMarkup(React.createElement(View));
+}
+
+// Exercise the actual controlled diagnostic capture hooks without real network or scans.
+export function controlledDiagnosticInteraction(handle,bindings={}){
+ const slots=[];let index=0,queued=[];
+ const hook=initial=>{const i=index++;if(!(i in slots))slots[i]=typeof initial==='function'?initial():initial;return [slots[i],v=>{slots[i]=typeof v==='function'?v(slots[i]):v;}];};
+ const {ControlledCapture}=components('src/components/ScanDiagnostics.jsx',{useState:hook,useRef:initial=>hook({current:initial})[0],useEffect(effect,deps){const i=index++,old=slots[i];if(!old||deps.some((v,j)=>v!==old.deps[j]))queued.push(()=>{old?.cleanup?.();slots[i]={deps,cleanup:effect()};});},...bindings},'export {ControlledCapture};');
+ function nodes(root,predicate){const out=[];const walk=n=>{if(!n||typeof n!=='object')return;if(Array.isArray(n)){n.forEach(walk);return;}if(predicate(n))out.push(n);walk(n.props?.children);};walk(root);return out;}
+ return {render(){index=0;const tree=ControlledCapture({handle});const effects=queued;queued=[];effects.forEach(fn=>fn());return tree;},nodes,unmount(){slots.forEach(s=>s?.cleanup?.());}};
 }

@@ -623,7 +623,7 @@ const emailRef    = useRef(null);
       }
       setResults(function(prev) {
   const newReport = attachReportPhotos(reportFromResponse(data),{front:controlled?prepared.front:imageFile,back:controlled?prepared.back:backImageFile});
-  rememberScanDiagnostic(newReport,res);
+  rememberScanDiagnostic(newReport,res,{controlled,manifest:controlled?JSON.parse(prepared.manifest):null});
 
   return [newReport, ...prev].slice(0, 5);
 });
@@ -1145,6 +1145,7 @@ if (data.imageAnalysis) setImageAnalysis(protectFinancialReport(data).imageAnaly
   const r = protectFinancialReport(saved);
   return (
     <div key={i}>
+      <ScanDiagnostics report={saved} prominent scrollToCapture={i===0} />
       <ResultCard
         data={r}
         photos={reportPhotos(saved)}
