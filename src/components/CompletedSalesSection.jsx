@@ -1,0 +1,17 @@
+import React from 'react';
+import {completedSalesView,SALES_COHORTS} from '../../lib/completedSales.mjs';
+const amount=(minor,currency)=>currency+' '+(minor/100).toFixed(Number.isInteger(minor)?2:3);
+export default function CompletedSalesSection({evidence=null}){
+ const view=completedSalesView(evidence);
+ return <section className="gp-u-section" aria-label="Completed sales evidence"><h3>Market value · completed sales</h3>
+  <style>{`.gp-u-sales.gp-u-completed-sales{grid-template-columns:repeat(4,minmax(0,1fr))}@media(max-width:900px){.gp-u-sales.gp-u-completed-sales{grid-template-columns:repeat(2,minmax(0,1fr))}}@media(max-width:620px){.gp-u-sales.gp-u-completed-sales{grid-template-columns:1fr}}`}</style>
+  <p>{view?'Qualified historical samples only — not current-value predictions or grading recommendations.':'No qualified feed connected. Not available: no commercially approved completed-sales provider.'} Asking listings, ended listings and unconfirmed offers are not completed-sale prices.</p>
+  <div className="gp-u-sales gp-u-completed-sales">{SALES_COHORTS.map(group=>{const s=view?.summaries.find(s=>s.group===group);return <div className="gp-u-sale" key={group}><h4>{group}</h4>{!s?.samples.length?<><strong style={{fontSize:16}}>Insufficient qualified sales data</strong><p>Qualified sample count unavailable{view?' or no qualifying records':''}.</p></>:s.samples.map((sample,i)=><div key={i}>
+   <strong style={{fontSize:18}}>{sample.medianMinor===null?'Insufficient qualified sales data':amount(sample.medianMinor,sample.currency)}</strong><p>{sample.medianMinor===null?'Minimum sample not met':'Qualified sample median'} · {sample.count} sales<br/>{sample.firstSale} to {sample.lastSale}</p>
+   {sample.medianMinor!==null&&<p>Observed range: {amount(sample.lowMinor,sample.currency)}–{amount(sample.highMinor,sample.currency)}</p>}
+   <p>{sample.condition?'Reported raw condition: '+sample.condition.replaceAll('_',' ')+'. ':''}Shipping {sample.shipping}; tax {sample.tax}. Latest retrieval: {sample.latestRetrieval.slice(0,10)}.</p>
+   {sample.transactions.length>0?<details><summary>Permitted supporting transactions</summary>{sample.transactions.map(t=><div key={t.key} style={{padding:'8px 0',overflowWrap:'anywhere'}}><p>{t.saleDate} · {amount(t.minor,t.currency)} · {t.provider}<br/>{t.settlement==='independently_verified'?'Independently verified settlement':'Provider-confirmed amount; settlement not independently verified'}<br/>Source reference: {t.reference}</p>{t.sourceUrl&&<a href={t.sourceUrl} target="_blank" rel="noopener noreferrer">Original source</a>}</div>)}</details>:<p>Transaction display is not authorized by the source policy.</p>}
+  </div>)}</div>;})}</div>
+  <p style={{fontSize:12}}>{view?`${view.windowDays}-day requested window; minimum ${view.minSample} sales per comparable price basis. Provider lookback: ${view.coverage.lookbackDays===null?'unknown':view.coverage.lookbackDays+' days'}. Reported matches: ${view.coverage.reportedTotal??'unknown'}. Completeness: ${view.coverage.complete===true?'reported complete':view.coverage.complete===false?'partial sample':'unknown'}. No automatic pagination. Quarantined records: ${view.quarantined.length}.`:'Sample size, sale-date range and price dispersion are unavailable. No market median or resale estimate is generated.'} Separate currencies and shipping/tax bases are never pooled. Historical samples do not establish future proceeds or verify the printing of the photographed card.</p>
+ </section>;
+}

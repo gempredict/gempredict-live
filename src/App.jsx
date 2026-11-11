@@ -1,3 +1,4 @@
+import CompletedSalesSection from './components/CompletedSalesSection.jsx';
 import ReportPhotos from './components/ReportPhotos';
 import {attachReportPhotos,reportPhotos} from '../lib/reportPhotos.mjs';
 import {reportListings} from '../lib/reportListings.mjs';
@@ -400,7 +401,7 @@ function EmptyState() {
   );
 }
 
-export function ResultCard({ data, index, onSave, isSaved,photos=null }) {
+export function ResultCard({ data, index, onSave, isSaved,photos=null,completedSalesEvidence=null }) {
   data = protectFinancialReport(data);
   const view=unifiedReportPresentation(data),listings=reportListings(data);
   const [copied,setCopied]=useState(false),[shared,setShared]=useState(false),[feedback,setFeedback]=useState(null);
@@ -423,7 +424,7 @@ export function ResultCard({ data, index, onSave, isSaved,photos=null }) {
      {(Array.isArray(data.scanNotices)?data.scanNotices:[]).map(safeScanFailure).filter(n=>['MARKETPLACE_UNAVAILABLE','VERIFICATION_UNRESOLVED'].includes(n?.code)).map(n=><p key={n.code} role="status">{n.error}</p>)}
      </details>
     </section>
-    <section className="gp-u-section" aria-label="Completed sales evidence"><h3>Market value · completed sales</h3><p>Qualified completed-sale evidence is not connected. Asking listings, ended listings and unconfirmed offers are not completed-sale prices.</p><div className="gp-u-sales">{view.sales.map(s=><div className="gp-u-sale" key={s.group}><h4>{s.group}</h4><strong>{s.status}</strong><p>{s.sample}</p></div>)}</div><p style={{fontSize:12}}>Sample size, sale-date range and price dispersion are unavailable. No market median or resale estimate is generated.</p></section>
+    <CompletedSalesSection evidence={completedSalesEvidence}/>
     <section className="gp-u-section" aria-label="Grading economics"><h3>PSA grading · economics</h3><p className="gp-u-note">{WITHHELD_MESSAGE}</p><p><strong>PSA Submission Fee</strong> Unavailable in automatic report economics. Select a dated service reference only within a manual scenario below.</p><details><summary>Explore manual PSA scenarios</summary><p>Optional assumptions only. Nothing you enter here changes the identification, condition findings, completed-sale evidence or protected saved report.</p><GradingScenarioCalculator embedded/></details></section>
     <div className="gp-u-actions"><button type="button" onClick={handleCopy}>{copied?'✓ Copied':'Copy Summary'}</button><button type="button" onClick={()=>onSave?.(data)}>{isSaved?'✓ Saved':'Save Report'}</button><button type="button" onClick={handleShare}>{shared?'✓ Copied':'Share'}</button></div>
     <div className="gp-u-feedback"><p>Was this card identification useful?</p><button type="button" onClick={()=>setFeedback('yes')}>👍 Yes</button><button type="button" onClick={()=>setFeedback('review')}>👎 Needs review</button>{feedback&&<p>{feedback==='yes'?'Thanks. Feedback recorded for this view.':'Thanks. Review the identification before using it.'}</p>}</div>

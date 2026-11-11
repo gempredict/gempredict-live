@@ -1,3 +1,4 @@
+import {completedSalesView,SALES_COHORTS} from '../../lib/completedSales.mjs';
 import {attachReportPhotos,reportPhotos} from '../../lib/reportPhotos.mjs';
 import {reportListings} from '../../lib/reportListings.mjs';
 import {unifiedReportPresentation} from '../../lib/unifiedReportPresentation.mjs';
@@ -23,13 +24,14 @@ function components(file,bindings={}){
  const {code}=transformSync(source,{filename:file,jsc:{parser:{syntax:'ecmascript',jsx:true},transform:{react:{runtime:'automatic'}}},module:{type:'commonjs'}});
  const exports={};vm.runInNewContext(code,{exports,require,React,...bindings});return exports;
 }
+const {default:CompletedSalesSection}=components('src/components/CompletedSalesSection.jsx',{completedSalesView,SALES_COHORTS});
 const {default:ReportPhotos}=components('src/components/ReportPhotos.jsx',{useState:React.useState,useEffect:React.useEffect});
 const {default:GradingScenarioCalculator}=components('src/components/GradingScenarioCalculator.jsx',{...economics,...feeReference,useState:React.useState});
 const {default:AtlasPanel}=components('src/components/AtlasPanel.jsx');
 const {default:ReportIdentityResult}=components('src/components/IdentityResult.jsx',{...financial,reportTitle,verificationRows,ScanDiagnostics:()=>null});
-const {ResultCard,ImageAnalysisCard}=components('src/App.jsx',{IdentityResult:ReportIdentityResult,attachReportPhotos,reportPhotos,reportListings,ReportPhotos,unifiedReportPresentation,GradingScenarioCalculator,...collector,safeScanFailure,conditionAssessmentLabels,...financial,identitySummary,reportTitle,verificationRows,buildGemPredictScore,AtlasPanel,useState:React.useState});
-export function renderReports(report){
- return {upper:renderToStaticMarkup(React.createElement(ResultCard,{data:report,index:0,onSave(){},isSaved:false})),lower:renderToStaticMarkup(React.createElement(ImageAnalysisCard,{report}))};
+const {ResultCard,ImageAnalysisCard}=components('src/App.jsx',{IdentityResult:ReportIdentityResult,attachReportPhotos,reportPhotos,reportListings,ReportPhotos,CompletedSalesSection,unifiedReportPresentation,GradingScenarioCalculator,...collector,safeScanFailure,conditionAssessmentLabels,...financial,identitySummary,reportTitle,verificationRows,buildGemPredictScore,AtlasPanel,useState:React.useState});
+export function renderReports(report,completedSalesEvidence=null){
+ return {upper:renderToStaticMarkup(React.createElement(ResultCard,{data:report,index:0,onSave(){},isSaved:false,completedSalesEvidence})),lower:renderToStaticMarkup(React.createElement(ImageAnalysisCard,{report}))};
 }
 // Isolate server authorization states without starting a browser or network.
 export async function renderDiagnosticControl(authorization,report=null){
@@ -48,7 +50,7 @@ export function renderIdentityResult(report){
 export function appInteraction(bindings={}){
  const slots=[];let index=0;
  const hook=initial=>{const i=index++;if(!(i in slots))slots[i]=typeof initial==='function'?initial():initial;return [slots[i],value=>{slots[i]=typeof value==='function'?value(slots[i]):value;}];};
- const {default:App}=components('src/App.jsx',{attachReportPhotos,reportPhotos,reportListings,ReportPhotos,unifiedReportPresentation,GradingScenarioCalculator,...collector,...financial,identitySummary,reportTitle,verificationRows,safeScanFailure,conditionAssessmentLabels,buildGemPredictScore,AtlasPanel,IdentityResult:()=>null,ScanDiagnostics:()=>null,ControlledValidation:()=>null,useState:hook,useRef:initial=>hook({current:initial})[0],useEffect(){},track(){},...bindings});
+ const {default:App}=components('src/App.jsx',{attachReportPhotos,reportPhotos,reportListings,ReportPhotos,CompletedSalesSection,unifiedReportPresentation,GradingScenarioCalculator,...collector,...financial,identitySummary,reportTitle,verificationRows,safeScanFailure,conditionAssessmentLabels,buildGemPredictScore,AtlasPanel,IdentityResult:()=>null,ScanDiagnostics:()=>null,ControlledValidation:()=>null,useState:hook,useRef:initial=>hook({current:initial})[0],useEffect(){},track(){},...bindings});
  function render(){index=0;return App();}
  function nodes(root,predicate){const found=[];function walk(node){if(!node||typeof node!=='object')return;if(Array.isArray(node)){node.forEach(walk);return;}if(predicate(node))found.push(node);walk(node.props?.children);}walk(root);return found;}
  return {render,nodes};
@@ -76,7 +78,7 @@ export async function scenarioCalculatorInteraction(bindings={}){
 
 export function unifiedReportInteraction(report,bindings={}){
  const slots=[];let index=0;const hook=initial=>{const i=index++;if(!(i in slots))slots[i]=typeof initial==='function'?initial():initial;return [slots[i],v=>{slots[i]=typeof v==='function'?v(slots[i]):v;}];};
- const {ResultCard:View}=components('src/App.jsx',{IdentityResult:ReportIdentityResult,...collector,...financial,attachReportPhotos,reportPhotos,reportListings,ReportPhotos,unifiedReportPresentation,GradingScenarioCalculator,safeScanFailure,conditionAssessmentLabels,identitySummary,reportTitle,verificationRows,buildGemPredictScore,AtlasPanel,useState:hook,setTimeout(){},...bindings});
+ const {ResultCard:View}=components('src/App.jsx',{IdentityResult:ReportIdentityResult,...collector,...financial,attachReportPhotos,reportPhotos,reportListings,ReportPhotos,CompletedSalesSection,unifiedReportPresentation,GradingScenarioCalculator,safeScanFailure,conditionAssessmentLabels,identitySummary,reportTitle,verificationRows,buildGemPredictScore,AtlasPanel,useState:hook,setTimeout(){},...bindings});
  const nodes=(root,predicate)=>{const found=[];function walk(n){if(!n||typeof n!=='object')return;if(Array.isArray(n)){n.forEach(walk);return;}if(predicate(n))found.push(n);walk(n.props?.children);}walk(root);return found;};
  return {render(props={}){index=0;return View({data:report,index:0,onSave(){},isSaved:false,...props});},nodes};
 }
