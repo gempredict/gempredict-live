@@ -75,3 +75,29 @@ test('authorized Preview diagnostics retain catalog outcome and safe rejection c
  }
  const success=await scan({env,headers:req.headers});const d=readDiagnosticTicket(req,success.responseHeaders[TICKET_HEADER],success.responseHeaders[SCAN_HEADER],env);assert.equal(d.identity.printed.setMarkings[0].text,'30C EN');assert.equal(d.identity.printed.copyright[0].text,'©2026');assert.equal(d.model.originalIdentity.identifiedYear,'2025');assert.equal(d.model.uncertainty.identityConfidence,88);
 });
+
+import {describeCatalogComparison} from '../lib/catalogComparison.mjs';
+import {hostedCatalogEvidence} from '../lib/reviewedCatalogSource.mjs';
+import {catalogVariantProvenance} from '../lib/catalogVariantProvenance.mjs';
+// Synthetic hosted shapes exercise documented compiler behavior; not a live Fraxure response.
+function finishCase(variants,detailed){
+ const hosted={id:'sm11-155',set:{id:'sm11'},variants,...(detailed===undefined?{}:{variants_detailed:detailed})};
+ const record={id:'sm11-155',provider:'tcgdex',subject:'Fraxure',year:'2019',brandSet:'Unified Minds',cardNumber:'155/236',language:'en',setId:'sm11',localId:'155',officialCount:236,releaseDate:'2019-08-02',variants,hostedEvidence:hostedCatalogEvidence(hosted)};
+ const card={subject:'Fraxure',year:'2019',brandSet:'Unified Minds',cardNumber:'155/236',language:'en',parallel:'Reverse Holo'};
+ const before=structuredClone(record),comparison=describeCatalogComparison({catalog:{status:'conflict',source:'tcgdex',referenceId:record.id,candidate:record,conflicts:['finish']}},card);assert.deepEqual(record,before);return{record,card,comparison};
+}
+test('missing finish flag is unresolved while an explicit non-generated contradiction remains a conflict',()=>{
+ const missing=finishCase({normal:true});assert.equal(missing.comparison.printing.status,'unresolved');assert.equal(missing.comparison.printing.providerEvidence.reportedFlags.reverse,null);
+ const explicit=finishCase({normal:true,holo:false,reverse:false},[{type:'normal',variantId:'explicit-normal-reference'}]);assert.equal(explicit.comparison.printing.status,'conflict');assert.equal(explicit.comparison.printing.providerEvidence.kind,'provider_detailed');assert.equal(explicit.comparison.printing.providerEvidence.reportedFlags.reverse,false);assert.equal(explicit.comparison.printing.verified,false);
+});
+test('generated legacy normal defaults preserve raw false flags but do not prove Reverse Holo impossible or verified',()=>{
+ const x=finishCase({normal:true,holo:false,reverse:false},[{type:'normal',size:'standard',variantId:'generated'}]);assert.equal(x.comparison.core.status,'supported');assert.equal(x.comparison.printing.status,'unresolved');assert.equal(x.comparison.printing.reason,'printing_evidence_incomplete');assert.equal(x.comparison.printing.providerEvidence.kind,'generated_legacy');assert.equal(x.record.variants.reverse,false);assert.deepEqual(catalogIdentityConflicts(x.card,x.record),['finish']);assert.equal(x.comparison.printing.verified,false);
+ const withoutProvenance=finishCase({normal:true,holo:false,reverse:false});assert.equal(withoutProvenance.comparison.printing.status,'conflict');assert.equal(withoutProvenance.comparison.printing.providerEvidence.negativeBasis,'provider_flags_without_source_provenance');
+ const unsafe=catalogVariantProvenance({...x.record,hostedEvidence:{...x.record.hostedEvidence,detailedComplete:false,printings:[{finish:'normal',variantId:'generated'}]}});assert.notEqual(unsafe.kind,'generated_legacy');
+ assert.notEqual(catalogVariantProvenance({...x.record,hostedEvidence:{...x.record.hostedEvidence,id:'another-card'}}).kind,'generated_legacy');
+ assert.notEqual(catalogVariantProvenance({...x.record,provider:'other-provider'}).kind,'generated_legacy');
+});
+test('catalog provenance is bounded and omits arbitrary provider fields, pricing and private payloads',()=>{
+ const x=finishCase({normal:true},[{type:'normal',variantId:'generated',pricing:{private:'secret'}}]);const p=catalogVariantProvenance({...x.record,hostedEvidence:{...x.record.hostedEvidence,updated:'https://private.example',printings:Array.from({length:30},()=>({finish:'normal',variantId:'secret:https://private.example'}))}});
+ assert.equal(p.entries.length,4);assert.equal(p.entriesTruncated,true);assert.notEqual(p.kind,'generated_legacy');assert.equal(p.hostedUpdated,null);assert.doesNotMatch(JSON.stringify(p),/secret|https:|pricing/);
+});
