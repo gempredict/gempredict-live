@@ -4,7 +4,7 @@
   "private": true,
   "scripts": {
     "dev": "next dev",
-    "build": "npm run test:sold && npm run test:mobile && npm run test:reconciliation && npm run test:pokemon && npm run test:benchmark && npm run test:economics && next build && node scripts/check-tcgdex-packaging.mjs",
+    "build": "npm run test:sold && npm run test:mobile && npm run test:reconciliation && npm run test:pokemon && npm run test:benchmark && npm run test:economics && next build && node scripts/check-tcgdex-packaging.mjs && node scripts/check-demo-packaging.mjs",
     "start": "next start",
     "lint": "next lint",
     "test:sold": "node --test tests/soldCompsFilter.test.mjs tests/soldIdentityGate.test.mjs tests/identityReviewToken.test.mjs tests/canonicalIdentityV2.test.mjs tests/sportsIdentityAudit.test.mjs tests/ebayIdentityMatch.test.mjs",
@@ -13,7 +13,7 @@
     "test:reconciliation": "node --test tests/reconciliation-handler.test.mjs",
     "benchmark:identity": "node scripts/identity-benchmark.mjs report",
     "test:benchmark": "node --test tests/identification-benchmark.test.mjs tests/sports-photo-evidence.test.mjs tests/sports-multisubject.test.mjs tests/sports-collector-reading.test.mjs",
-    "test:economics": "node --test tests/grading-scenarios.test.mjs tests/grading-fee-reference.test.mjs tests/psa-collector-workflow.test.mjs tests/unified-card-report.test.mjs tests/report-photos-listings.test.mjs tests/completed-sales.test.mjs"
+    "test:economics": "node --test tests/grading-scenarios.test.mjs tests/grading-fee-reference.test.mjs tests/psa-collector-workflow.test.mjs tests/unified-card-report.test.mjs tests/report-photos-listings.test.mjs tests/completed-sales.test.mjs tests/demo-report.test.mjs"
   },
   "dependencies": {
     "@anthropic-ai/sdk": "1.6.0",

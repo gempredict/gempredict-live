@@ -1,9 +1,9 @@
 import React from 'react';
 import {completedSalesView,SALES_COHORTS} from '../../lib/completedSales.mjs';
 const amount=(minor,currency)=>currency+' '+(minor/100).toFixed(Number.isInteger(minor)?2:3);
-export default function CompletedSalesSection({evidence=null}){
+export default function CompletedSalesSection({evidence=null,demo=false}){
  const view=completedSalesView(evidence);
- return <section className="gp-u-section" aria-label="Completed sales evidence"><h3>Market value · completed sales</h3>
+ return <section className="gp-u-section" aria-label="Completed sales evidence"><h3>Market value · completed sales</h3>{demo&&<p className="gp-u-note">DEMO — SYNTHETIC DATA · No qualified transactions or commercial permissions.</p>}
   <style>{`.gp-u-sales.gp-u-completed-sales{grid-template-columns:repeat(4,minmax(0,1fr))}@media(max-width:900px){.gp-u-sales.gp-u-completed-sales{grid-template-columns:repeat(2,minmax(0,1fr))}}@media(max-width:620px){.gp-u-sales.gp-u-completed-sales{grid-template-columns:1fr}}`}</style>
   <p>{view?'Qualified historical samples only — not current-value predictions or grading recommendations.':'No qualified feed connected. Not available: no commercially approved completed-sales provider.'} Asking listings, ended listings and unconfirmed offers are not completed-sale prices.</p>
   <div className="gp-u-sales gp-u-completed-sales">{SALES_COHORTS.map(group=>{const s=view?.summaries.find(s=>s.group===group);return <div className="gp-u-sale" key={group}><h4>{group}</h4>{!s?.samples.length?<><strong style={{fontSize:16}}>Insufficient qualified sales data</strong><p>Qualified sample count unavailable{view?' or no qualifying records':''}.</p></>:s.samples.map((sample,i)=><div key={i}>
