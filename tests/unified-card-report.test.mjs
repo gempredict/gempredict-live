@@ -38,7 +38,7 @@ test('unified actions save and copy only protected report data; manual assumptio
  const r=await fraxureScan();const report=reportFromResponse({...r.payload,rawValue:200,financialDecision:{allowed:true}});let copied='',saved;
  const ui=unifiedReportInteraction(report,{navigator:{clipboard:{writeText(s){copied=s;}}}});const tree=ui.render({onSave:r=>{saved=r;}});
  const button=name=>ui.nodes(tree,n=>n.type==='button'&&n.props.children===name)[0];button('Copy Summary').props.onClick();button('Save Report').props.onClick();assert.match(copied,/withheld/);assert.equal(saved.financialDecision.allowed,false);assert.equal(saved.rawValue,null);assert.equal(saved.manualScenario,undefined);assert.equal(saved.originalIdentityObservation.identifiedBrandSet,report.originalIdentityObservation.identifiedBrandSet);
- const app=fs.readFileSync('src/App.jsx','utf8');assert.ok(!app.includes('<ImageAnalysisCard report={r} />'));assert.ok(app.includes('<ImageAnalysisCard report={data} embedded/>'));assert.ok(app.includes('<ScanDiagnostics report={saved} />'));
+ const app=fs.readFileSync('src/App.jsx','utf8');assert.ok(!app.includes('<ImageAnalysisCard report={r} />'));assert.ok(app.includes('<ConditionSnapshot data={data.imageAnalysis} demo={demo}/>'));assert.ok(app.includes('<ScanDiagnostics report={saved} />'));
 });
 
 test('sports and unsupported TCG categories cannot borrow a core-catalog badge from unrelated flags',()=>{
