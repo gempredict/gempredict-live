@@ -1,0 +1,488 @@
+{
+  "version": 1,
+  "cohortId": "phase3l-reference-pair-v1",
+  "baselineCommit": "2e7f53177d7118d875943eee69a3ef45d42a1140",
+  "status": "NOT RUN",
+  "accuracyRate": null,
+  "rows": [
+    {
+      "cardId": "GP-3L-FRAXURE",
+      "expectedIdentity": "2019 Unified Minds Fraxure #155/236 — Reverse Holo",
+      "groundTruth": {
+        "status": "owner_declared_not_independently_reviewed",
+        "reviewer": null,
+        "reviewedAt": null,
+        "fields": {
+          "subject": {
+            "value": "Fraxure",
+            "status": "known",
+            "assertionStatus": "owner_supplied",
+            "source": "owner_phase3l_assignment",
+            "approvedAliases": []
+          },
+          "year": {
+            "value": "2019",
+            "status": "known",
+            "assertionStatus": "owner_supplied",
+            "source": "owner_phase3l_assignment",
+            "approvedAliases": []
+          },
+          "set": {
+            "value": "Sun & Moon Unified Minds",
+            "status": "known",
+            "assertionStatus": "owner_supplied",
+            "source": "owner_phase3l_assignment",
+            "approvedAliases": [
+              "Unified Minds",
+              "Sun & Moon—Unified Minds",
+              "Sun & Moon: Unified Minds"
+            ]
+          },
+          "cardNumber": {
+            "value": "155/236",
+            "status": "known",
+            "assertionStatus": "owner_supplied",
+            "source": "owner_phase3l_assignment",
+            "approvedAliases": []
+          },
+          "parallel": {
+            "value": "Reverse Holo",
+            "status": "known",
+            "assertionStatus": "owner_supplied",
+            "source": "owner_phase3l_assignment",
+            "approvedAliases": [
+              "Reverse-Holo"
+            ]
+          },
+          "finish": {
+            "value": "reverse-holo",
+            "status": "known",
+            "assertionStatus": "owner_supplied",
+            "source": "owner_phase3l_assignment",
+            "approvedAliases": [
+              "Reverse Holo"
+            ]
+          },
+          "language": {
+            "value": null,
+            "status": "unknown",
+            "assertionStatus": "not_established",
+            "source": null,
+            "approvedAliases": []
+          },
+          "autoOrRelic": {
+            "value": null,
+            "status": "unknown",
+            "assertionStatus": "not_established",
+            "source": null,
+            "approvedAliases": []
+          },
+          "serialNumber": {
+            "value": null,
+            "status": "unknown",
+            "assertionStatus": "not_established",
+            "source": null,
+            "approvedAliases": []
+          },
+          "printRun": {
+            "value": null,
+            "status": "unknown",
+            "assertionStatus": "not_established",
+            "source": null,
+            "approvedAliases": []
+          }
+        },
+        "sources": [
+          {
+            "kind": "owner_summary",
+            "path": "benchmarks/identity/phase3l/README.md",
+            "supports": [
+              "subject",
+              "year",
+              "set",
+              "cardNumber",
+              "parallel",
+              "finish"
+            ]
+          }
+        ]
+      },
+      "independentReferences": [
+        {
+          "provider": "tcgdex",
+          "id": "sm11-155",
+          "status": "historically_reported_not_independently_retained",
+          "supports": [
+            "subject",
+            "year",
+            "set",
+            "cardNumber"
+          ],
+          "sourcePath": "benchmarks/identity/supplemental/FRAXURE-summary.json",
+          "physicalPrintingVerified": false
+        }
+      ],
+      "physicalPrintingGroundTruth": "not_independently_reviewed",
+      "conditionGroundTruth": {
+        "status": "not_assessed",
+        "ownerApproved": false,
+        "preparedHashes": {
+          "front": null,
+          "back": null
+        },
+        "categories": {
+          "corners": {
+            "status": "NOT TESTED",
+            "referenceId": null
+          },
+          "edges": {
+            "status": "NOT TESTED",
+            "referenceId": null
+          },
+          "surface": {
+            "status": "NOT TESTED",
+            "referenceId": null
+          },
+          "centering": {
+            "status": "NOT TESTED",
+            "referenceId": null
+          }
+        }
+      },
+      "status": "NOT RUN",
+      "attempts": [],
+      "identityBaseline": {
+        "subject": {
+          "status": "NOT TESTED",
+          "reason": "no_linked_completed_attempt",
+          "expected": "Fraxure",
+          "observed": null,
+          "basis": "owner_supplied"
+        },
+        "year": {
+          "status": "NOT TESTED",
+          "reason": "no_linked_completed_attempt",
+          "expected": "2019",
+          "observed": null,
+          "basis": "owner_supplied"
+        },
+        "set": {
+          "status": "NOT TESTED",
+          "reason": "no_linked_completed_attempt",
+          "expected": "Sun & Moon Unified Minds",
+          "observed": null,
+          "basis": "owner_supplied"
+        },
+        "cardNumber": {
+          "status": "NOT TESTED",
+          "reason": "no_linked_completed_attempt",
+          "expected": "155/236",
+          "observed": null,
+          "basis": "owner_supplied"
+        },
+        "parallel": {
+          "status": "NOT TESTED",
+          "reason": "no_linked_completed_attempt",
+          "expected": "Reverse Holo",
+          "observed": null,
+          "basis": "owner_supplied"
+        },
+        "finish": {
+          "status": "NOT TESTED",
+          "reason": "no_linked_completed_attempt",
+          "expected": "reverse-holo",
+          "observed": null,
+          "basis": "owner_supplied"
+        },
+        "language": {
+          "status": "NOT TESTED",
+          "reason": "no_linked_completed_attempt",
+          "expected": null,
+          "observed": null,
+          "basis": "not_established"
+        },
+        "autoOrRelic": {
+          "status": "NOT TESTED",
+          "reason": "no_linked_completed_attempt",
+          "expected": null,
+          "observed": null,
+          "basis": "not_established"
+        },
+        "serialNumber": {
+          "status": "NOT TESTED",
+          "reason": "no_linked_completed_attempt",
+          "expected": null,
+          "observed": null,
+          "basis": "not_established"
+        },
+        "printRun": {
+          "status": "NOT TESTED",
+          "reason": "no_linked_completed_attempt",
+          "expected": null,
+          "observed": null,
+          "basis": "not_established"
+        }
+      },
+      "conditionBaseline": {
+        "corners": {
+          "status": "NOT TESTED",
+          "reason": "no_real_photo_attempt_or_human_reference"
+        },
+        "edges": {
+          "status": "NOT TESTED",
+          "reason": "no_real_photo_attempt_or_human_reference"
+        },
+        "surface": {
+          "status": "NOT TESTED",
+          "reason": "no_real_photo_attempt_or_human_reference"
+        },
+        "centering": {
+          "status": "NOT TESTED",
+          "reason": "no_real_photo_attempt_or_human_reference"
+        }
+      },
+      "calls": {
+        "paidModelCalls": 0,
+        "marketplaceCalls": 0,
+        "basis": "not_run"
+      },
+      "costs": {
+        "estimatedUsd": null,
+        "observedUsd": 0,
+        "basis": "no_requests_made"
+      }
+    },
+    {
+      "cardId": "GP-3L-KONNOR",
+      "expectedIdentity": "2024 Bowman Chrome Prospects Konnor Griffin #BCP-86 — Mojo Refractor",
+      "groundTruth": {
+        "status": "owner_declared_not_independently_reviewed",
+        "reviewer": null,
+        "reviewedAt": null,
+        "fields": {
+          "subject": {
+            "value": "Konnor Griffin",
+            "status": "known",
+            "assertionStatus": "owner_supplied",
+            "source": "owner_phase3l_assignment",
+            "approvedAliases": []
+          },
+          "year": {
+            "value": "2024",
+            "status": "known",
+            "assertionStatus": "owner_supplied",
+            "source": "owner_phase3l_assignment",
+            "approvedAliases": []
+          },
+          "set": {
+            "value": "Bowman Chrome Prospects",
+            "status": "known",
+            "assertionStatus": "owner_supplied",
+            "source": "owner_phase3l_assignment",
+            "approvedAliases": []
+          },
+          "cardNumber": {
+            "value": "BCP-86",
+            "status": "known",
+            "assertionStatus": "owner_supplied",
+            "source": "owner_phase3l_assignment",
+            "approvedAliases": []
+          },
+          "parallel": {
+            "value": "Mojo Refractor",
+            "status": "known",
+            "assertionStatus": "owner_supplied",
+            "source": "owner_phase3l_assignment",
+            "approvedAliases": []
+          },
+          "finish": {
+            "value": "Mojo Refractor",
+            "status": "known",
+            "assertionStatus": "owner_supplied",
+            "source": "owner_phase3l_assignment",
+            "approvedAliases": []
+          },
+          "language": {
+            "value": null,
+            "status": "unknown",
+            "assertionStatus": "not_established",
+            "source": null,
+            "approvedAliases": []
+          },
+          "autoOrRelic": {
+            "value": null,
+            "status": "unknown",
+            "assertionStatus": "not_established",
+            "source": null,
+            "approvedAliases": []
+          },
+          "serialNumber": {
+            "value": null,
+            "status": "unknown",
+            "assertionStatus": "not_established",
+            "source": null,
+            "approvedAliases": []
+          },
+          "printRun": {
+            "value": null,
+            "status": "unknown",
+            "assertionStatus": "not_established",
+            "source": null,
+            "approvedAliases": []
+          }
+        },
+        "sources": [
+          {
+            "kind": "owner_summary",
+            "path": "benchmarks/identity/phase3l/README.md",
+            "supports": [
+              "subject",
+              "year",
+              "set",
+              "cardNumber",
+              "parallel",
+              "finish"
+            ]
+          }
+        ]
+      },
+      "independentReferences": [],
+      "physicalPrintingGroundTruth": "not_independently_reviewed",
+      "conditionGroundTruth": {
+        "status": "not_assessed",
+        "ownerApproved": false,
+        "preparedHashes": {
+          "front": null,
+          "back": null
+        },
+        "categories": {
+          "corners": {
+            "status": "NOT TESTED",
+            "referenceId": null
+          },
+          "edges": {
+            "status": "NOT TESTED",
+            "referenceId": null
+          },
+          "surface": {
+            "status": "NOT TESTED",
+            "referenceId": null
+          },
+          "centering": {
+            "status": "NOT TESTED",
+            "referenceId": null
+          }
+        }
+      },
+      "status": "NOT RUN",
+      "attempts": [],
+      "identityBaseline": {
+        "subject": {
+          "status": "NOT TESTED",
+          "reason": "no_linked_completed_attempt",
+          "expected": "Konnor Griffin",
+          "observed": null,
+          "basis": "owner_supplied"
+        },
+        "year": {
+          "status": "NOT TESTED",
+          "reason": "no_linked_completed_attempt",
+          "expected": "2024",
+          "observed": null,
+          "basis": "owner_supplied"
+        },
+        "set": {
+          "status": "NOT TESTED",
+          "reason": "no_linked_completed_attempt",
+          "expected": "Bowman Chrome Prospects",
+          "observed": null,
+          "basis": "owner_supplied"
+        },
+        "cardNumber": {
+          "status": "NOT TESTED",
+          "reason": "no_linked_completed_attempt",
+          "expected": "BCP-86",
+          "observed": null,
+          "basis": "owner_supplied"
+        },
+        "parallel": {
+          "status": "NOT TESTED",
+          "reason": "no_linked_completed_attempt",
+          "expected": "Mojo Refractor",
+          "observed": null,
+          "basis": "owner_supplied"
+        },
+        "finish": {
+          "status": "NOT TESTED",
+          "reason": "no_linked_completed_attempt",
+          "expected": "Mojo Refractor",
+          "observed": null,
+          "basis": "owner_supplied"
+        },
+        "language": {
+          "status": "NOT TESTED",
+          "reason": "no_linked_completed_attempt",
+          "expected": null,
+          "observed": null,
+          "basis": "not_established"
+        },
+        "autoOrRelic": {
+          "status": "NOT TESTED",
+          "reason": "no_linked_completed_attempt",
+          "expected": null,
+          "observed": null,
+          "basis": "not_established"
+        },
+        "serialNumber": {
+          "status": "NOT TESTED",
+          "reason": "no_linked_completed_attempt",
+          "expected": null,
+          "observed": null,
+          "basis": "not_established"
+        },
+        "printRun": {
+          "status": "NOT TESTED",
+          "reason": "no_linked_completed_attempt",
+          "expected": null,
+          "observed": null,
+          "basis": "not_established"
+        }
+      },
+      "conditionBaseline": {
+        "corners": {
+          "status": "NOT TESTED",
+          "reason": "no_real_photo_attempt_or_human_reference"
+        },
+        "edges": {
+          "status": "NOT TESTED",
+          "reason": "no_real_photo_attempt_or_human_reference"
+        },
+        "surface": {
+          "status": "NOT TESTED",
+          "reason": "no_real_photo_attempt_or_human_reference"
+        },
+        "centering": {
+          "status": "NOT TESTED",
+          "reason": "no_real_photo_attempt_or_human_reference"
+        }
+      },
+      "calls": {
+        "paidModelCalls": 0,
+        "marketplaceCalls": 0,
+        "basis": "not_run"
+      },
+      "costs": {
+        "estimatedUsd": null,
+        "observedUsd": 0,
+        "basis": "no_requests_made"
+      }
+    }
+  ],
+  "limitations": [
+    "Owner-supplied reference facts are not independently verified physical-copy facts.",
+    "Correct predictions never authorize printing verification or financial outputs.",
+    "Diagnostic redaction/missing fields remain unresolved; exact defect coordinates are not reconstructed.",
+    "Full-scan token usage and exact provider billing/call counts may not be retained; unknown values remain unknown.",
+    "No overall accuracy percentage is calculated."
+  ]
+}

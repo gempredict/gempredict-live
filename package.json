@@ -11,9 +11,10 @@
     "test:mobile": "node --test tests/mobile-reconciliation.test.mjs",
     "test:pokemon": "node --test tests/pokemon-restoration.test.mjs tests/*identity*.test.mjs tests/*provenance*.test.mjs tests/*variant*.test.mjs tests/tcgdex-*.test.mjs tests/structured-listing-evidence.test.mjs tests/photo-condition.test.mjs tests/condition-evidence.test.mjs tests/clean-condition-evidence.test.mjs tests/foil-glare-evidence.test.mjs tests/controlled-validation.test.mjs tests/collector-report.test.mjs tests/scan-diagnostics.test.mjs tests/scan-failures.test.mjs tests/vision-output-budget.test.mjs tests/catalog-reconciliation-phase1a.test.mjs tests/identity-stage.test.mjs tests/source-catalog-reconciliation.test.mjs tests/catalog-finish-audit.test.mjs tests/reviewed-set-discovery.test.mjs",
     "test:reconciliation": "node --test tests/reconciliation-handler.test.mjs",
+    "benchmark:reference": "node scripts/identity-benchmark.mjs scorecard",
     "benchmark:identity": "node scripts/identity-benchmark.mjs report",
     "test:benchmark": "node --test tests/identification-benchmark.test.mjs tests/sports-photo-evidence.test.mjs tests/sports-multisubject.test.mjs tests/sports-collector-reading.test.mjs",
-    "test:economics": "node --test tests/grading-scenarios.test.mjs tests/grading-fee-reference.test.mjs tests/psa-collector-workflow.test.mjs tests/unified-card-report.test.mjs tests/report-photos-listings.test.mjs tests/completed-sales.test.mjs tests/demo-report.test.mjs tests/premium-report.test.mjs tests/original-report-restoration.test.mjs"
+    "test:economics": "node --test tests/grading-scenarios.test.mjs tests/grading-fee-reference.test.mjs tests/psa-collector-workflow.test.mjs tests/unified-card-report.test.mjs tests/report-photos-listings.test.mjs tests/completed-sales.test.mjs tests/demo-report.test.mjs tests/premium-report.test.mjs tests/original-report-restoration.test.mjs tests/reference-validation.test.mjs"
   },
   "dependencies": {
     "@anthropic-ai/sdk": "1.6.0",

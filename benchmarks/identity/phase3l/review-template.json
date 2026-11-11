@@ -1,0 +1,35 @@
+{
+  "version": 1,
+  "cardId": null,
+  "ownerApproved": false,
+  "physicalCardId": null,
+  "reviewer": null,
+  "reviewedAt": null,
+  "referenceManifestVersion": 1,
+  "preparedHashes": {
+    "front": null,
+    "back": null
+  },
+  "callAudit": {
+    "paidModelCalls": null,
+    "marketplaceCalls": null,
+    "sourceReference": null
+  },
+  "costAudit": {
+    "estimatedUsd": null,
+    "observedUsd": null,
+    "sourceReference": null
+  },
+  "conditionReview": {
+    "ownerApproved": false,
+    "referenceAssessmentId": null,
+    "adjudicationId": null,
+    "diagnosticSha256": null,
+    "categories": {
+      "corners": "NOT TESTED",
+      "edges": "NOT TESTED",
+      "surface": "NOT TESTED",
+      "centering": "NOT TESTED"
+    }
+  }
+}
