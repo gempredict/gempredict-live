@@ -86,3 +86,79 @@ test('prepared dimension inspection has a read-only image fallback without JPEG 
  const d=await preparedDimensions(new File(['synthetic'],'test.jpg'),{bitmap:undefined,ImageImpl:FakeImage,url:{createObjectURL(){return 'blob:local-only';},revokeObjectURL(){revoked++;}}});
  assert.deepEqual(d,{width:30,height:40});assert.equal(decoded,1);assert.equal(revoked,1);
 });
+
+// Files on iOS can return an empty/generic MIME despite preserving the JPEG bytes.
+// These are synthetic JPEGs, not physical-card accuracy or a device-provider scan.
+test('saved JPEG verification uses actual bytes despite iPhone Files MIME metadata, without accepting altered bytes',async()=>{
+ for(const mime of ['', 'application/octet-stream','image/jpg']){
+  const s=await setup();
+  for(const kind of ['front','back','manifest']){
+   await s.control.export(s.a,kind);const d=s.downloads.at(-1);
+   assert.equal(await s.control.verifySaved(s.a,kind,new File([await d.blob.arrayBuffer()],d.name,{type:mime})),true);
+  }
+  assert.equal(s.control.consume(s.a).front,s.front);
+ }
+ const s=await setup();await s.control.export(s.a,'front');
+ await assert.rejects(s.control.verifySaved(s.a,'front',new File([await s.back.arrayBuffer()],'front.jpg')));
+ assert.throws(()=>s.control.consume(s.a));
+ const notJpeg=await setup();await notJpeg.control.export(notJpeg.a,'front');
+ await assert.rejects(notJpeg.control.verifySaved(notJpeg.a,'front',new File(['not a JPEG'],'front.jpg',{type:'image/jpeg'})));
+});
+test('canceling saved-file selection leaves downloaded and previously verified evidence consumable',async()=>{
+ const s=await verified();assert.equal(await s.control.verifySaved(s.a,'front',undefined),false);
+ assert.equal(s.control.consume(s.a).back,s.back);
+});
+async function validationUi({dimensions,expiresIn=60000}={}){
+ const {controlledValidationInteraction}=await import('./helpers/renderReports.mjs');const s=await setup();const downloads=[],timers=[],events={};let submissions=0,clock=100000;
+ const target=prefix=>({addEventListener(name,fn){events[prefix+name]=fn;},removeEventListener(name,fn){if(events[prefix+name]===fn)delete events[prefix+name];}});
+ class Clock extends Date{static now(){return clock;}}
+ const props={front:s.front,back:s.back,busy:false,getSelectionEpoch:()=> '1:1',onSubmit:async()=>{submissions++;}};
+ const h=controlledValidationInteraction(props,{Date:Clock,window:target('window.'),document:target('document.'),setTimeout(fn){timers.push(fn);return fn;},clearTimeout(){},fetch:async()=>({ok:true,json:async()=>({conditionValidationAvailable:true,authorized:true,revision,expiresAt:clock+expiresIn})}),createPreparedValidation:options=>createPreparedValidation({...options,cryptoImpl:webcrypto,dimensions:dimensions|| (async()=>({width:30,height:40})),download:async(blob,name)=>downloads.push({blob,name})})});
+ let tree;function render(){tree=h.render();return tree;}const nodes=predicate=>h.nodes(tree,predicate);const button=label=>nodes(n=>n.type==='button'&&(Array.isArray(n.props.children)?n.props.children.join(''):n.props.children)===label)[0];const inputs=()=>nodes(n=>n.type==='input'&&n.props.type==='file');const text=()=>{let out='';const walk=n=>{if(typeof n==='string')out+=n+' ';else if(Array.isArray(n))n.forEach(walk);else if(n?.props)walk(n.props.children);};walk(tree);return out;};
+ render();await new Promise(setImmediate);render();
+ return {h,s,downloads,events,timers,render,nodes,button,inputs,text,submissions:()=>submissions,advance(ms){clock+=ms;},async freeze(){await button('Freeze prepared front and back').props.onClick();render();},async download(kind){await button(kind==='manifest'?'Download manifest':`Download prepared ${kind} JPEG`).props.onClick();render();return downloads.at(-1);},async verify(kind,file){await inputs()[['front','back','manifest'].indexOf(kind)].props.onChange({target:{files:file?[file]:[],value:'selected'}});render();}};
+}
+test('actual verification UI preserves attempt through rerenders, focus, visibility, empty change and cancel events',async()=>{
+ const u=await validationUi();await u.freeze();const d=await u.download('front');
+ await u.verify('front',new File([await d.blob.arrayBuffer()],d.name));assert.match(u.text(),/Match verified locally/);
+ for(let i=0;i<3;i++){u.h.props.getSelectionEpoch=()=> '1:1';u.render();u.events['window.focus']();u.events['document.visibilitychange']();u.render();}
+ u.inputs()[1].props.onCancel();u.render();await u.verify('back',undefined);
+ assert.equal(u.inputs().length,3);assert.match(u.text(),/frozen pair and existing verification matches are unchanged/);assert.match(u.text(),/Match verified locally/);
+ assert.match(u.text(),/Next step:.*saved back/);assert.equal(u.submissions(),0);
+});
+test('actual verification UI keeps failed-file reason visible after reset and ordinary rerenders',async()=>{
+ const u=await validationUi();await u.freeze();await u.download('front');await u.verify('front',u.s.back);
+ assert.equal(u.inputs().length,0);assert.match(u.text(),/could not be read or did not match the frozen front file/);assert.match(u.text(),/Files\/Downloads/);
+ assert.match(u.text(),/Verification failed — prepare again/);u.render();u.events['window.focus']();u.render();
+ assert.equal(u.nodes(n=>n.props?.role==='alert').length,1);assert.match(u.text(),/Freeze the prepared pair/);assert.equal(u.submissions(),0);
+ await u.freeze();assert.equal(u.nodes(n=>n.props?.role==='alert').length,0);assert.equal(u.inputs().length,3);
+});
+test('owner expiry on iPhone picker return remains visible and blocks even delayed verification results',async()=>{
+ let block=false,release;const gate=new Promise(r=>{release=r;});
+ const u=await validationUi({dimensions:async()=>{if(block)await gate;return {width:30,height:40};}});await u.freeze();const d=await u.download('front');block=true;
+ const pending=u.inputs()[0].props.onChange({target:{files:[new File([await d.blob.arrayBuffer()],d.name)],value:'selected'}});
+ u.render();u.advance(60001);u.events['window.focus']();u.render();release();await pending;u.render();
+ assert.match(u.text(),/Owner authorization expired/);assert.match(u.text(),/Reauthorize Preview Scan Diagnostics/);assert.equal(u.inputs().length,0);assert.equal(u.nodes(n=>n.props?.role==='alert').length,1);assert.doesNotMatch(u.text(),/Match verified locally/);assert.equal(u.submissions(),0);
+ // A separate timer-expiry path stays visible without any focus event.
+ const v=await validationUi();await v.freeze();v.advance(60001);v.timers.at(-1)();v.render();assert.match(v.text(),/Owner authorization expired/);assert.equal(v.inputs().length,0);
+});
+test('actual UI verifies all three iPhone-style saved files and retains explicit one-use spending controls',async()=>{
+ const u=await validationUi();await u.freeze();
+ for(const kind of ['front','back','manifest']){const d=await u.download(kind);await u.verify(kind,new File([await d.blob.arrayBuffer()],d.name));}
+ assert.equal(u.nodes(n=>n.type==='span'&&n.props.children==='Match verified locally').length,3);
+ assert.match(u.text(),/All three files match/);assert.equal(u.button('Run controlled Full Analysis once').props.disabled,true);
+ u.nodes(n=>n.type==='input'&&n.props.type==='checkbox')[0].props.onChange({target:{checked:true}});u.render();await u.button('Run controlled Full Analysis once').props.onClick();u.render();
+ assert.equal(u.submissions(),1);assert.equal(u.inputs().length,0);assert.equal(u.button('Run controlled Full Analysis once'),undefined);
+});
+
+test('asynchronous saved-file read errors persist visibly and a component remount cannot restore verification claims',async()=>{
+ let fail=false;const u=await validationUi({dimensions:async()=>{if(fail)throw Error('synthetic read/decode failure');return {width:30,height:40};}});await u.freeze();const d=await u.download('front');fail=true;
+ await u.verify('front',new File([await d.blob.arrayBuffer()],d.name));u.render();assert.match(u.text(),/Saved evidence could not be read/);assert.equal(u.inputs().length,0);assert.equal(u.submissions(),0);
+ u.h.unmount();const fresh=await validationUi();assert.equal(fresh.inputs().length,0);assert.match(fresh.text(),/Reloading this page resets/);assert.equal(fresh.button('Run controlled Full Analysis once'),undefined);
+ const expired=await validationUi({expiresIn:-1});assert.match(expired.text(),/Owner authorization unavailable or expired/);assert.equal(expired.button('Freeze prepared front and back'),undefined);
+});
+test('real photo replacement still resets the UI, while an unmounted pending verification cannot publish success',async()=>{
+ const u=await validationUi();await u.freeze();u.h.props.front=new File([await u.s.front.arrayBuffer()],'replacement.jpg',{type:'image/jpeg'});u.render();u.render();assert.equal(u.inputs().length,0);assert.match(u.text(),/Selected photos or preparation state changed/);
+ let block=false,release;const gate=new Promise(r=>{release=r;});const v=await validationUi({dimensions:async()=>{if(block)await gate;return {width:30,height:40};}});await v.freeze();const d=await v.download('front');block=true;
+ const pending=v.inputs()[0].props.onChange({target:{files:[new File([await d.blob.arrayBuffer()],d.name)],value:'selected'}});v.h.unmount();release();await pending;assert.equal(v.submissions(),0);
+});
