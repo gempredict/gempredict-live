@@ -1,3 +1,6 @@
+import ReportPhotos from './components/ReportPhotos';
+import {attachReportPhotos,reportPhotos} from '../lib/reportPhotos.mjs';
+import {reportListings} from '../lib/reportListings.mjs';
 import GradingScenarioCalculator from './components/GradingScenarioCalculator';
 import {unifiedReportPresentation} from '../lib/unifiedReportPresentation.mjs';
 import {collectorIdentityMessage,collectorConditions,collectorLimitations} from '../lib/collectorPresentation.mjs';
@@ -397,9 +400,9 @@ function EmptyState() {
   );
 }
 
-export function ResultCard({ data, index, onSave, isSaved }) {
+export function ResultCard({ data, index, onSave, isSaved,photos=null }) {
   data = protectFinancialReport(data);
-  const view=unifiedReportPresentation(data);
+  const view=unifiedReportPresentation(data),listings=reportListings(data);
   const [copied,setCopied]=useState(false),[shared,setShared]=useState(false),[feedback,setFeedback]=useState(null);
   function handleCopy(){try{navigator.clipboard.writeText(buildCopySummary(data));}catch{}setCopied(true);setTimeout(()=>setCopied(false),2000);}
   function handleShare(){const summary=buildCopySummary(data);if(navigator.share)navigator.share({title:'GemPredict Report',text:summary}).catch(()=>{});else{try{navigator.clipboard.writeText(summary);}catch{}}setShared(true);setTimeout(()=>setShared(false),2000);}
@@ -407,17 +410,21 @@ export function ResultCard({ data, index, onSave, isSaved }) {
    <style>{`.gp-unified{font-family:Arial,Helvetica,sans-serif;border:1px solid #c9a84c66;border-radius:20px;overflow:hidden;background:#f5f3ee;color:#0e0f0c;box-shadow:0 12px 35px #00000010}.gp-unified *{box-sizing:border-box}.gp-u-header{background:#10140f;color:#fff;padding:28px}.gp-u-eyebrow{font-size:11px;text-transform:uppercase;letter-spacing:.13em;color:#c9a84c;margin:0 0 12px;font-weight:700}.gp-u-header h2{font-family:Georgia,serif;font-size:clamp(24px,4vw,34px);line-height:1.25;margin:0 0 12px;overflow-wrap:anywhere}.gp-u-header p{font-size:13px;margin:8px 0;color:#dddccf}.gp-u-body{padding:24px}.gp-u-section{padding:22px 0;border-bottom:1px solid #e2dfd8}.gp-u-section:first-child{padding-top:0}.gp-u-section h3{font-family:Georgia,serif;font-size:23px;margin:0 0 12px}.gp-u-section p{font-size:14px;line-height:1.6}.gp-u-fields,.gp-u-sales{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px}.gp-u-fields div,.gp-u-sale{padding:14px;background:white;border:1px solid #e2dfd8;border-radius:10px;min-width:0}.gp-u-fields dt{font-size:11px;color:#62655b}.gp-u-fields dd{font-size:14px;margin:4px 0 0;overflow-wrap:anywhere}.gp-u-sale h4{font-size:15px;margin:0 0 12px}.gp-u-sale strong{display:block;font-size:20px;color:#62655b}.gp-u-sale p{font-size:12px;margin-bottom:0}.gp-u-badge{display:inline-block;border:1px solid #c9a84c66;border-radius:25px;padding:5px 11px;color:#e0c77f;font-size:11px}.gp-unified details{margin-top:16px}.gp-unified summary{cursor:pointer;font-size:13px;font-weight:600;padding:8px 0}.gp-u-note{background:#fcf6e7;border-left:3px solid #c9a84c;padding:12px 15px;border-radius:0 8px 8px 0}.gp-u-actions{display:flex;gap:10px;flex-wrap:wrap;padding-top:22px}.gp-u-actions button,.gp-u-feedback button{min-height:44px;padding:10px 16px;background:white;border:1px solid #b9b7ad;border-radius:9px;font-weight:600;color:#20221c;cursor:pointer}.gp-u-actions button:focus-visible,.gp-unified summary:focus-visible{outline:3px solid #c9a84c;outline-offset:3px}.gp-u-feedback{font-size:12px;padding-top:18px}.gp-u-feedback button{padding:6px 10px;margin-right:8px;font-size:12px}.gp-u-description{max-width:65ch}.gp-unified .econ-embedded{padding:0;min-height:0;background:transparent}.gp-unified .econ-embedded .econ-progress{margin-top:16px}.gp-unified .econ-embedded .econ-panel{padding:20px;box-shadow:none}.gp-unified .econ-embedded .econ-footer{display:block}@media(max-width:620px){.gp-u-header{padding:22px 18px}.gp-u-body{padding:18px}.gp-u-fields{grid-template-columns:repeat(2,minmax(0,1fr))}.gp-u-sales{grid-template-columns:1fr}.gp-u-section h3{font-size:21px}.gp-unified .econ-embedded .econ-panel{padding:16px}}`}</style>
    <header className="gp-u-header"><div className="gp-u-eyebrow">GemPredict · Card Analysis Report</div><h2>{reportTitle(data)}</h2><span className="gp-u-badge">{view.identityLabel==='Identification proposal'?'Identity unverified · Identification proposal':view.identityLabel}</span><p>{view.category} · Exact printing unresolved</p></header>
    <div className="gp-u-body">
-    <section className="gp-u-section" aria-label="Card identification"><h3>Your card</h3><p className="gp-u-description">{collectorIdentityMessage(data)}</p>{view.categoryConflict&&<p className="gp-u-note">Category information conflicts. Review the identification; contradictory category details are excluded from this summary.</p>}<dl className="gp-u-fields">{view.fields.map(f=><div key={f.label}><dt>{f.label}</dt><dd>{f.value}</dd></div>)}</dl>
+    <section className="gp-u-section" aria-label="Card identification"><h3>Your card</h3><ReportPhotos photos={photos}/><p className="gp-u-description">{collectorIdentityMessage(data)}</p>{view.categoryConflict&&<p className="gp-u-note">Category information conflicts. Review the identification; contradictory category details are excluded from this summary.</p>}<dl className="gp-u-fields">{view.fields.map(f=><div key={f.label}><dt>{f.label}</dt><dd>{f.value}</dd></div>)}</dl>
      <p className="gp-u-description">Catalog support, photo observations and physical-printing verification are separate. No rarity or parallel is inferred from a generic foil description.</p>
      <details><summary>Identity &amp; provenance details</summary><VerificationStatus report={data}/><p style={{fontSize:12,overflowWrap:'anywhere'}}>{identitySummary(data)}</p></details>{data.stage==='identity'&&<details><summary>Printed identity evidence &amp; original observation</summary><IdentityResult report={data}/></details>}
      {data.imageAnalysis&&<details><summary>Review or correct identification</summary><IdentityReviewCard report={data}/></details>}
     </section>
     <section className="gp-u-section" aria-label="Condition evidence"><h3>Photo condition</h3>{data.imageAnalysis?<ImageAnalysisCard report={data} embedded/>:<p>{data.stage==='identity'?'Condition analysis: not requested.':'No photographic condition assessment is available.'} Identification alone does not establish condition.</p>}</section>
-    <section className="gp-u-section" aria-label="Completed sales evidence"><h3>Completed-sale comparisons</h3><p>Qualified completed-sale evidence is not connected. Asking listings, ended listings and unconfirmed offers are not completed-sale prices.</p><div className="gp-u-sales">{view.sales.map(s=><div className="gp-u-sale" key={s.group}><h4>{s.group}</h4><strong>{s.status}</strong><p>{s.sample}</p></div>)}</div><p style={{fontSize:12}}>Sample size, sale-date range and price dispersion are unavailable. No market median or resale estimate is generated.</p></section>
-    <section className="gp-u-section" aria-label="eBay discovery"><h3>Marketplace evidence</h3><p>eBay: {view.discovery.status}{view.discovery.returnedCount!==null?' · '+view.discovery.returnedCount+' returned discovery records':''}.</p><p>{view.printingStatus}</p><p>No candidate listing price is used as a valuation or graded comparable.</p>
+    <section className="gp-u-section" aria-label="eBay discovery"><h3>Available on eBay</h3><p>Active asking listings — not completed sales or market valuations.</p><p>{view.discovery.status}{view.discovery.returnedCount!==null?' · '+view.discovery.returnedCount+' discovery records':''}. Exact-printing matches: {listings.qualified.length}. Unverified candidates: {listings.candidates.length}.</p>
+     {!listings.candidates.length&&<p>No safely classifiable active candidates are available. Missing identity, variant or source-link evidence is not bypassed.</p>}
+     {listings.candidates.length>0&&<><h4>Possible matches — unverified printing</h4><p>These pass local screening only. They are not exact-card comparables and cannot support a valuation.</p><div className="gp-u-sales">{listings.candidates.slice(0,6).map(item=><article className="gp-u-sale" key={item.url}>{item.image&&<img src={item.image} loading="lazy" referrerPolicy="no-referrer" alt="eBay listing photograph" style={{width:'100%',height:160,objectFit:'contain'}}/>}<a href={item.url} target="_blank" rel="noopener noreferrer" style={{color:'#70561e',overflowWrap:'anywhere'}}>{item.title}</a><p><strong>Asking price: {item.amount!==null?item.currency+' '+item.amount.toFixed(2):'Unavailable'}</strong></p><p>Condition: {item.condition||'Not supplied'}</p><p>Unverified candidate · active listing</p></article>)}</div></>}
+     <details><summary>Listing evidence and limitations</summary><p>{view.printingStatus} {listings.rejectedCount} rejected or unsafe records are excluded. Only the first six screened candidates are shown; this is not exhaustive market coverage.</p><p>The current report lacks independently established physical-printing evidence, so no exact-printing listing is asserted.</p>
      {(Array.isArray(data.scanNotices)?data.scanNotices:[]).map(safeScanFailure).filter(n=>['MARKETPLACE_UNAVAILABLE','VERIFICATION_UNRESOLVED'].includes(n?.code)).map(n=><p key={n.code} role="status">{n.error}</p>)}
+     </details>
     </section>
-    <section className="gp-u-section" aria-label="Grading economics"><h3>Grading economics</h3><p className="gp-u-note">{WITHHELD_MESSAGE}</p><p><strong>PSA Submission Fee</strong> Unavailable in automatic report economics. Select a dated service reference only within a manual scenario below.</p><details><summary>Explore manual PSA scenarios</summary><p>Optional assumptions only. Nothing you enter here changes the identification, condition findings, completed-sale evidence or protected saved report.</p><GradingScenarioCalculator embedded/></details></section>
+    <section className="gp-u-section" aria-label="Completed sales evidence"><h3>Market value · completed sales</h3><p>Qualified completed-sale evidence is not connected. Asking listings, ended listings and unconfirmed offers are not completed-sale prices.</p><div className="gp-u-sales">{view.sales.map(s=><div className="gp-u-sale" key={s.group}><h4>{s.group}</h4><strong>{s.status}</strong><p>{s.sample}</p></div>)}</div><p style={{fontSize:12}}>Sample size, sale-date range and price dispersion are unavailable. No market median or resale estimate is generated.</p></section>
+    <section className="gp-u-section" aria-label="Grading economics"><h3>PSA grading · economics</h3><p className="gp-u-note">{WITHHELD_MESSAGE}</p><p><strong>PSA Submission Fee</strong> Unavailable in automatic report economics. Select a dated service reference only within a manual scenario below.</p><details><summary>Explore manual PSA scenarios</summary><p>Optional assumptions only. Nothing you enter here changes the identification, condition findings, completed-sale evidence or protected saved report.</p><GradingScenarioCalculator embedded/></details></section>
     <div className="gp-u-actions"><button type="button" onClick={handleCopy}>{copied?'✓ Copied':'Copy Summary'}</button><button type="button" onClick={()=>onSave?.(data)}>{isSaved?'✓ Saved':'Save Report'}</button><button type="button" onClick={handleShare}>{shared?'✓ Copied':'Share'}</button></div>
     <div className="gp-u-feedback"><p>Was this card identification useful?</p><button type="button" onClick={()=>setFeedback('yes')}>👍 Yes</button><button type="button" onClick={()=>setFeedback('review')}>👎 Needs review</button>{feedback&&<p>{feedback==='yes'?'Thanks. Feedback recorded for this view.':'Thanks. Review the identification before using it.'}</p>}</div>
    </div>
@@ -598,12 +605,12 @@ const emailRef    = useRef(null);
       if (!res.ok) { setError(data.error || "Something went wrong. Please try again."); setLoading(false); return; }
 
       if(mode==='identity'){
-        const identified=reportFromResponse(data);rememberScanDiagnostic(identified,res);setIdentityResult(identified);
+        const identified=attachReportPhotos(reportFromResponse(data),{front:controlled?prepared.front:imageFile,back:controlled?prepared.back:backImageFile});rememberScanDiagnostic(identified,res);setIdentityResult(identified);
         if(data.remaining!=null)setRemaining(data.remaining);
         return;
       }
       setResults(function(prev) {
-  const newReport = reportFromResponse(data);
+  const newReport = attachReportPhotos(reportFromResponse(data),{front:controlled?prepared.front:imageFile,back:controlled?prepared.back:backImageFile});
   rememberScanDiagnostic(newReport,res);
 
   return [newReport, ...prev].slice(0, 5);
@@ -1085,7 +1092,7 @@ if (data.imageAnalysis) setImageAnalysis(protectFinancialReport(data).imageAnaly
           </div>
           <p><a href="/grading-economics">Grading Economics — manual scenario calculator</a></p>
           <ControlledValidation front={imageFile} back={backImageFile} busy={loading||processingImages>0||!!photoErrors.front||!!photoErrors.back} getSelectionEpoch={()=>selectionVersions.current.front+':'+selectionVersions.current.back} onSubmit={prepared=>handleSubmit('condition-validation',prepared)}/>
-          {identityResult&&!loading&&<ResultCard data={identityResult} index={0} onSave={saveReport} isSaved={isSavedReport(identityResult)}/>}
+          {identityResult&&!loading&&<ResultCard data={identityResult} photos={reportPhotos(identityResult)} index={0} onSave={saveReport} isSaved={isSavedReport(identityResult)}/>}
 
           {/* Remaining */}
           {remaining !== null && (
@@ -1127,6 +1134,7 @@ if (data.imageAnalysis) setImageAnalysis(protectFinancialReport(data).imageAnaly
     <div key={i}>
       <ResultCard
         data={r}
+        photos={reportPhotos(saved)}
         index={i}
         onSave={saveReport}
         isSaved={isSavedReport(r)}

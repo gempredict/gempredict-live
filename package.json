@@ -13,7 +13,7 @@
     "test:reconciliation": "node --test tests/reconciliation-handler.test.mjs",
     "benchmark:identity": "node scripts/identity-benchmark.mjs report",
     "test:benchmark": "node --test tests/identification-benchmark.test.mjs tests/sports-photo-evidence.test.mjs tests/sports-multisubject.test.mjs tests/sports-collector-reading.test.mjs",
-    "test:economics": "node --test tests/grading-scenarios.test.mjs tests/grading-fee-reference.test.mjs tests/psa-collector-workflow.test.mjs tests/unified-card-report.test.mjs"
+    "test:economics": "node --test tests/grading-scenarios.test.mjs tests/grading-fee-reference.test.mjs tests/psa-collector-workflow.test.mjs tests/unified-card-report.test.mjs tests/report-photos-listings.test.mjs"
   },
   "dependencies": {
     "@anthropic-ai/sdk": "1.6.0",
