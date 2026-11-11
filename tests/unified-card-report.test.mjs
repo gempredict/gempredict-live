@@ -14,7 +14,7 @@ test('complete Pokémon handler feeds a single report with canonical core, quali
  assert.equal((html.match(/aria-label="Unified card analysis report"/g)||[]).length,1);
  assert.match(body,/Unified Minds.*Fraxure/);assert.match(body,/Collector number 155\/236/);assert.match(body,/Possible visible damage/);assert.match(body,/Back photo/);assert.match(body,/resolution/);
  for(const section of ['Card identification','Condition evidence','Completed sales evidence','eBay discovery','Grading economics'])assert.ok(html.includes(`aria-label="${section}"`));
- assert.ok(html.includes('econ-embedded'));assert.ok(!html.includes('<main'));assert.doesNotMatch(body,/GemPredict Score|Most Likely Outcome|PSA 10 Odds|Recommended Action|Grade It/);
+ assert.ok(html.includes('econ-embedded'));assert.ok(!html.includes('<main'));assert.doesNotMatch(body,/GemPredict Score|Grade It|Consider It/);
  assert.match(body,/No qualified feed connected/);assert.match(body,/PSA Submission Fee Unavailable/);assert.equal(safe.financialDecision.allowed,false);for(const f of FINANCIAL_FIELDS)assert.equal(safe[f],null);
 });
 test('unrelated sports metadata cannot classify a Pokémon report as Baseball; category disagreements remain explicit',async()=>{

@@ -17,7 +17,7 @@ test('front-only, missing, rejected photo types and restored reports have explic
  assert.match(renderReports({cardTitle:'Restored report'}).upper,/not retained in saved or restored reports/);
 });
 test('screened active listings retain actual title, price, currency, condition and validated source URL without exact claims',()=>{
- const r=report([item()]),view=reportListings(r);assert.equal(view.candidates.length,1);assert.equal(view.qualified.length,0);assert.equal(view.candidates[0].amount,42.5);assert.equal(view.candidates[0].currency,'USD');assert.equal(view.candidates[0].url,'https://www.ebay.com/itm/123456789012');const html=renderReports(r).upper;assert.match(html,/USD 42.50/);assert.match(html,/Possible matches/);assert.match(html,/active listing/);assert.ok(html.indexOf('Available on eBay')<html.indexOf('Market snapshot'));
+ const r=report([item()]),view=reportListings(r);assert.equal(view.candidates.length,1);assert.equal(view.qualified.length,0);assert.equal(view.candidates[0].amount,42.5);assert.equal(view.candidates[0].currency,'USD');assert.equal(view.candidates[0].url,'https://www.ebay.com/itm/123456789012');const html=renderReports(r).upper;assert.match(html,/USD 42.50/);assert.match(html,/Possible matches/);assert.match(html,/active listing/);assert.ok(html.indexOf('Listings used')>=0&&html.indexOf('Listings used')<html.indexOf('Market snapshot'));
 });
 test('wrong years, numbers, parallels, serials, products and explicitly rejected records never become possible matches',()=>{
  for(const t of [title.replace('2024','2022'),title.replace('BCP-86','BCP-87'),title.replace('Mojo','Purple'),title+' /250',title+' Bowman Sterling'])assert.equal(reportListings(report([item(0,t)])).candidates.length,0,t);
