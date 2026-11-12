@@ -1,3 +1,4 @@
+import {fullAnalysisStructuredEnabled,fullAnalysisOutputFormat,parseFullAnalysisMessage,fullAnalysisStructuredGuidance} from '../../lib/fullAnalysisSchema.mjs';
 import {verifyConditionValidation} from '../../lib/conditionValidationServer.mjs';
 import {safeIdentityValidation} from '../../lib/identityValidation.mjs';
 import {identifyFromPhotos} from '../../lib/identityStage.mjs';
@@ -531,7 +532,8 @@ async function fetchImageAnalysis(
   backImageMimeType,
   cardName,
   cardType,
-  scanDiagnostics=null
+  scanDiagnostics=null,
+  structured=false
 ) {
   if (!anthropic) throw new Error("NO_API_KEY");
   if (!imageBuffer || imageBuffer.length === 0) return null;
@@ -557,9 +559,10 @@ const backMime = backImageMimeType &&
 
   const imagePrompt=buildSportsVisionPrompt({cardName,typeLabel,hasBack:!!backBase64});
 
-  scanDiagnostics?.vision('request_started',cardType);
+  scanDiagnostics?.vision('request_started',cardType,structured?'json_schema':'prompt_json');
   const message = await anthropic.messages.create({
     model: VISION_MODEL, max_tokens: visionOutputBudget(!!backBase64),
+    ...(structured?{output_config:{format:fullAnalysisOutputFormat(!!backBase64,cardType)}}:{}),
     messages: [{
       role: "user",
       content: [
@@ -586,20 +589,30 @@ const backMime = backImageMimeType &&
 
   {
     type: "text",
-    text: cardType==='pokemon'?buildVisionPrompt({cardName,typeLabel,hasBack:!!backBase64}):imagePrompt,
+    text: (cardType==='pokemon'?buildVisionPrompt({cardName,typeLabel,hasBack:!!backBase64}):imagePrompt)+(structured?fullAnalysisStructuredGuidance:''),
   },
       ],
     }],
+  }).catch(error=>{
+    if(structured){
+      const rule=[400,422].includes(error?.status)?'request_rejected':error instanceof SyntaxError||error?.cause instanceof SyntaxError?'transport_invalid':null;
+      if(rule){error.visionValidation=safeVisionValidation({phase:'request',rule});scanDiagnostics?.visionValidation(error.visionValidation);}
+    }
+    throw error; // Never retry or fall back to prompt JSON.
   });
 
-  scanDiagnostics?.visionCompletion(message,{maxOutputTokens:visionOutputBudget(!!backBase64)});
+  scanDiagnostics?.visionCompletion(message,{maxOutputTokens:visionOutputBudget(!!backBase64),mechanism:structured?'json_schema':'prompt_json'});
   let parsed;
-  try{parsed=parseVisionMessage(message);}
+  try{parsed=structured?parseFullAnalysisMessage(message,backBase64?['front','back']:['front'],cardType):parseVisionMessage(message);}
   catch(error){scanDiagnostics?.visionValidation(error.visionValidation);throw error;}
   scanDiagnostics?.model(parsed);
   let normalized;
   try{normalized=normaliseImageAnalysis(parsed,backImageBuffer?['front','back']:['front'],cardType);if(!normalized)throw Error();}
   catch{scanDiagnostics?.normalized(null);const error=Error('ANALYSIS_NORMALIZATION_FAILED');error.visionValidation=safeVisionValidation({phase:'normalization',rule:'normalization_failed'});scanDiagnostics?.visionValidation(error.visionValidation);throw error;}
+  if(structured){
+    // Preserve the exact validated proposal separately from later canonical corrections.
+    normalized={...normalized,originalIdentityObservation:parsed,identityReadings:parsed.identityReadings,...(parsed.sportsIdentity?{sportsIdentity:parsed.sportsIdentity}:{}),identityConfidence:parsed.identityConfidence};
+  }
   scanDiagnostics?.normalized(normalized);
   return normalized;
 }
@@ -769,10 +782,11 @@ if (hasTypedCardName && looksLikeJunk(cardName)) {
         backImageMimeType,
         cardName,
         cardType,
-        scanDiagnostics
+        scanDiagnostics,
+        fullAnalysisStructuredEnabled(req,conditionValidation,cardType)
       ).catch(function(err) {
         analysisFailure=providerFailure(err);
-        if(!['ANALYSIS_RESPONSE_INCOMPLETE','ANALYSIS_EMPTY_RESPONSE','ANALYSIS_RESPONSE_INVALID','ANALYSIS_NORMALIZATION_FAILED'].includes(err.message))scanDiagnostics?.vision(err.message==='NO_API_KEY'?'provider_not_configured':[401,403].includes(err.status)?'provider_authentication_failed':err.status===429?'rate_limited':'request_failed');
+        if(!safeVisionValidation(err.visionValidation)&&!['ANALYSIS_RESPONSE_INCOMPLETE','ANALYSIS_EMPTY_RESPONSE','ANALYSIS_RESPONSE_INVALID','ANALYSIS_NORMALIZATION_FAILED'].includes(err.message))scanDiagnostics?.vision(err.message==='NO_API_KEY'?'provider_not_configured':[401,403].includes(err.status)?'provider_authentication_failed':err.status===429?'rate_limited':'request_failed');
         console.error('[GemPredict] Image analysis failed',analysisFailure.payload.code,safeVisionValidation(err.visionValidation));
         return null;
       });

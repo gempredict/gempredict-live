@@ -1,3 +1,4 @@
+import {compatibilityExamples,fullMessage} from './helpers/fullAnalysisFixtures.mjs';
 // Synthetic JPEGs + actual multipart/SDK mocks. Never a live provider request.
 import test from 'node:test';
 import assert from 'node:assert/strict';
@@ -203,4 +204,31 @@ test('failed controlled sports responses retain completion/parser/category evide
 });
 test('actual App retains failed controlled context for prominent evidence export and creates no report',async()=>{
  const s=await verified({category:'sports'});let captured=0;const h=appInteraction({FormData,URL,UploadError,normalizeMobileImage:async f=>f,assertUploadBudget:async()=>{},requestPrediction:async()=>({response:{ok:false,status:502,headers:{get:()=>null}},data:{code:'ANALYSIS_RESPONSE_INVALID',error:'Synthetic unreadable result'}}),rememberScanDiagnostic(report,response,options){captured++;assert.equal(options.controlled,true);assert.equal(options.failed,true);assert.equal(options.manifest.category,'sports');},predictionFailureResponse:()=>null});let tree=h.render();const files=h.nodes(tree,n=>n.type==='input'&&n.props.type==='file');await files[0].props.onChange({target:{files:[s.front]}});await files[1].props.onChange({target:{files:[s.back]}});h.nodes(tree,n=>n.type==='select'&&n.props.value==='pokemon')[0].props.onChange({target:{value:'sports'}});await new Promise(setImmediate);tree=h.render();await h.nodes(tree,n=>n.props?.getSelectionEpoch&&n.props?.onSubmit)[0].props.onSubmit(s.control.consume(s.a,'sports'));tree=h.render();assert.equal(captured,1);assert.ok(h.nodes(tree,n=>n.props?.prominent&&n.props?.report).length>=1);assert.equal(h.nodes(tree,n=>n.props?.data?.prediction).length,0);
+});
+
+// Phase 3L.7: only synthetic messages through the installed SDK fetch stub.
+test('owner-only Preview structured prototype sends one schema request, preserves dual players and withholds finance',async()=>{
+ const s=await verified({category:'sports'}),raw=structuredClone(compatibilityExamples[2].raw);
+ const flag={...env,GEMPREDICT_PREVIEW_FULL_STRUCTURED_OUTPUT_ENABLED:'true'},headers=auth();
+ const r=await controlled(s,{env:flag,headers,actualSdkFetch:async()=>new Response(JSON.stringify({...fullMessage(raw),type:'message',role:'assistant',id:'msg_synthetic',model:'claude-sonnet-4-6',usage:{input_tokens:100,output_tokens:100}}),{status:200,headers:{'content-type':'application/json'}})});
+ assert.equal(r.status,200);assert.equal(r.metrics.sdkRequest.output_config.format.type,'json_schema');assert.equal(r.metrics.vision,1);assert.equal(r.metrics.sdkMaxRetries,0);noMarket(r);
+ assert.equal(r.payload.imageAnalysis.sportsIdentity.subjects.length,2);assert.equal(r.payload.imageAnalysis.identifiedParallel,'Celebration Confetti');assert.equal(r.payload.imageAnalysis.originalIdentityObservation.identifiedSubject,raw.identifiedSubject);assert.equal(r.payload.sportsIdentityAudit.catalogVerified,false);assert.equal(r.payload.financialDecision.allowed,false);
+ const d=readDiagnosticTicket({method:'POST',headers},r.responseHeaders[TICKET_HEADER],r.responseHeaders[SCAN_HEADER],flag);
+ assert.equal(d.visionRequest.mechanism,'json_schema');assert.equal(d.visionCompletion.schemaVersion,1);
+});
+test('structured controlled scan rejects invalid contracts, refusal, caps and SDK rejection without retries or fallback',async()=>{
+ for(const response of [fullMessage({...compatibilityExamples[2].raw,schemaVersion:2}),{...fullMessage(compatibilityExamples[2].raw),stop_reason:'refusal'},{...fullMessage(compatibilityExamples[2].raw),stop_reason:'max_tokens'},null]){
+  const s=await verified({category:'sports'}),flag={...env,GEMPREDICT_PREVIEW_FULL_STRUCTURED_OUTPUT_ENABLED:'true'},headers=auth();
+  const r=await controlled(s,{env:flag,headers,actualSdkFetch:async()=>new Response(JSON.stringify(response?{...response,type:'message',role:'assistant',id:'msg_synthetic',model:'claude-sonnet-4-6'}:{type:'error',error:{type:'invalid_request_error',message:'Synthetic schema rejection'}}),{status:response?200:400,headers:{'content-type':'application/json'}})});
+  assert.notEqual(r.status,200);assert.equal(r.metrics.vision,1);assert.equal(r.metrics.sdkMaxRetries,0);noMarket(r);assert.equal(r.payload.imageAnalysis,undefined);
+  if(!response){const d=readDiagnosticTicket({method:'POST',headers},r.responseHeaders[TICKET_HEADER],r.responseHeaders[SCAN_HEADER],flag);assert.equal(d.visionValidation.rule,'request_rejected');assert.equal(d.visionStatus,'provider_request_rejected');}
+  if(response?.content&&response.stop_reason==='end_turn'){
+   const d=readDiagnosticTicket({method:'POST',headers},r.responseHeaders[TICKET_HEADER],r.responseHeaders[SCAN_HEADER],flag);assert.equal(d.visionValidation.rule,'structured_contract');assert.equal(d.visionStatus,'schema_rejected');
+  }
+ }
+});
+test('structured flag cannot activate for an ordinary scan or expired/absent owner authorization',async()=>{
+ const flag={...env,GEMPREDICT_PREVIEW_FULL_STRUCTURED_OUTPUT_ENABLED:'true'},headers=auth();
+ const ordinary=await runScan({env:flag,headers:auth()});assert.equal(ordinary.metrics.sdkRequest.output_config,undefined);
+ const s=await verified({category:'sports'});const denied=await controlled(s,{env:flag,headers:{}});assert.notEqual(denied.status,200);assert.equal(denied.metrics.vision,0);
 });
