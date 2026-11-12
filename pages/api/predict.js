@@ -1,7 +1,7 @@
 import {verifyConditionValidation} from '../../lib/conditionValidationServer.mjs';
 import {safeIdentityValidation} from '../../lib/identityValidation.mjs';
 import {identifyFromPhotos} from '../../lib/identityStage.mjs';
-import {VISION_MODEL,visionOutputBudget,parseVisionMessage,retainSportsVisionEvidence} from '../../lib/visionResponsePolicy.mjs';
+import {VISION_MODEL,visionOutputBudget,parseVisionMessage,safeVisionValidation,retainSportsVisionEvidence} from '../../lib/visionResponsePolicy.mjs';
 import {buildSportsVisionPrompt} from '../../lib/visionPromptContract.mjs';
 import {scanFailure,providerFailure} from '../../lib/scanFailures.mjs';
 import {beginScanDiagnostics} from '../../lib/scanDiagnostics.mjs';
@@ -592,16 +592,15 @@ const backMime = backImageMimeType &&
     }],
   });
 
+  scanDiagnostics?.visionCompletion(message,{maxOutputTokens:visionOutputBudget(!!backBase64)});
   let parsed;
   try{parsed=parseVisionMessage(message);}
-  catch(error){if(error.message==='ANALYSIS_EMPTY_RESPONSE')scanDiagnostics?.vision('empty_response');else scanDiagnostics?.model(null);throw error;}
+  catch(error){scanDiagnostics?.visionValidation(error.visionValidation);throw error;}
   scanDiagnostics?.model(parsed);
   let normalized;
-  try{normalized=normaliseImageAnalysis(parsed,backImageBuffer?['front','back']:['front'],cardType);}
-  catch{scanDiagnostics?.normalized(null);throw new Error('ANALYSIS_NORMALIZATION_FAILED');}
+  try{normalized=normaliseImageAnalysis(parsed,backImageBuffer?['front','back']:['front'],cardType);if(!normalized)throw Error();}
+  catch{scanDiagnostics?.normalized(null);const error=Error('ANALYSIS_NORMALIZATION_FAILED');error.visionValidation=safeVisionValidation({phase:'normalization',rule:'normalization_failed'});scanDiagnostics?.visionValidation(error.visionValidation);throw error;}
   scanDiagnostics?.normalized(normalized);
-  if (!normalized) console.error("[GemPredict] Vision normalization failed", { stopReason: message.stop_reason || "unknown" });
-  if(!normalized)throw new Error('ANALYSIS_NORMALIZATION_FAILED');
   return normalized;
 }
 
@@ -774,7 +773,7 @@ if (hasTypedCardName && looksLikeJunk(cardName)) {
       ).catch(function(err) {
         analysisFailure=providerFailure(err);
         if(!['ANALYSIS_RESPONSE_INCOMPLETE','ANALYSIS_EMPTY_RESPONSE','ANALYSIS_RESPONSE_INVALID','ANALYSIS_NORMALIZATION_FAILED'].includes(err.message))scanDiagnostics?.vision(err.message==='NO_API_KEY'?'provider_not_configured':[401,403].includes(err.status)?'provider_authentication_failed':err.status===429?'rate_limited':'request_failed');
-        console.error('[GemPredict] Image analysis failed',analysisFailure.payload.code);
+        console.error('[GemPredict] Image analysis failed',analysisFailure.payload.code,safeVisionValidation(err.visionValidation));
         return null;
       });
     }

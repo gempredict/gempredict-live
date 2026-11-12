@@ -1,4 +1,5 @@
 import React,{useEffect,useState,useRef} from 'react';
+import {safeVisionValidation} from '../../lib/visionResponsePolicy.mjs';
 import {scanDiagnosticAccess} from '../../lib/scanDiagnosticClient.mjs';
 import {prepareDiagnosticExport,initiateDiagnosticDownload} from '../../lib/diagnosticExport.mjs';
 export default function ScanDiagnostics({report=null,prominent=false,scrollToCapture=false}){
@@ -29,6 +30,7 @@ function OrdinaryDiagnostics({report}){
 
 function ControlledCapture({handle,scrollToCapture=false}){
  const [access,setAccess]=useState(null),[clock,setClock]=useState(Date.now),[buffer,setBuffer]=useState(null),[busy,setBusy]=useState(false),[message,setMessage]=useState(''),[initiated,setInitiated]=useState(false);
+ const [failureDetail,setFailureDetail]=useState(null);
  const panel=useRef(null),lock=useRef(false),alive=useRef(false),request=useRef(null),release=useRef(null);
  const available=!!handle.ticket&&!!handle.expiresAt,expired=available&&clock>=handle.expiresAt;
  const ownerExpired=!!access&&(!access.authorized||!access.expiresAt||clock>=access.expiresAt);
@@ -57,15 +59,19 @@ function ControlledCapture({handle,scrollToCapture=false}){
    release.current=setTimeout(()=>{lock.current=false;if(alive.current)setBusy(false);},700);return;
   }
   const abort=new AbortController();request.current=abort;const timeout=setTimeout(()=>abort.abort(),20000);
-  prepareDiagnosticExport(handle,{signal:abort.signal}).then(blob=>{
+  prepareDiagnosticExport(handle,{signal:abort.signal}).then(async blob=>{
    if(!alive.current)return;
    if(Date.now()>=handle.expiresAt||Date.now()>=access.expiresAt){setBuffer(null);setClock(Date.now());return;}
-   setBuffer(blob);setMessage('Export ready in memory. Tap Download Scan Diagnostics again to save the file. This second tap lets Safari start the download directly. Nothing is saved yet.');
+   let detail=null;if(handle.failed){const diagnostic=JSON.parse(await blob.text());detail=safeVisionValidation(diagnostic.visionValidation);}
+   if(!alive.current)return;if(Date.now()>=handle.expiresAt||Date.now()>=access.expiresAt){setBuffer(null);setClock(Date.now());return;}
+   setFailureDetail(detail);setBuffer(blob);setMessage('Export ready in memory. Tap Download Scan Diagnostics again to save the file. This second tap lets Safari start the download directly. Nothing is saved yet.');
   }).catch(e=>{if(alive.current)setMessage(e.name==='AbortError'?'Export interrupted, timed out or expired. Check the availability below; retry only the diagnostic export while valid. Do not repeat the paid scan.':e.message||'Export failed. Retry the diagnostic export before expiry; do not rescan.');})
    .finally(()=>{clearTimeout(timeout);lock.current=false;if(alive.current)setBusy(false);});
  }
  return <section ref={panel} aria-label="Controlled scan validation evidence" style={{background:'#fffbeb',border:'2px solid #b78738',borderRadius:12,padding:16,marginBottom:16,overflowWrap:'anywhere'}}>
-  <h3 style={{marginTop:0}}>Controlled Scan Complete — Save Validation Evidence</h3>
+  <h3 style={{marginTop:0}}>{handle.failed?'Controlled Scan Failed — Save Validation Evidence':'Controlled Scan Complete — Save Validation Evidence'}</h3>
+  {handle.failed&&<p>Analysis failed. No usable report or valuation was generated. Save diagnostics and stop for review; do not repeat the paid scan.</p>}
+  {failureDetail&&<p>Failure category: {failureDetail.phase} / {failureDetail.rule}. The diagnostic file includes the available stop reason and output-limit metadata; no raw model text is retained.</p>}
   <p role="status">Diagnostic availability: {!available?'Unavailable — no usable export handle or server expiry was returned.':expired?'Expired — the server export window has ended.':!access?'Checking owner authorization.':ownerExpired?'Owner authorization expired or unavailable.':buffer?'Export prepared in memory; ready to download.':'Available for owner export.'}</p>
   {handle.expiresAt&&<p>Export expires at {new Date(handle.expiresAt).toLocaleTimeString()} ({Math.max(0,Math.ceil((handle.expiresAt-clock)/1000))} seconds remaining). Owner authorization may expire sooner.</p>}
   <p>Save to <strong>Files → Downloads</strong>, not Photos. First tap prepares the export; second tap starts the download. Keep the exact prepared front/back JPEGs and manifest with this JSON.</p>

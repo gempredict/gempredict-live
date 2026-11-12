@@ -66,3 +66,15 @@ test('schema-sized dual-photo fixture retains dense evidence without accepting i
  assert.equal(r.payload.imageAnalysis.identityReadings.length,10);assert.ok(r.payload.imageAnalysis.visualObservations.length>=8);
  console.log('Synthetic dual-photo fixture: '+Buffer.byteLength(json)+' UTF-8 bytes; '+json.length+' characters. Token count is not asserted without the provider tokenizer.');
 });
+
+import {safeVisionCompletion,safeVisionValidation} from '../lib/visionResponsePolicy.mjs';
+test('vision parser exposes exact bounded failure categories without accepting or repairing invalid output',()=>{
+ const cases=[[response('{'),'json','json_syntax'],[response('[]'),'schema','top_level_object'],[response('null'),'schema','top_level_object'],[response('{}','tool_use'),'completion','stop_reason'],[response('{}','max_tokens'),'completion','output_limit'],[response(''),'completion','empty_output'],[response('x'.repeat(32769)),'json','byte_limit'],[{stop_reason:'end_turn',content:[{type:'text',text:'{}'},{type:'tool_use',input:{secret:'private'}}]},'completion','content_shape']];
+ for(const [message,phase,rule]of cases){let error;try{parseVisionMessage(message);}catch(e){error=e;}assert.ok(error);assert.equal(error.visionValidation.phase,phase);assert.equal(error.visionValidation.rule,rule);assert.doesNotMatch(JSON.stringify(error),/private|input|secret/);}
+ assert.deepEqual(parseVisionMessage({stop_reason:'end_turn',content:[{type:'text',text:'{"identified'},{type:'text',text:'Subject":"Synthetic"}'}]}),{identifiedSubject:'Synthetic'});
+});
+test('completion observability contains only fixed block types, bounded lengths, stops and numeric usage',()=>{
+ const m={stop_reason:'sk-private-stop',id:'private-response-id',content:[{type:'text',text:'RAW_PRIVATE_MODEL_TEXT'},{type:'unknown-private-type',data:'private-image'},{type:'thinking',thinking:'private'}],usage:{input_tokens:40,output_tokens:4800}};
+ const meta=safeVisionCompletion(m,{maxOutputTokens:4800});assert.equal(meta.mechanism,'prompt_json');assert.equal(meta.stopReason,'unknown');assert.deepEqual(meta.blockTypes,{text:1,other:1,thinking:1});assert.equal(meta.maxOutputTokens,4800);assert.equal(meta.usage.outputTokens,4800);assert.doesNotMatch(JSON.stringify(meta),/RAW_PRIVATE|sk-private|private-response|private-image|unknown-private/);assert.equal(safeVisionValidation({phase:'json',rule:'json_syntax',path:'private'}).path,undefined);
+ const huge=safeVisionCompletion({stop_reason:'end_turn',content:Array.from({length:100},()=>({type:'text',text:'x'.repeat(1000)}))});assert.equal(huge.contentBlocks,32);assert.equal(huge.contentBlocksTruncated,true);assert.equal(huge.textUtf8Bytes,32769);
+});

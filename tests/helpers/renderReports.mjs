@@ -1,3 +1,4 @@
+import {safeVisionValidation} from '../../lib/visionResponsePolicy.mjs';
 import {CONTROLLED_CATEGORIES,validControlledCategory,controlledCategorySubmission} from '../../lib/controlledCategories.mjs';
 import {completedSalesView,SALES_COHORTS} from '../../lib/completedSales.mjs';
 import {attachReportPhotos,reportPhotos} from '../../lib/reportPhotos.mjs';
@@ -40,7 +41,7 @@ export function renderReports(report,completedSalesEvidence=null,props={}){
 export async function renderDiagnosticControl(authorization,report=null){
  const {scanDiagnosticAccess}=await import('../../lib/scanDiagnosticClient.mjs');
  let calls=0;
- const {default:Control}=components('src/components/ScanDiagnostics.jsx',{scanDiagnosticAccess,useEffect(){},useState(initial){return [calls++===0?authorization:initial,()=>{}];}});
+ const {default:Control}=components('src/components/ScanDiagnostics.jsx',{safeVisionValidation,scanDiagnosticAccess,useEffect(){},useState(initial){return [calls++===0?authorization:initial,()=>{}];}});
  return renderToStaticMarkup(React.createElement(Control,{report}));
 }
 
@@ -102,7 +103,7 @@ export function renderDemoAction(access){
 export function controlledDiagnosticInteraction(handle,bindings={}){
  const slots=[];let index=0,queued=[];
  const hook=initial=>{const i=index++;if(!(i in slots))slots[i]=typeof initial==='function'?initial():initial;return [slots[i],v=>{slots[i]=typeof v==='function'?v(slots[i]):v;}];};
- const {ControlledCapture}=components('src/components/ScanDiagnostics.jsx',{useState:hook,useRef:initial=>hook({current:initial})[0],useEffect(effect,deps){const i=index++,old=slots[i];if(!old||deps.some((v,j)=>v!==old.deps[j]))queued.push(()=>{old?.cleanup?.();slots[i]={deps,cleanup:effect()};});},...bindings},'export {ControlledCapture};');
+ const {ControlledCapture}=components('src/components/ScanDiagnostics.jsx',{safeVisionValidation,useState:hook,useRef:initial=>hook({current:initial})[0],useEffect(effect,deps){const i=index++,old=slots[i];if(!old||deps.some((v,j)=>v!==old.deps[j]))queued.push(()=>{old?.cleanup?.();slots[i]={deps,cleanup:effect()};});},...bindings},'export {ControlledCapture};');
  function nodes(root,predicate){const out=[];const walk=n=>{if(!n||typeof n!=='object')return;if(Array.isArray(n)){n.forEach(walk);return;}if(predicate(n))out.push(n);walk(n.props?.children);};walk(root);return out;}
  return {render(){index=0;const tree=ControlledCapture({handle});const effects=queued;queued=[];effects.forEach(fn=>fn());return tree;},nodes,unmount(){slots.forEach(s=>s?.cleanup?.());}};
 }

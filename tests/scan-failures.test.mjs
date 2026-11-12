@@ -49,5 +49,5 @@ test('authorized failed scan exports a safe breadcrumb through the same transpor
  const response={status:r.status,ok:false,type:'basic',headers:{get:k=>k==='content-type'?'application/json':r.responseHeaders[Object.keys(r.responseHeaders).find(h=>h.toLowerCase()===k.toLowerCase())]},json:async()=>r.payload};
  let error;try{await requestPrediction({},async()=>response);}catch(e){error=e;}
  const handle={};rememberScanDiagnostic(handle,predictionFailureResponse(error));const capability=scanDiagnosticAccess(handle);assert.ok(capability);
- const d=readDiagnosticTicket(req,capability.ticket,capability.scanId,env);assert.equal(d.failureCode,'ANALYSIS_RESPONSE_INCOMPLETE');assert.equal(d.responseStatus,502);assert.equal(d.images.front.validation,'passed');assert.equal(d.images.back.validation,'passed');assert.equal(d.visionStatus,'invalid_json');assert.equal(d.marketplace.attempted,false);
+ const d=readDiagnosticTicket(req,capability.ticket,capability.scanId,env);assert.equal(d.failureCode,'ANALYSIS_RESPONSE_INCOMPLETE');assert.equal(d.responseStatus,502);assert.equal(d.images.front.validation,'passed');assert.equal(d.images.back.validation,'passed');assert.equal(d.visionStatus,'output_truncated');assert.equal(d.marketplace.attempted,false);
 });

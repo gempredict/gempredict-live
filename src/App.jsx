@@ -615,7 +615,7 @@ const emailRef    = useRef(null);
       }
 
       const { response: res, data } = result;
-      if(!res.ok){const failed={};rememberScanDiagnostic(failed,res);setFailedScanDiagnostic(failed);}
+      if(!res.ok){const failed={};rememberScanDiagnostic(failed,res,{controlled,manifest:controlled?JSON.parse(prepared.manifest):null,failed:true});setFailedScanDiagnostic(failed);}
       if (res.status === 429) { setRateLimitMsg(data.message || "Rate limit exceeded. Please try again later."); setLoading(false); return; }
       if (!res.ok) { setError(data.error || "Something went wrong. Please try again."); setLoading(false); return; }
 
@@ -643,7 +643,7 @@ if (data.imageAnalysis) setImageAnalysis(protectFinancialReport(data).imageAnaly
 });
     
 
-    } catch (error) { const response=predictionFailureResponse(error);if(response){const failed={};rememberScanDiagnostic(failed,response);setFailedScanDiagnostic(failed);}setError(error instanceof UploadError ? error.message+(error.scanCode?" (Reference: "+error.scanCode+")":"") : "Unexpected report display error. No financial recommendation was generated."); }
+    } catch (error) { const response=predictionFailureResponse(error);if(response||controlled){const failed={};rememberScanDiagnostic(failed,response||{},{controlled,manifest:controlled?JSON.parse(prepared.manifest):null,failed:true});setFailedScanDiagnostic(failed);}setError(error instanceof UploadError ? error.message+(error.scanCode?" (Reference: "+error.scanCode+")":"") : "Unexpected report display error. No financial recommendation was generated."); }
     finally   { scanInFlight.current=false;setLoading(false); }
   }
 
@@ -882,7 +882,7 @@ if (data.imageAnalysis) setImageAnalysis(protectFinancialReport(data).imageAnaly
             </div>
             <ScanDiagnostics />
             <DemoReportAction />
-            {failedScanDiagnostic && <ScanDiagnostics report={failedScanDiagnostic} />}
+            {failedScanDiagnostic && <><ScanDiagnostics report={failedScanDiagnostic} prominent scrollToCapture/><ScanDiagnostics report={failedScanDiagnostic}/></>}
             {/* Condition */}
             <div style={{ marginBottom: "0.9rem" }}>
               <label style={labelSt}>
