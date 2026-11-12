@@ -1,3 +1,4 @@
+import {controlledCategorySubmission} from '../lib/controlledCategories.mjs';
 import ReportStyle from './components/ReportStyle.jsx';
 import ConditionSnapshot from './components/ConditionSnapshot.jsx';
 import DemoReportAction from './components/DemoReportAction.jsx';
@@ -447,6 +448,7 @@ export function ResultCard({ data, index, onSave, isSaved,photos=null,completedS
 export default function App() {
   const [cardName,        setCardName]        = useState("");
   const [cardType,        setCardType]        = useState("pokemon");
+  const cardTypeCurrent=useRef(cardType);cardTypeCurrent.current=cardType;
   const [cardSet,         setCardSet]         = useState("");
   const [condition,       setCondition]       = useState("strong");
   const [email,           setEmail]           = useState("");
@@ -578,6 +580,7 @@ const emailRef    = useRef(null);
   async function handleSubmit(mode='full',prepared=null) {
     const controlled=mode==='condition-validation';
     mode=controlled?mode:mode==='identity'?'identity':'full';
+    if(controlled&&(!controlledCategorySubmission(prepared,cardTypeCurrent.current)||cardType!==cardTypeCurrent.current)){setError('Choose and confirm the current controlled card category, then prepare again. No scan submitted.');return;}
     if(controlled&&(!prepared||prepared.front!==imageFile||prepared.back!==backImageFile||prepared.version!==selectionVersions.current.front+':'+selectionVersions.current.back)){setError('Frozen preparation changed. Export and verify again.');return;}
     if(scanInFlight.current||mode==='identity'&&!imageFile)return;
     if (loading || processingImages || photoErrors.front || photoErrors.back || (!cardName.trim() && !imageFile)) return;
@@ -591,9 +594,9 @@ const emailRef    = useRef(null);
         // Multipart/form-data when image is present
         const formData = new FormData();
         if(mode==='identity')formData.append("mode","identity");
-        if(controlled){formData.append("mode","condition-validation");formData.append("validationManifest",prepared.manifest);}
+        if(controlled){formData.append("mode","condition-validation");formData.append("validationManifest",prepared.manifest);formData.append("validationCategorySelected",prepared.category);formData.append("validationCategoryConfirmed",prepared.confirmedCategory);formData.append("validationCategoryAttempt",prepared.confirmationAttemptId);}
         formData.append("cardName", cardName.trim());
-        formData.append("cardType",  cardType);
+        formData.append("cardType",  controlled?prepared.category:cardType);
         formData.append("cardSet",   cardSet.trim());
         formData.append("condition", condition);
         if (email.trim()) formData.append("email", email.trim());
@@ -1104,7 +1107,7 @@ if (data.imageAnalysis) setImageAnalysis(protectFinancialReport(data).imageAnaly
             <span style={{fontSize:'0.8rem',color:C.inkSoft}}>Front photo required; back optional. Identification only. Analyze My Card remains the separate full scan.</span>
           </div>
           <p><a href="/grading-economics">Grading Economics — manual scenario calculator</a></p>
-          <ControlledValidation front={imageFile} back={backImageFile} busy={loading||processingImages>0||!!photoErrors.front||!!photoErrors.back} getSelectionEpoch={()=>selectionVersions.current.front+':'+selectionVersions.current.back} onSubmit={prepared=>handleSubmit('condition-validation',prepared)}/>
+          <ControlledValidation cardType={cardType} onCategoryChange={setCardType} front={imageFile} back={backImageFile} busy={loading||processingImages>0||!!photoErrors.front||!!photoErrors.back} getSelectionEpoch={()=>selectionVersions.current.front+':'+selectionVersions.current.back} onSubmit={prepared=>handleSubmit('condition-validation',prepared)}/>
           {identityResult&&!loading&&<ResultCard data={identityResult} photos={reportPhotos(identityResult)} index={0} onSave={saveReport} isSaved={isSavedReport(identityResult)}/>}
 
           {/* Remaining */}

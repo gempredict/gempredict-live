@@ -557,7 +557,7 @@ const backMime = backImageMimeType &&
 
   const imagePrompt=buildSportsVisionPrompt({cardName,typeLabel,hasBack:!!backBase64});
 
-  scanDiagnostics?.vision('request_started');
+  scanDiagnostics?.vision('request_started',cardType);
   const message = await anthropic.messages.create({
     model: VISION_MODEL, max_tokens: visionOutputBudget(!!backBase64),
     messages: [{
@@ -648,6 +648,7 @@ await scanDiagnostics?.images(imageBuffer,backImageBuffer);
   const cardType    = VALID_CARD_TYPES.has(cardTypeRaw) ? cardTypeRaw : "tcg";
 
   scanDiagnostics?.category(cardType);
+  if(fields.mode==='condition-validation')scanDiagnostics?.categorySelection(fields);
   const hasImage = !!imageBuffer;
 const hasTypedCardName = !!(cardName && cardName.trim());
 
@@ -727,7 +728,7 @@ if (hasTypedCardName && looksLikeJunk(cardName)) {
   let conditionValidation=null;
   if(fields.mode==='condition-validation'){
     try{conditionValidation=await verifyConditionValidation(req,fields,imageBuffer,backImageBuffer);}
-    catch{return res.status(403).json({error:'Controlled validation requires current Preview owner authorization and matching exported prepared files.'});}
+    catch{return res.status(403).json({error:'Controlled validation requires current Preview owner authorization, matching exported prepared files and explicit matching category confirmation.'});}
     scanDiagnostics?.conditionValidation(conditionValidation);
   }
   if(fields.mode==='identity'){
