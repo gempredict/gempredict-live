@@ -206,11 +206,15 @@ test('actual App retains failed controlled context for prominent evidence export
  const s=await verified({category:'sports'});let captured=0;const h=appInteraction({FormData,URL,UploadError,normalizeMobileImage:async f=>f,assertUploadBudget:async()=>{},requestPrediction:async()=>({response:{ok:false,status:502,headers:{get:()=>null}},data:{code:'ANALYSIS_RESPONSE_INVALID',error:'Synthetic unreadable result'}}),rememberScanDiagnostic(report,response,options){captured++;assert.equal(options.controlled,true);assert.equal(options.failed,true);assert.equal(options.manifest.category,'sports');},predictionFailureResponse:()=>null});let tree=h.render();const files=h.nodes(tree,n=>n.type==='input'&&n.props.type==='file');await files[0].props.onChange({target:{files:[s.front]}});await files[1].props.onChange({target:{files:[s.back]}});h.nodes(tree,n=>n.type==='select'&&n.props.value==='pokemon')[0].props.onChange({target:{value:'sports'}});await new Promise(setImmediate);tree=h.render();await h.nodes(tree,n=>n.props?.getSelectionEpoch&&n.props?.onSubmit)[0].props.onSubmit(s.control.consume(s.a,'sports'));tree=h.render();assert.equal(captured,1);assert.ok(h.nodes(tree,n=>n.props?.prominent&&n.props?.report).length>=1);assert.equal(h.nodes(tree,n=>n.props?.data?.prediction).length,0);
 });
 
+async function structuredControlled(s,patch={}){
+ const pre=await controlled(s,{...patch,fields:{mode:'condition-preflight',validationMechanism:'json_schema'}});assert.equal(pre.status,200);assert.equal(pre.metrics.vision,0);assert.equal(pre.payload.ready,true);
+ return controlled(s,{...patch,fields:{validationMechanism:'json_schema',validationPreflightTicket:pre.payload.ticket,validationSpendApproval:'estimate_not_hard_cap_0.50_usd',...patch.fields}});
+}
 // Phase 3L.7: only synthetic messages through the installed SDK fetch stub.
 test('owner-only Preview structured prototype sends one schema request, preserves dual players and withholds finance',async()=>{
  const s=await verified({category:'sports'}),raw=structuredClone(compatibilityExamples[2].raw);
  const flag={...env,GEMPREDICT_PREVIEW_FULL_STRUCTURED_OUTPUT_ENABLED:'true'},headers=auth();
- const r=await controlled(s,{env:flag,headers,actualSdkFetch:async()=>new Response(JSON.stringify({...fullMessage(raw),type:'message',role:'assistant',id:'msg_synthetic',model:'claude-sonnet-4-6',usage:{input_tokens:100,output_tokens:100}}),{status:200,headers:{'content-type':'application/json'}})});
+ const r=await structuredControlled(s,{env:flag,headers,actualSdkFetch:async()=>new Response(JSON.stringify({...fullMessage(raw),type:'message',role:'assistant',id:'msg_synthetic',model:'claude-sonnet-4-6',usage:{input_tokens:100,output_tokens:100}}),{status:200,headers:{'content-type':'application/json'}})});
  assert.equal(r.status,200);assert.equal(r.metrics.sdkRequest.output_config.format.type,'json_schema');assert.equal(r.metrics.vision,1);assert.equal(r.metrics.sdkMaxRetries,0);noMarket(r);
  assert.equal(r.payload.imageAnalysis.sportsIdentity.subjects.length,2);assert.equal(r.payload.imageAnalysis.identifiedParallel,'Celebration Confetti');assert.equal(r.payload.imageAnalysis.originalIdentityObservation.identifiedSubject,raw.identifiedSubject);assert.equal(r.payload.sportsIdentityAudit.catalogVerified,false);assert.equal(r.payload.financialDecision.allowed,false);
  const d=readDiagnosticTicket({method:'POST',headers},r.responseHeaders[TICKET_HEADER],r.responseHeaders[SCAN_HEADER],flag);
@@ -219,9 +223,9 @@ test('owner-only Preview structured prototype sends one schema request, preserve
 test('structured controlled scan rejects invalid contracts, refusal, caps and SDK rejection without retries or fallback',async()=>{
  for(const response of [fullMessage({...compatibilityExamples[2].raw,schemaVersion:2}),{...fullMessage(compatibilityExamples[2].raw),stop_reason:'refusal'},{...fullMessage(compatibilityExamples[2].raw),stop_reason:'max_tokens'},null]){
   const s=await verified({category:'sports'}),flag={...env,GEMPREDICT_PREVIEW_FULL_STRUCTURED_OUTPUT_ENABLED:'true'},headers=auth();
-  const r=await controlled(s,{env:flag,headers,actualSdkFetch:async()=>new Response(JSON.stringify(response?{...response,type:'message',role:'assistant',id:'msg_synthetic',model:'claude-sonnet-4-6'}:{type:'error',error:{type:'invalid_request_error',message:'Synthetic schema rejection'}}),{status:response?200:400,headers:{'content-type':'application/json'}})});
+  const r=await structuredControlled(s,{env:flag,headers,actualSdkFetch:async()=>new Response(JSON.stringify(response?{...response,type:'message',role:'assistant',id:'msg_synthetic',model:'claude-sonnet-4-6'}:{type:'error',error:{type:'invalid_request_error',message:'Schema is too complex for compilation.'}}),{status:response?200:400,headers:{'content-type':'application/json'}})});
   assert.notEqual(r.status,200);assert.equal(r.metrics.vision,1);assert.equal(r.metrics.sdkMaxRetries,0);noMarket(r);assert.equal(r.payload.imageAnalysis,undefined);
-  if(!response){const d=readDiagnosticTicket({method:'POST',headers},r.responseHeaders[TICKET_HEADER],r.responseHeaders[SCAN_HEADER],flag);assert.equal(d.visionValidation.rule,'request_rejected');assert.equal(d.visionStatus,'provider_request_rejected');}
+  if(!response){const d=readDiagnosticTicket({method:'POST',headers},r.responseHeaders[TICKET_HEADER],r.responseHeaders[SCAN_HEADER],flag);assert.equal(d.visionValidation.rule,'request_rejected');assert.equal(d.visionStatus,'provider_request_rejected');assert.equal(d.provider.failureCategory,'schema_compilation_rejected');}
   if(response?.content&&response.stop_reason==='end_turn'){
    const d=readDiagnosticTicket({method:'POST',headers},r.responseHeaders[TICKET_HEADER],r.responseHeaders[SCAN_HEADER],flag);assert.equal(d.visionValidation.rule,'structured_contract');assert.equal(d.visionStatus,'schema_rejected');
   }
@@ -231,4 +235,63 @@ test('structured flag cannot activate for an ordinary scan or expired/absent own
  const flag={...env,GEMPREDICT_PREVIEW_FULL_STRUCTURED_OUTPUT_ENABLED:'true'},headers=auth();
  const ordinary=await runScan({env:flag,headers:auth()});assert.equal(ordinary.metrics.sdkRequest.output_config,undefined);
  const s=await verified({category:'sports'});const denied=await controlled(s,{env:flag,headers:{}});assert.notEqual(denied.status,200);assert.equal(denied.metrics.vision,0);
+});
+
+test('structured preflight with disabled flag verifies bytes and exposes a blocked zero-charge summary',async()=>{
+ const s=await verified({category:'sports'}),r=await controlled(s,{fields:{mode:'condition-preflight',validationMechanism:'json_schema'}});
+ assert.equal(r.status,200);assert.equal(r.payload.ready,false);assert.equal(r.payload.ticket,null);assert.equal(r.payload.preparedPairVerified,true);assert.equal(r.payload.mechanism,'json_schema');assert.equal(r.payload.cost.planningSubtotal,.372);assert.equal(r.payload.cost.guaranteedMaximum,false);assert.equal(r.metrics.vision,0);noMarket(r);
+ const blocked=await controlled(s,{fields:{validationMechanism:'json_schema'}});assert.equal(blocked.status,403);assert.equal(blocked.metrics.vision,0);noMarket(blocked);
+});
+test('structured submissions require matching mechanism, one-use fresh permit and cost approval before any provider boundary',async()=>{
+ const s=await verified({category:'sports'}),flag={...env,GEMPREDICT_PREVIEW_FULL_STRUCTURED_OUTPUT_ENABLED:'true'},headers=auth();
+ const pre=await controlled(s,{env:flag,headers,fields:{mode:'condition-preflight',validationMechanism:'json_schema'}});assert.equal(pre.payload.ready,true);
+ const valid={validationMechanism:'json_schema',validationPreflightTicket:pre.payload.ticket,validationSpendApproval:'estimate_not_hard_cap_0.50_usd'};
+ for(const fields of [{...valid,validationPreflightTicket:'forged'},{...valid,validationSpendApproval:''},{...valid,validationMechanism:'prompt_json'},{...valid,cardName:'Francisco Lindor Juan Soto'},{...valid,cardSet:'Topps It Takes Two'},{}]){
+  const r=await controlled(s,{env:flag,headers,fields});assert.equal(r.status,403);assert.equal(r.metrics.vision,0);noMarket(r);
+ }
+ const different=await verified({category:'sports'});const mismatch=await controlled(different,{env:flag,headers,fields:valid});assert.equal(mismatch.status,403);assert.equal(mismatch.metrics.vision,0);
+ const success=await controlled(s,{env:flag,headers,fields:valid,visionResponse:fullMessage(compatibilityExamples[2].raw)});assert.equal(success.status,200);assert.equal(success.metrics.vision,1);assert.match(success.metrics.visionPrompt,/Supplied name \(unverified\): null/);noMarket(success);
+ const replay=await controlled(s,{env:flag,headers,fields:valid});assert.equal(replay.status,403);assert.equal(replay.metrics.vision,0);
+ const rolledBack=await controlled(s,{env,headers,fields:valid});assert.equal(rolledBack.status,403);assert.equal(rolledBack.metrics.vision,0);
+});
+test('structured success and all four failure classes retain downloadable safe diagnostics and audit ordering',async()=>{
+ const {prepareDiagnosticExport}=await import('../lib/diagnosticExport.mjs');
+ for(const kind of ['success','compilation_rejection','refusal','cap','local_validation']){
+  const s=await verified({category:'sports'}),flag={...env,GEMPREDICT_PREVIEW_FULL_STRUCTURED_OUTPUT_ENABLED:'true'},headers=auth();
+  const raw=structuredClone(compatibilityExamples[2].raw);if(kind==='local_validation')raw.schemaVersion=99;
+  const msg={...fullMessage(raw),stop_reason:kind==='refusal'?'refusal':kind==='cap'?'max_tokens':'end_turn',usage:{input_tokens:1400,output_tokens:900}};
+  const patch=kind==='compilation_rejection'?{visionError:{status:400,error:{message:'Schema is too complex for compilation. Synthetic fixture only.'}}}:{visionResponse:msg};
+  const r=await structuredControlled(s,{env:flag,headers,...patch});
+  assert.equal(r.metrics.vision,1);assert.equal(r.metrics.sdkMaxRetries,0);noMarket(r);
+  const d=readDiagnosticTicket({method:'POST',headers},r.responseHeaders[TICKET_HEADER],r.responseHeaders[SCAN_HEADER],flag);
+  assert.equal(d.categoryRouting.sportsAuditRan,kind==='success');assert.equal(d.provider.sdkAttempts,1);assert.equal(d.provider.independentlyAuditedProviderRequests,null);assert.equal(d.provider.actualCost,null);assert.ok(d.provider.latencyMs>=0);assert.equal(d.visionRequest.mechanism,'json_schema');
+  if(kind==='compilation_rejection')assert.equal(d.provider.failureCategory,'schema_compilation_rejected');
+  if(kind==='success'){assert.equal(d.model.sportsDetails.subjects.length,2);assert.equal(d.model.sportsDetails.subset,'It Takes Two');assert.equal(r.payload.financialDecision.allowed,false);}
+  const blob=await prepareDiagnosticExport({failed:kind!=='success',ticket:r.responseHeaders[TICKET_HEADER],scanId:d.scanId,expiresAt:Number(r.responseHeaders['X-GemPredict-Diagnostic-Expires']),attemptId:s.a.manifest.attemptId,preparedHashes:{front:s.a.manifest.files.front.sha256,back:s.a.manifest.files.back.sha256}},{fetchImpl:async()=>new Response(JSON.stringify(d))});assert.equal(JSON.parse(await blob.text()).scanId,d.scanId);
+  assert.ok(!JSON.stringify(d).includes('private provider exception'));assert.equal(d.rawModelResponse,undefined);
+ }
+});
+test('owner UI shows structured spending and disabled-flag checkpoint while leaving the pair unconsumed',async()=>{
+ const {controlledValidationInteraction}=await import('./helpers/renderReports.mjs');const s=await setup({category:'sports'}),downloads=[];let calls=0,submissions=0;
+ const props={front:s.front,back:s.back,busy:false,cardType:'sports',onCategoryChange(){},getSelectionEpoch:()=> '1:1',onSubmit:async()=>{submissions++;}};
+ const h=controlledValidationInteraction(props,{fetch:async()=>({ok:true,json:async()=>({conditionValidationAvailable:true,authorized:true,revision,expiresAt:Date.now()+60000})}),createPreparedValidation:options=>createPreparedValidation({...options,cryptoImpl:webcrypto,dimensions:async()=>({width:30,height:40}),download:async(blob,name)=>downloads.push({blob,name})}),checkStructuredPreflight:async()=>{calls++;return {ready:false,flagEnabled:false,blocker:'Structured-output flag is disabled. Stop for owner activation approval.',deployment:'https://synthetic-preview.vercel.app',revision};}});
+ h.render();await new Promise(setImmediate);let tree=h.render();const nodes=fn=>h.nodes(tree,fn),button=label=>nodes(n=>n.type==='button'&&(Array.isArray(n.props.children)?n.props.children.join(''):n.props.children)===label)[0];
+ nodes(n=>n.type==='select'&&n.props['aria-label']==='Controlled analysis mechanism')[0].props.onChange({target:{value:'json_schema'}});tree=h.render();nodes(n=>n.type==='select'&&n.props['aria-label']==='Controlled card category')[0].props.onChange({target:{value:'sports'}});tree=h.render();await button('Freeze prepared front and back').props.onClick();tree=h.render();
+ for(const [i,kind]of ['front','back','manifest'].entries()){
+  await button(kind==='manifest'?'Download manifest':`Download prepared ${kind} JPEG`).props.onClick();tree=h.render();const d=downloads.at(-1);await nodes(n=>n.type==='input'&&n.props.type==='file')[i].props.onChange({target:{files:[new File([await d.blob.arrayBuffer()],d.name)],value:'saved'}});tree=h.render();
+ }
+ nodes(n=>n.type==='input'&&n.props['aria-label']==='Confirm selected category')[0].props.onChange({target:{checked:true}});tree=h.render();await button('Check structured preflight — no paid request').props.onClick();tree=h.render();assert.equal(calls,1);assert.equal(submissions,0);assert.equal(button('Run controlled Full Analysis once').props.disabled,true);assert.equal(nodes(n=>n.type==='input'&&n.props.type==='file').length,3);
+ const text=JSON.stringify(tree);for(const t of ['$0.50','not a guaranteed maximum','disabled — stop for activation approval','4,800','no retry'])assert.ok(text.includes(t),t);
+});
+test('expired permits, expired owners, unregistered worker permits and Production cannot submit',async t=>{
+ const {readFullPreflight,issueFullPreflight,diagnosticSession}=await import('../lib/scanDiagnosticsAuth.mjs');
+ t.mock.timers.enable({apis:['Date'],now:Date.now()});
+ const s=await verified({category:'sports'}),flag={...env,GEMPREDICT_PREVIEW_FULL_STRUCTURED_OUTPUT_ENABLED:'true'},headers=auth();
+ const pre=await controlled(s,{env:flag,headers,fields:{mode:'condition-preflight',validationMechanism:'json_schema'}});
+ const fields={validationMechanism:'json_schema',validationPreflightTicket:pre.payload.ticket,validationSpendApproval:'estimate_not_hard_cap_0.50_usd'};
+ const req={method:'POST',headers},unregistered=issueFullPreflight(diagnosticSession(req,flag),readFullPreflight(req,pre.payload.ticket,flag));
+ const cold=await controlled(s,{env:flag,headers,fields:{...fields,validationPreflightTicket:unregistered.ticket}});assert.equal(cold.status,403);assert.equal(cold.metrics.vision,0);
+ t.mock.timers.tick(120001);const expired=await controlled(s,{env:flag,headers,fields});assert.equal(expired.status,403);assert.equal(expired.metrics.vision,0);
+ t.mock.timers.tick(900000);const ownerExpired=await controlled(s,{env:flag,headers,fields});assert.equal(ownerExpired.status,403);assert.equal(ownerExpired.metrics.vision,0);
+ const production=await controlled(s,{env:{...flag,VERCEL_ENV:'production'},headers:auth(),fields});assert.equal(production.status,403);assert.equal(production.metrics.vision,0);
 });

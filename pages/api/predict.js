@@ -1,3 +1,4 @@
+import {structuredExperimentPreflight,requireStructuredExperiment} from '../../lib/structuredExperiment.mjs';
 import {fullAnalysisStructuredEnabled,fullAnalysisOutputFormat,parseFullAnalysisMessage,fullAnalysisStructuredGuidance} from '../../lib/fullAnalysisSchema.mjs';
 import {verifyConditionValidation} from '../../lib/conditionValidationServer.mjs';
 import {safeIdentityValidation} from '../../lib/identityValidation.mjs';
@@ -560,6 +561,8 @@ const backMime = backImageMimeType &&
   const imagePrompt=buildSportsVisionPrompt({cardName,typeLabel,hasBack:!!backBase64});
 
   scanDiagnostics?.vision('request_started',cardType,structured?'json_schema':'prompt_json');
+  const visionStarted=Date.now();
+  scanDiagnostics?.providerAttempt(structured);
   const message = await anthropic.messages.create({
     model: VISION_MODEL, max_tokens: visionOutputBudget(!!backBase64),
     ...(structured?{output_config:{format:fullAnalysisOutputFormat(!!backBase64,cardType)}}:{}),
@@ -594,13 +597,16 @@ const backMime = backImageMimeType &&
       ],
     }],
   }).catch(error=>{
+    scanDiagnostics?.providerLatency(Date.now()-visionStarted);
     if(structured){
+      scanDiagnostics?.providerRequestFailed(error);
       const rule=[400,422].includes(error?.status)?'request_rejected':error instanceof SyntaxError||error?.cause instanceof SyntaxError?'transport_invalid':null;
       if(rule){error.visionValidation=safeVisionValidation({phase:'request',rule});scanDiagnostics?.visionValidation(error.visionValidation);}
     }
     throw error; // Never retry or fall back to prompt JSON.
   });
 
+  scanDiagnostics?.providerLatency(Date.now()-visionStarted);
   scanDiagnostics?.visionCompletion(message,{maxOutputTokens:visionOutputBudget(!!backBase64),mechanism:structured?'json_schema':'prompt_json'});
   let parsed;
   try{parsed=structured?parseFullAnalysisMessage(message,backBase64?['front','back']:['front'],cardType):parseVisionMessage(message);}
@@ -660,7 +666,7 @@ await scanDiagnostics?.images(imageBuffer,backImageBuffer);
   const cardType    = VALID_CARD_TYPES.has(cardTypeRaw) ? cardTypeRaw : "tcg";
 
   scanDiagnostics?.category(cardType);
-  if(fields.mode==='condition-validation')scanDiagnostics?.categorySelection(fields);
+  if(['condition-validation','condition-preflight'].includes(fields.mode))scanDiagnostics?.categorySelection(fields);
   const hasImage = !!imageBuffer;
 const hasTypedCardName = !!(cardName && cardName.trim());
 
@@ -736,12 +742,22 @@ if (hasTypedCardName && looksLikeJunk(cardName)) {
   }
 
   // Explicitly isolated mode shares the same parser, image checks and hourly cap.
-  if(fields.mode && !['identity','full','condition-validation'].includes(fields.mode))return res.status(400).json({error:'Unsupported scan mode.'});
+  if(fields.mode && !['identity','full','condition-validation','condition-preflight'].includes(fields.mode))return res.status(400).json({error:'Unsupported scan mode.'});
   let conditionValidation=null;
-  if(fields.mode==='condition-validation'){
+  if(['condition-validation','condition-preflight'].includes(fields.mode)){
     try{conditionValidation=await verifyConditionValidation(req,fields,imageBuffer,backImageBuffer);}
     catch{return res.status(403).json({error:'Controlled validation requires current Preview owner authorization, matching exported prepared files and explicit matching category confirmation.'});}
     scanDiagnostics?.conditionValidation(conditionValidation);
+  }
+  if(fields.mode==='condition-preflight'){
+    try{res.setHeader('Cache-Control','private, no-store');return res.status(200).json(structuredExperimentPreflight(req,fields,conditionValidation));}
+    catch{return res.status(403).json({error:'Structured preflight requires a current owner session, Sports category and matching frozen pair. No provider request was made.'});}
+  }
+  if(fields.validationMechanism&&!conditionValidation)return res.status(403).json({error:'An explicit experimental mechanism requires verified controlled owner authorization. No provider request or prompt-JSON fallback was made.'});
+  let structuredAnalysis=false;
+  if(conditionValidation&&(fields.validationMechanism||fullAnalysisStructuredEnabled(req,conditionValidation,cardType))){
+    try{structuredAnalysis=requireStructuredExperiment(req,fields,conditionValidation);}
+    catch{return res.status(403).json({error:'Structured experiment blocked: flag, owner authorization, mechanism, cost approval or preflight is missing, stale or mismatched. Run the no-charge preflight again; do not repeat a submitted scan. No provider request or prompt-JSON fallback was made.'});}
   }
   if(fields.mode==='identity'){
     scanDiagnostics?.stage('identity');
@@ -783,7 +799,7 @@ if (hasTypedCardName && looksLikeJunk(cardName)) {
         cardName,
         cardType,
         scanDiagnostics,
-        fullAnalysisStructuredEnabled(req,conditionValidation,cardType)
+        structuredAnalysis
       ).catch(function(err) {
         analysisFailure=providerFailure(err);
         if(!safeVisionValidation(err.visionValidation)&&!['ANALYSIS_RESPONSE_INCOMPLETE','ANALYSIS_EMPTY_RESPONSE','ANALYSIS_RESPONSE_INVALID','ANALYSIS_NORMALIZATION_FAILED'].includes(err.message))scanDiagnostics?.vision(err.message==='NO_API_KEY'?'provider_not_configured':[401,403].includes(err.status)?'provider_authentication_failed':err.status===429?'rate_limited':'request_failed');

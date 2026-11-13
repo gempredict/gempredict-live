@@ -594,12 +594,12 @@ const emailRef    = useRef(null);
         // Multipart/form-data when image is present
         const formData = new FormData();
         if(mode==='identity')formData.append("mode","identity");
-        if(controlled){formData.append("mode","condition-validation");formData.append("validationManifest",prepared.manifest);formData.append("validationCategorySelected",prepared.category);formData.append("validationCategoryConfirmed",prepared.confirmedCategory);formData.append("validationCategoryAttempt",prepared.confirmationAttemptId);}
-        formData.append("cardName", cardName.trim());
+        if(controlled){formData.append("mode","condition-validation");formData.append("validationManifest",prepared.manifest);formData.append("validationCategorySelected",prepared.category);formData.append("validationCategoryConfirmed",prepared.confirmedCategory);formData.append("validationCategoryAttempt",prepared.confirmationAttemptId);if(prepared.validationMechanism){formData.append("validationMechanism",prepared.validationMechanism);formData.append("validationPreflightTicket",prepared.validationPreflightTicket||'');formData.append("validationSpendApproval",prepared.validationSpendApproval||'');}}
+        formData.append("cardName", controlled&&prepared.validationMechanism?'':cardName.trim());
         formData.append("cardType",  controlled?prepared.category:cardType);
-        formData.append("cardSet",   cardSet.trim());
+        formData.append("cardSet",   controlled&&prepared.validationMechanism?'':cardSet.trim());
         formData.append("condition", condition);
-        if (email.trim()) formData.append("email", email.trim());
+        if (email.trim()&&!(controlled&&prepared.validationMechanism)) formData.append("email", email.trim());
         formData.append("image", controlled?prepared.front:imageFile);
         if (backImageFile) {
   formData.append("backImage", controlled?prepared.back:backImageFile);

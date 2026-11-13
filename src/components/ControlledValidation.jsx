@@ -1,3 +1,4 @@
+import {checkStructuredPreflight} from '../../lib/structuredExperimentClient.mjs';
 import {CONTROLLED_CATEGORIES,validControlledCategory} from '../../lib/controlledCategories.mjs';
 import React,{useState,useRef,useEffect} from 'react';
 import {createPreparedValidation} from '../../lib/preparedValidation.mjs';
@@ -6,10 +7,11 @@ const emptyStatus=()=>Object.fromEntries(kinds.map(k=>[k,'Not prepared']));
 export default function ControlledValidation({front,back,busy,cardType,onCategoryChange,getSelectionEpoch,onSubmit}){
  const [access,setAccess]=useState(null),[attempt,setAttempt]=useState(null),[message,setMessage]=useState(''),[working,setWorking]=useState(false),[verified,setVerified]=useState({});
  const [status,setStatus]=useState(emptyStatus),[spendAuthorized,setSpendAuthorized]=useState(false);
+ const [experimental,setExperimental]=useState(false),[preflight,setPreflight]=useState(null);
  const [categoryChoice,setCategoryChoice]=useState(null),[confirmedCategory,setConfirmedCategory]=useState(null);
  const current=useRef(null),controller=useRef(null),generation=useRef(0),locked=useRef(false),mounted=useRef(false),owner=useRef(null),refreshId=useRef(0);
  current.current={front,back,busy,getSelectionEpoch,cardType,categoryChoice};
- function invalidate(reason){generation.current++;controller.current?.invalidate();setAttempt(null);setVerified({});setSpendAuthorized(false);setConfirmedCategory(null);if(reason)setMessage(reason);}
+ function invalidate(reason){setPreflight(null);generation.current++;controller.current?.invalidate();setAttempt(null);setVerified({});setSpendAuthorized(false);setConfirmedCategory(null);if(reason)setMessage(reason);}
  function expire(){
   if(!owner.current?.authorized)return;
   owner.current={...owner.current,authorized:false};setAccess(owner.current);
@@ -44,6 +46,11 @@ export default function ControlledValidation({front,back,busy,cardType,onCategor
   if(typeof document!=='undefined')document.addEventListener('visibilitychange',checkExpiry);
   return()=>{clearTimeout(timer);if(typeof window!=='undefined')window.removeEventListener('focus',checkExpiry);if(typeof document!=='undefined')document.removeEventListener('visibilitychange',checkExpiry);};
  },[access?.authorized,access?.expiresAt]);
+ useEffect(()=>{
+  if(!preflight?.ready||!preflight.expiresAt)return;
+  const timer=setTimeout(()=>{if(mounted.current){setPreflight(p=>p?{...p,ready:false,blocker:'Preflight expired. Run the no-charge preflight again; no paid request was made.'}:null);setSpendAuthorized(false);}},Math.max(0,preflight.expiresAt-Date.now()));
+  return()=>clearTimeout(timer);
+ },[preflight?.expiresAt,preflight?.ready]);
  if(!access?.conditionValidationAvailable)return null;
  async function action(task,complete,failedKind){
   if(locked.current)return;locked.current=true;setWorking(true);const token=generation.current;
@@ -51,7 +58,7 @@ export default function ControlledValidation({front,back,busy,cardType,onCategor
   catch(e){if(mounted.current&&token===generation.current){invalidate(e.message||'Controlled preparation failed. No scan was submitted. Freeze, download and verify again.');setStatus(Object.fromEntries(kinds.map(k=>[k,k===failedKind?'Verification failed — prepare again':'Preparation reset — prepare again'])));}}
   finally{locked.current=false;if(mounted.current)setWorking(false);}
  }
- const next=!access.authorized?'Reauthorize Preview Scan Diagnostics, then refresh owner authorization.':categoryChoice!==cardType?'Choose the controlled card category explicitly.':!front||!back?'Select and prepare both front and back photos.':!attempt?'Freeze the prepared pair. Reloading this page resets the in-memory preparation.':kinds.find(k=>!verified[k])?`Download and verify the saved ${kinds.find(k=>!verified[k])} file. Choose the exported file from Files/Downloads.`:confirmedCategory!==cardType?'All three files match. Confirm the selected category before authorizing a paid scan.':!spendAuthorized?'All three files match. Review the unknown cost; authorize a paid scan only when ready.':'All three files match. The controlled scan is ready for explicit owner initiation.';
+ const next=!access.authorized?'Reauthorize Preview Scan Diagnostics, then refresh owner authorization.':categoryChoice!==cardType?'Choose the controlled card category explicitly.':!front||!back?'Select and prepare both front and back photos.':!attempt?'Freeze the prepared pair. Reloading this page resets the in-memory preparation.':kinds.find(k=>!verified[k])?`Download and verify the saved ${kinds.find(k=>!verified[k])} file. Choose the exported file from Files/Downloads.`:confirmedCategory!==cardType?'All three files match. Confirm the selected category before authorizing a paid scan.':experimental&&!preflight?.ready?'Run the no-charge structured preflight. If the flag is disabled, stop for owner activation approval.':!spendAuthorized?'All three files match. Review the unknown cost; authorize a paid scan only when ready.':'All three files match. The controlled scan is ready for explicit owner initiation.';
  function pickerCanceled(){
   if(!owner.current?.authorized)return;
   if(owner.current.expiresAt<=Date.now()){expire();return;}
@@ -68,14 +75,23 @@ export default function ControlledValidation({front,back,busy,cardType,onCategor
   <h3>Owner-only controlled card validation</h3>
   <p><strong>Selected card category: {CONTROLLED_CATEGORIES[cardType]||'Unresolved'}</strong></p>
   <label>Category for this controlled test <select aria-label="Controlled card category" value={categoryChoice===cardType?cardType:''} disabled={!access.authorized||busy||working} onChange={e=>{const value=e.target.value;invalidate('Category selection changed. Choose the category, then freeze, download and verify again.');setStatus(emptyStatus());setCategoryChoice(validControlledCategory(value)?value:null);if(validControlledCategory(value))onCategoryChange(value);}}><option value="">Choose category explicitly</option>{Object.entries(CONTROLLED_CATEGORIES).map(([value,label])=><option key={value} value={value}>{label}</option>)}</select></label>
+  <label style={{display:'block',marginTop:12}}>Controlled analysis mechanism <select aria-label="Controlled analysis mechanism" value={experimental?'json_schema':'prompt_json'} disabled={busy||working} onChange={e=>{invalidate('Analysis mechanism changed. Freeze and verify the pair again.');setStatus(emptyStatus());setExperimental(e.target.value==='json_schema');}}><option value="prompt_json">Prompt JSON (existing path)</option><option value="json_schema">Structured JSON Schema — experimental Sports preflight</option></select></label>
+  <p>Analysis mechanism: <strong>{experimental?'Structured JSON Schema':'Prompt JSON (existing path)'}</strong></p>
   <p>Expected request cost: unknown. One paid Claude request may incur a charge; no automatic retries.</p>
   <p>Local evidence export first; one Full Analysis attempt with marketplace disabled. No grade or financial recommendation.</p>
+  {experimental&&<div aria-label="Structured experiment preflight">
+   <p>Model: claude-sonnet-4-6 · Schema: 1 · Maximum output: 4,800 tokens. One provider attempt; no retry or prompt-JSON fallback. Marketplace off; financial output withheld.</p>
+   <p>Proposed spending ceiling: USD $0.50. Planning basis: 100,000 input tokens × $3/million + 4,800 output tokens × $15/million = $0.372. Actual input and cost are unknown; this is not a guaranteed maximum or billing cap. Separate owner approval is required.</p>
+   <p>Feature flag: {preflight?preflight.flagEnabled?'enabled on this immutable Preview':'disabled — stop for activation approval':'not checked'}. Diagnostics: success and failure, owner/session expiry applies.</p>
+   {preflight&&<><p>Preview: {preflight.deployment} · Commit: {preflight.revision}</p><p role="status">{preflight.blocker||'Server verified this pair. Preflight expires '+new Date(preflight.expiresAt).toLocaleTimeString()+'.'}</p></>}
+   <button type="button" disabled={busy||working||!attempt||cardType!=='sports'||confirmedCategory!==cardType||!kinds.every(k=>verified[k])} onClick={()=>action(()=>checkStructuredPreflight(controller.current.inspect(attempt,confirmedCategory)),p=>{setPreflight(p);setSpendAuthorized(false);})}>Check structured preflight — no paid request</button>
+  </div>}
   {message&&<p role="alert" style={{border:'1px solid #b78738',padding:10}}>{message}</p>}
   <p role="status"><strong>Next step:</strong> {next}</p>
   <button type="button" onClick={refresh} disabled={busy||working}>Refresh owner authorization</button>
   {!access.authorized?<p>Authorize Preview Scan Diagnostics using the existing owner control, then refresh here.</p>:<>
    <p>Keep originals separately. Freeze both prepared photos, download each JPEG and manifest, then reselect all three saved files below to verify the bytes. No evidence is uploaded during export or verification. Canceling the picker keeps your preparation.</p>
-   <button type="button" disabled={busy||working||!front||!back||categoryChoice!==cardType} onClick={()=>action(()=>controller.current.freeze(),a=>{setAttempt(a);setVerified({});setSpendAuthorized(false);setConfirmedCategory(null);setStatus(Object.fromEntries(kinds.map(k=>[k,'Download required'])));setMessage('');})}>Freeze prepared front and back</button>
+   <button type="button" disabled={busy||working||!front||!back||categoryChoice!==cardType} onClick={()=>action(()=>controller.current.freeze(),a=>{setAttempt(a);setPreflight(null);setVerified({});setSpendAuthorized(false);setConfirmedCategory(null);setStatus(Object.fromEntries(kinds.map(k=>[k,'Download required'])));setMessage('');})}>Freeze prepared front and back</button>
   </>}
   {attempt&&<p>Attempt: {attempt.manifest.attemptId}</p>}
   <ul aria-label="Saved file verification status">{kinds.map(kind=><li key={kind} style={{marginTop:10}}>
@@ -87,9 +103,9 @@ export default function ControlledValidation({front,back,busy,cardType,onCategor
   </li>)}</ul>
   {attempt&&access.authorized&&<div>
    <p>Submission uses the same frozen File objects. Replacing either photograph invalidates this preparation. A failed or submitted attempt cannot be reused automatically.</p>
-    <label style={{display:'block',margin:'12px 0'}}><input type="checkbox" aria-label="Confirm selected category" checked={confirmedCategory===cardType} disabled={busy||working} onChange={e=>{setConfirmedCategory(e.target.checked?cardType:null);setSpendAuthorized(false);}}/> I confirm the selected category is {CONTROLLED_CATEGORIES[cardType]||'unresolved'} for this frozen pair.</label>
-   <label style={{display:'block',margin:'12px 0'}}><input type="checkbox" checked={spendAuthorized} disabled={busy||working||confirmedCategory!==cardType} onChange={e=>setSpendAuthorized(e.target.checked)}/> I explicitly authorize one paid controlled scan of this prepared pair. Cost is unknown.</label>
-   <button type="button" disabled={busy||working||confirmedCategory!==cardType||!spendAuthorized||!kinds.every(k=>verified[k])} onClick={()=>{if(confirmedCategory!==cardType||!spendAuthorized){setMessage('Confirm the selected category and explicitly authorize one paid scan. No scan submitted.');return;}return action(async()=>{const frozen=controller.current.consume(attempt,confirmedCategory);setAttempt(null);setVerified({});setSpendAuthorized(false);setConfirmedCategory(null);await onSubmit(frozen);});}}>Run controlled Full Analysis once</button>
+    <label style={{display:'block',margin:'12px 0'}}><input type="checkbox" aria-label="Confirm selected category" checked={confirmedCategory===cardType} disabled={busy||working} onChange={e=>{setConfirmedCategory(e.target.checked?cardType:null);setSpendAuthorized(false);setPreflight(null);}}/> I confirm the selected category is {CONTROLLED_CATEGORIES[cardType]||'unresolved'} for this frozen pair.</label>
+   <label style={{display:'block',margin:'12px 0'}}><input type="checkbox" checked={spendAuthorized} disabled={busy||working||confirmedCategory!==cardType||experimental&&(!preflight?.ready||Date.now()>=preflight.expiresAt)} onChange={e=>setSpendAuthorized(e.target.checked)}/> I explicitly authorize one paid controlled scan of this prepared pair. {experimental?'I separately accept the $0.50 planning ceiling is not a hard cap; actual cost is unknown.':'Cost is unknown.'}</label>
+   <button type="button" disabled={busy||working||confirmedCategory!==cardType||!spendAuthorized||!kinds.every(k=>verified[k])||experimental&&(!preflight?.ready||Date.now()>=preflight.expiresAt)} onClick={()=>{if(experimental&&(!preflight?.ready||Date.now()>=preflight.expiresAt)){setMessage('Preflight missing, blocked or expired. No scan submitted.');return;}if(confirmedCategory!==cardType||!spendAuthorized){setMessage('Confirm the selected category and explicitly authorize one paid scan. No scan submitted.');return;}return action(async()=>{const frozen=controller.current.consume(attempt,confirmedCategory);setAttempt(null);setVerified({});setSpendAuthorized(false);setConfirmedCategory(null);await onSubmit(experimental?{...frozen,validationMechanism:'json_schema',validationPreflightTicket:preflight.ticket,validationSpendApproval:'estimate_not_hard_cap_0.50_usd'}:frozen);});}}>Run controlled Full Analysis once</button>
   </div>}
  </section>;
 }

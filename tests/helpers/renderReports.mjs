@@ -1,3 +1,4 @@
+import {checkStructuredPreflight} from '../../lib/structuredExperimentClient.mjs';
 import {safeVisionValidation} from '../../lib/visionResponsePolicy.mjs';
 import {CONTROLLED_CATEGORIES,validControlledCategory,controlledCategorySubmission} from '../../lib/controlledCategories.mjs';
 import {completedSalesView,SALES_COHORTS} from '../../lib/completedSales.mjs';
@@ -64,7 +65,7 @@ export function appInteraction(bindings={}){
 export function controlledValidationInteraction(props,bindings){
  const slots=[];let index=0,queued=[];
  const hook=initial=>{const i=index++;if(!(i in slots))slots[i]=typeof initial==='function'?initial():initial;return [slots[i],v=>{slots[i]=typeof v==='function'?v(slots[i]):v;}];};
- const {default:Control}=components('src/components/ControlledValidation.jsx',{CONTROLLED_CATEGORIES,validControlledCategory,setTimeout:(...args)=>{const t=setTimeout(...args);t.unref();return t;},clearTimeout,useState:hook,useRef:initial=>hook({current:initial})[0],useEffect(effect,deps){const i=index++,old=slots[i];if(!old||deps.some((v,j)=>v!==old.deps[j])){queued.push(()=>{old?.cleanup?.();slots[i]={deps,cleanup:effect()};});}},...bindings});
+ const {default:Control}=components('src/components/ControlledValidation.jsx',{checkStructuredPreflight,Date,CONTROLLED_CATEGORIES,validControlledCategory,setTimeout:(...args)=>{const t=setTimeout(...args);t.unref();return t;},clearTimeout,useState:hook,useRef:initial=>hook({current:initial})[0],useEffect(effect,deps){const i=index++,old=slots[i];if(!old||deps.some((v,j)=>v!==old.deps[j])){queued.push(()=>{old?.cleanup?.();slots[i]={deps,cleanup:effect()};});}},...bindings});
  const nodes=(root,predicate)=>{const out=[];const walk=n=>{if(!n||typeof n!=='object')return;if(Array.isArray(n)){n.forEach(walk);return;}if(predicate(n))out.push(n);walk(n.props?.children);};walk(root);return out;};
  return {render(){index=0;const tree=Control(props);const effects=queued;queued=[];effects.forEach(fn=>fn());return tree;},nodes,props,unmount(){slots.forEach(slot=>{if(typeof slot?.cleanup==='function')slot.cleanup();});}};
 }
