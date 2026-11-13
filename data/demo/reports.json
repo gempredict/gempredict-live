@@ -1,0 +1,1939 @@
+{
+  "synthetic": true,
+  "asOf": "2026-11-10T12:00:00Z",
+  "provenance": "Offline fixtures: fraxureFixture.mjs, reconciliationPipeline.mjs and conditionReportFixture.mjs. No real card scan or transaction.",
+  "examples": {
+    "pokemon": {
+      "success": true,
+      "scanNotices": [
+        {
+          "error": "Marketplace discovery is unavailable. Photo observations remain available; valuation and grading recommendations are withheld.",
+          "code": "MARKETPLACE_UNAVAILABLE",
+          "failureCategory": "marketplace_valuation"
+        },
+        {
+          "error": "Independent identity or runtime verification remains unresolved. Review the separate verification statuses; financial recommendations are withheld.",
+          "code": "VERIFICATION_UNRESOLVED",
+          "failureCategory": "verification_runtime"
+        }
+      ],
+      "identityV2": {
+        "schemaVersion": 2,
+        "category": "pokemon",
+        "subject": "Fraxure",
+        "player": null,
+        "sport": null,
+        "team": null,
+        "manufacturer": "Pokemon",
+        "year": "2019",
+        "set": "Unified Minds",
+        "collectorNumber": "155/236",
+        "parallel": "Reverse Holo",
+        "autograph": "none",
+        "catalog": {
+          "provider": "tcgdex",
+          "id": "sm11-155"
+        },
+        "identityStatus": "unresolved",
+        "identityVerified": false,
+        "printingVerified": false,
+        "title": "2019 Unified Minds Fraxure #155/236",
+        "priceLookupEligible": false,
+        "evidence": {
+          "visionPresent": true,
+          "catalogAligned": false,
+          "materialConflict": true,
+          "userReviewed": false
+        },
+        "language": "en",
+        "rarity": "Uncommon"
+      },
+      "graderScenariosV2": [
+        {
+          "company": "PSA",
+          "serviceTier": null,
+          "gradingFee": null,
+          "shippingCost": null,
+          "insuranceCost": null,
+          "turnaroundDays": null,
+          "declaredValueLimit": null,
+          "gradeDistribution": null,
+          "soldPriceByGrade": null,
+          "expectedNet": null,
+          "status": "not_evaluated"
+        },
+        {
+          "company": "BGS",
+          "serviceTier": null,
+          "gradingFee": null,
+          "shippingCost": null,
+          "insuranceCost": null,
+          "turnaroundDays": null,
+          "declaredValueLimit": null,
+          "gradeDistribution": null,
+          "soldPriceByGrade": null,
+          "expectedNet": null,
+          "status": "not_evaluated"
+        },
+        {
+          "company": "TAG",
+          "serviceTier": null,
+          "gradingFee": null,
+          "shippingCost": null,
+          "insuranceCost": null,
+          "turnaroundDays": null,
+          "declaredValueLimit": null,
+          "gradeDistribution": null,
+          "soldPriceByGrade": null,
+          "expectedNet": null,
+          "status": "not_evaluated"
+        },
+        {
+          "company": "CGC",
+          "serviceTier": null,
+          "gradingFee": null,
+          "shippingCost": null,
+          "insuranceCost": null,
+          "turnaroundDays": null,
+          "declaredValueLimit": null,
+          "gradeDistribution": null,
+          "soldPriceByGrade": null,
+          "expectedNet": null,
+          "status": "not_evaluated"
+        },
+        {
+          "company": "SGC",
+          "serviceTier": null,
+          "gradingFee": null,
+          "shippingCost": null,
+          "insuranceCost": null,
+          "turnaroundDays": null,
+          "declaredValueLimit": null,
+          "gradeDistribution": null,
+          "soldPriceByGrade": null,
+          "expectedNet": null,
+          "status": "not_evaluated"
+        }
+      ],
+      "sportsIdentityAudit": null,
+      "marketData": {
+        "success": true,
+        "count": 1,
+        "items": [
+          {
+            "title": "DEMO — SYNTHETIC DATA — 2019 Pokemon Unified Minds Fraxure 155/236 Reverse Holo English",
+            "itemId": "v1|123456789012|0",
+            "itemWebUrl": "https://www.ebay.com/itm/123456789012",
+            "image": null,
+            "price": {
+              "value": "42.50",
+              "currency": "USD"
+            },
+            "condition": "Synthetic ungraded listing example",
+            "accepted": true,
+            "rejectionReasons": []
+          }
+        ],
+        "rawComparableItems": [],
+        "rejectedItems": [],
+        "marketSummary": {}
+      },
+      "imageAnalysis": {
+        "identifiedRarity": null,
+        "identityReadings": [
+          {
+            "field": "subject",
+            "text": "Fraxure",
+            "certainty": "clear",
+            "side": "front",
+            "area": "name",
+            "alternatives": []
+          },
+          {
+            "field": "cardNumber",
+            "text": "155/236",
+            "certainty": "clear",
+            "side": "front",
+            "area": "collector_line",
+            "alternatives": []
+          }
+        ],
+        "identifiedLanguage": "English",
+        "identifiedFranchise": null,
+        "identifiedYear": "2019",
+        "identifiedManufacturer": "Pokemon",
+        "identifiedSport": null,
+        "identifiedTeam": null,
+        "identifiedSerialNumber": null,
+        "identifiedBrandSet": "Cosmic Eclipse",
+        "identifiedSubject": "Fraxure",
+        "identifiedCardNumber": "155/236",
+        "identifiedParallel": "Reverse Holo",
+        "identifiedAutoOrRelic": "none",
+        "identityConfidence": 50,
+        "identityNotes": "Card identity could not be confidently determined.",
+        "centering": null,
+        "corners": null,
+        "edges": null,
+        "surface": null,
+        "centeringNote": "Unassessable centering; a defect cannot be established.",
+        "cornersNote": "Possible corners whitening; unconfirmed, inspect the physical card. Possible corners whitening; unconfirmed, inspect the physical card. Possible corners whitening; unconfirmed, inspect the physical card.",
+        "edgesNote": "Possible edges whitening; unconfirmed, inspect the physical card.",
+        "surfaceNote": "Unassessable surface; a defect cannot be established. Unassessable surface; a defect cannot be established.",
+        "overallScore": null,
+        "gradingRisk": "Photo inspection can miss defects; inspect the physical card.",
+        "estimatedGrade": null,
+        "worthGrading": null,
+        "worthGradingReason": "Grading recommendations are withheld until identity, version and matching market evidence are verified. Visual condition observations remain available.",
+        "gradeCeiling": null,
+        "primaryLimiter": "Possible corners whitening; unconfirmed, inspect the physical card.",
+        "majorGradeCap": "A grade ceiling cannot be established from these observations.",
+        "confidenceLevel": null,
+        "imageSummary": "Card identity is unverified. Photo observations: Possible corners whitening; unconfirmed, inspect the physical card. Possible corners whitening; unconfirmed, inspect the physical card. Possible corners whitening; unconfirmed, inspect the physical card. Possible edges whitening; unconfirmed, inspect the physical card. Unassessable surface; a defect cannot be established. Unassessable surface; a defect cannot be established. Unassessable centering; a defect cannot be established. Image resolution limits inspection. Camera angle limits inspection and centering measurement. These observations do not establish a PSA grade.",
+        "mostLikelyGradeRange": null,
+        "psa10Upside": null,
+        "gemRiskFactors": [
+          "Possible corners whitening; unconfirmed, inspect the physical card.",
+          "Possible corners whitening; unconfirmed, inspect the physical card.",
+          "Possible corners whitening; unconfirmed, inspect the physical card.",
+          "Possible edges whitening; unconfirmed, inspect the physical card.",
+          "Unassessable surface; a defect cannot be established.",
+          "Unassessable surface; a defect cannot be established.",
+          "Unassessable centering; a defect cannot be established.",
+          "Image resolution limits inspection.",
+          "Camera angle limits inspection and centering measurement."
+        ],
+        "minorConcerns": "Possible corners whitening; unconfirmed, inspect the physical card. Possible corners whitening; unconfirmed, inspect the physical card. Possible corners whitening; unconfirmed, inspect the physical card. Possible edges whitening; unconfirmed, inspect the physical card. Unassessable surface; a defect cannot be established. Unassessable surface; a defect cannot be established. Unassessable centering; a defect cannot be established.",
+        "conditionAssessments": {
+          "centering": {
+            "observations": [
+              {
+                "side": "front",
+                "certainty": "unassessable",
+                "region": [
+                  0,
+                  0,
+                  0.1,
+                  0.1
+                ],
+                "cue": "truncated_print_border",
+                "code": "miscut",
+                "reasonCodes": [
+                  "global_photo_limitation",
+                  "support_confidence_insufficient"
+                ],
+                "text": "Unassessable centering; a defect cannot be established."
+              }
+            ],
+            "sides": [
+              "front"
+            ],
+            "state": "unassessable"
+          },
+          "corners": {
+            "observations": [
+              {
+                "side": "back",
+                "certainty": "suspected",
+                "region": [
+                  0.01,
+                  0.01,
+                  0.08,
+                  0.08
+                ],
+                "cue": "localized_color_loss",
+                "code": "whitening",
+                "reasonCodes": [
+                  "global_photo_limitation"
+                ],
+                "text": "Possible corners whitening; unconfirmed, inspect the physical card."
+              },
+              {
+                "side": "back",
+                "certainty": "suspected",
+                "region": [
+                  0.9,
+                  0.01,
+                  0.08,
+                  0.08
+                ],
+                "cue": "localized_color_loss",
+                "code": "whitening",
+                "reasonCodes": [
+                  "global_photo_limitation"
+                ],
+                "text": "Possible corners whitening; unconfirmed, inspect the physical card."
+              },
+              {
+                "side": "back",
+                "certainty": "suspected",
+                "region": [
+                  0.01,
+                  0.9,
+                  0.08,
+                  0.08
+                ],
+                "cue": "localized_color_loss",
+                "code": "whitening",
+                "reasonCodes": [
+                  "global_photo_limitation"
+                ],
+                "text": "Possible corners whitening; unconfirmed, inspect the physical card."
+              }
+            ],
+            "sides": [
+              "back"
+            ],
+            "state": "suspected_defect"
+          },
+          "edges": {
+            "observations": [
+              {
+                "side": "back",
+                "certainty": "suspected",
+                "region": [
+                  0.01,
+                  0.4,
+                  0.03,
+                  0.1
+                ],
+                "cue": "localized_color_loss",
+                "code": "whitening",
+                "reasonCodes": [
+                  "global_photo_limitation"
+                ],
+                "text": "Possible edges whitening; unconfirmed, inspect the physical card."
+              }
+            ],
+            "sides": [
+              "back"
+            ],
+            "state": "suspected_defect"
+          },
+          "surface": {
+            "observations": [
+              {
+                "side": "front",
+                "certainty": "unassessable",
+                "region": [
+                  0.4,
+                  0.4,
+                  0.1,
+                  0.1
+                ],
+                "cue": "surface_line",
+                "code": "scratches",
+                "reasonCodes": [
+                  "global_photo_limitation",
+                  "support_confidence_insufficient"
+                ],
+                "text": "Unassessable surface; a defect cannot be established."
+              },
+              {
+                "side": "back",
+                "certainty": "unassessable",
+                "region": [
+                  0.4,
+                  0.4,
+                  0.1,
+                  0.1
+                ],
+                "cue": "surface_line",
+                "code": "scratches",
+                "reasonCodes": [
+                  "global_photo_limitation",
+                  "support_confidence_insufficient"
+                ],
+                "text": "Unassessable surface; a defect cannot be established."
+              }
+            ],
+            "sides": [
+              "front",
+              "back"
+            ],
+            "state": "unassessable"
+          }
+        },
+        "visualEvidenceVersion": 4,
+        "conditionEvidenceLimits": {
+          "observationsExceeded": false,
+          "coverageExceeded": false
+        },
+        "inspectionCoverage": [
+          {
+            "side": "front",
+            "attribute": "centering",
+            "status": "unassessable",
+            "regions": [],
+            "limitations": [],
+            "reason": "coverage_not_established",
+            "basis": "model_observation",
+            "wholeAttributeVerified": false
+          },
+          {
+            "side": "front",
+            "attribute": "corners",
+            "status": "unassessable",
+            "regions": [],
+            "limitations": [],
+            "reason": "coverage_not_established",
+            "basis": "model_observation",
+            "wholeAttributeVerified": false
+          },
+          {
+            "side": "front",
+            "attribute": "edges",
+            "status": "unassessable",
+            "regions": [],
+            "limitations": [],
+            "reason": "coverage_not_established",
+            "basis": "model_observation",
+            "wholeAttributeVerified": false
+          },
+          {
+            "side": "front",
+            "attribute": "surface",
+            "status": "unassessable",
+            "regions": [],
+            "limitations": [],
+            "reason": "coverage_not_established",
+            "basis": "model_observation",
+            "wholeAttributeVerified": false
+          },
+          {
+            "side": "back",
+            "attribute": "centering",
+            "status": "unassessable",
+            "regions": [],
+            "limitations": [],
+            "reason": "coverage_not_established",
+            "basis": "model_observation",
+            "wholeAttributeVerified": false
+          },
+          {
+            "side": "back",
+            "attribute": "corners",
+            "status": "unassessable",
+            "regions": [],
+            "limitations": [],
+            "reason": "coverage_not_established",
+            "basis": "model_observation",
+            "wholeAttributeVerified": false
+          },
+          {
+            "side": "back",
+            "attribute": "edges",
+            "status": "unassessable",
+            "regions": [],
+            "limitations": [],
+            "reason": "coverage_not_established",
+            "basis": "model_observation",
+            "wholeAttributeVerified": false
+          },
+          {
+            "side": "back",
+            "attribute": "surface",
+            "status": "unassessable",
+            "regions": [],
+            "limitations": [],
+            "reason": "coverage_not_established",
+            "basis": "model_observation",
+            "wholeAttributeVerified": false
+          }
+        ],
+        "localizationVerified": false,
+        "centeringGeometryVerified": false,
+        "centeringMeasurementStatus": "unavailable",
+        "modelPhotoNotes": [],
+        "inspectedSides": [
+          "front",
+          "back"
+        ],
+        "visualObservations": [
+          {
+            "attribute": "corners",
+            "code": "whitening",
+            "certainty": "suspected",
+            "reportedCertainty": "suspected",
+            "evidence": {
+              "side": "back",
+              "region": [
+                0.01,
+                0.01,
+                0.08,
+                0.08
+              ],
+              "cue": "localized_color_loss",
+              "confidence": 0.6
+            },
+            "localizationStatus": "model_proposed",
+            "reasonCodes": [
+              "global_photo_limitation"
+            ]
+          },
+          {
+            "attribute": "corners",
+            "code": "whitening",
+            "certainty": "suspected",
+            "reportedCertainty": "suspected",
+            "evidence": {
+              "side": "back",
+              "region": [
+                0.9,
+                0.01,
+                0.08,
+                0.08
+              ],
+              "cue": "localized_color_loss",
+              "confidence": 0.6
+            },
+            "localizationStatus": "model_proposed",
+            "reasonCodes": [
+              "global_photo_limitation"
+            ]
+          },
+          {
+            "attribute": "corners",
+            "code": "whitening",
+            "certainty": "suspected",
+            "reportedCertainty": "suspected",
+            "evidence": {
+              "side": "back",
+              "region": [
+                0.01,
+                0.9,
+                0.08,
+                0.08
+              ],
+              "cue": "localized_color_loss",
+              "confidence": 0.6
+            },
+            "localizationStatus": "model_proposed",
+            "reasonCodes": [
+              "global_photo_limitation"
+            ]
+          },
+          {
+            "attribute": "edges",
+            "code": "whitening",
+            "certainty": "suspected",
+            "reportedCertainty": "suspected",
+            "evidence": {
+              "side": "back",
+              "region": [
+                0.01,
+                0.4,
+                0.03,
+                0.1
+              ],
+              "cue": "localized_color_loss",
+              "confidence": 0.6
+            },
+            "localizationStatus": "model_proposed",
+            "reasonCodes": [
+              "global_photo_limitation"
+            ]
+          },
+          {
+            "attribute": "surface",
+            "code": "scratches",
+            "certainty": "unassessable",
+            "reportedCertainty": "unassessable",
+            "evidence": {
+              "side": "front",
+              "region": [
+                0.4,
+                0.4,
+                0.1,
+                0.1
+              ],
+              "cue": "surface_line",
+              "confidence": 0.2
+            },
+            "localizationStatus": "model_proposed",
+            "reasonCodes": [
+              "global_photo_limitation",
+              "support_confidence_insufficient"
+            ]
+          },
+          {
+            "attribute": "surface",
+            "code": "scratches",
+            "certainty": "unassessable",
+            "reportedCertainty": "unassessable",
+            "evidence": {
+              "side": "back",
+              "region": [
+                0.4,
+                0.4,
+                0.1,
+                0.1
+              ],
+              "cue": "surface_line",
+              "confidence": 0.2
+            },
+            "localizationStatus": "model_proposed",
+            "reasonCodes": [
+              "global_photo_limitation",
+              "support_confidence_insufficient"
+            ]
+          },
+          {
+            "attribute": "centering",
+            "code": "miscut",
+            "certainty": "unassessable",
+            "reportedCertainty": "unassessable",
+            "evidence": {
+              "side": "front",
+              "region": [
+                0,
+                0,
+                0.1,
+                0.1
+              ],
+              "cue": "truncated_print_border",
+              "confidence": 0.2
+            },
+            "localizationStatus": "model_proposed",
+            "reasonCodes": [
+              "global_photo_limitation",
+              "support_confidence_insufficient"
+            ]
+          }
+        ],
+        "imageLimitations": [
+          "limited_resolution",
+          "perspective"
+        ],
+        "visualSafetyFlags": {
+          "structuralDamage": false,
+          "unverifiedStructuralRisk": false,
+          "imageQualityLimited": true
+        },
+        "psa9Probability": null,
+        "psa10Probability": null,
+        "gradeProbabilities": null,
+        "gradingRecommendation": null,
+        "submissionRecommendation": null,
+        "identityObservationOnly": true
+      },
+      "atlas": null,
+      "atlasIdentityConfidence": {
+        "score": 100,
+        "level": "Very High",
+        "reasons": [
+          "Subject identified",
+          "Set identified",
+          "Collector number identified",
+          "Parallel identified",
+          "Manufacturer identified",
+          "Language identified",
+          "Year identified"
+        ]
+      },
+      "canonicalCard": {
+        "subject": "Fraxure",
+        "year": "2019",
+        "brandSet": "Unified Minds",
+        "parallel": "Reverse Holo",
+        "cardNumber": "155/236",
+        "autoOrRelic": "none",
+        "language": "en",
+        "confidence": 50,
+        "displayName": "2019 Unified Minds Fraxure #155/236",
+        "notes": "Card identity could not be confidently determined.",
+        "setId": "sm11",
+        "rarity": "Uncommon",
+        "variant": {
+          "kind": null,
+          "finish": "reverse-holo",
+          "art": null,
+          "color": null,
+          "treatment": null,
+          "printRun": null,
+          "autograph": false,
+          "relic": false,
+          "ambiguous": false,
+          "unrecognized": false
+        }
+      },
+      "identityEvidence": {
+        "status": "unverified",
+        "verified": false,
+        "contradictions": [],
+        "missing": [],
+        "observed": {
+          "subject": "Fraxure",
+          "set": "Cosmic Eclipse",
+          "number": "155/236",
+          "year": "2019",
+          "parallel": "Reverse Holo"
+        },
+        "supplied": {
+          "cardName": null,
+          "cardSet": null
+        },
+        "candidatesComplete": true,
+        "note": "Photo fields are provisional until verified against a catalog and card artwork."
+      },
+      "identityVerification": {
+        "year": {
+          "originalValue": "2019",
+          "originalValueMissing": false,
+          "value": "2019",
+          "candidateValue": null,
+          "status": "corrected",
+          "supportingListingCount": 0,
+          "informativeEvidenceCount": 0,
+          "consensus": 0,
+          "missingListingCount": 0,
+          "ambiguousListingCount": 0,
+          "conflictingListingCount": 0,
+          "evidenceReferences": [],
+          "nonInformativeEvidenceReferences": [],
+          "supportingEvidenceReferences": [],
+          "verificationSource": "tcgdex"
+        },
+        "set": {
+          "originalValue": "Cosmic Eclipse",
+          "originalValueMissing": false,
+          "value": "Unified Minds",
+          "candidateValue": null,
+          "status": "corrected",
+          "supportingListingCount": 0,
+          "informativeEvidenceCount": 0,
+          "consensus": 0,
+          "missingListingCount": 0,
+          "ambiguousListingCount": 0,
+          "conflictingListingCount": 0,
+          "evidenceReferences": [],
+          "nonInformativeEvidenceReferences": [],
+          "supportingEvidenceReferences": [],
+          "verificationSource": "tcgdex"
+        },
+        "independentListingCount": 0,
+        "catalog": {
+          "candidateInvestigation": {
+            "queries": [
+              {
+                "subject": "Fraxure",
+                "cardNumber": "155/236"
+              }
+            ],
+            "language": null,
+            "setCode": null,
+            "clearNumber": "155/236",
+            "requiresNumberConfirmation": false,
+            "reason": "printed_number_constraint"
+          },
+          "requiresNumberConfirmation": false,
+          "requiresConfirmation": true,
+          "status": "conflict",
+          "reasonCode": "catalog_candidate_conflict",
+          "source": "tcgdex",
+          "referenceId": "sm11-155",
+          "conflicts": [
+            "finish"
+          ],
+          "candidate": {
+            "subject": "Fraxure",
+            "cardNumber": "155/236",
+            "year": "2019",
+            "brandSet": "Unified Minds",
+            "parallel": null,
+            "language": "en",
+            "provider": "tcgdex",
+            "setId": "sm11",
+            "setCode": null,
+            "localId": "155",
+            "officialCount": 236,
+            "releaseDate": "2019-08-02",
+            "rarity": "Uncommon",
+            "variants": null,
+            "hostedEvidence": {
+              "provider": "tcgdex",
+              "id": "sm11-155",
+              "language": "en",
+              "setId": "sm11",
+              "setUpdated": null,
+              "retrievedAt": "2026-11-10T12:00:00Z",
+              "updated": null,
+              "revision": null,
+              "variants": {
+                "normal": null,
+                "holo": null,
+                "reverse": null
+              },
+              "rarity": "Uncommon",
+              "regulationMark": null,
+              "extraVariantFlags": {},
+              "detailedPresent": false,
+              "detailedComplete": false,
+              "printings": []
+            },
+            "reviewedSource": null
+          },
+          "initialConflicts": [
+            "brandSet",
+            "finish"
+          ],
+          "initialProposedFinishes": [
+            "reverse"
+          ],
+          "initialMissingFields": [],
+          "confirmationReasons": [
+            "catalog_field_conflict"
+          ],
+          "originalConflicts": [
+            "brandSet",
+            "finish"
+          ],
+          "corrections": [
+            {
+              "field": "brandSet",
+              "originalValue": "Cosmic Eclipse",
+              "value": "Unified Minds"
+            },
+            {
+              "field": "language",
+              "originalValue": "English",
+              "value": "en"
+            },
+            {
+              "field": "setId",
+              "originalValue": null,
+              "value": "sm11"
+            },
+            {
+              "field": "rarity",
+              "originalValue": null,
+              "value": "Uncommon"
+            }
+          ],
+          "reasonCodes": [
+            "catalog_candidate_conflict"
+          ]
+        },
+        "printed": {
+          "name": [
+            {
+              "field": "subject",
+              "text": "Fraxure",
+              "certainty": "clear",
+              "side": "front",
+              "area": "name",
+              "alternatives": []
+            }
+          ],
+          "collectorNumber": [
+            {
+              "field": "cardNumber",
+              "text": "155/236",
+              "certainty": "clear",
+              "side": "front",
+              "area": "collector_line",
+              "alternatives": []
+            }
+          ],
+          "setMarkings": [],
+          "parsedSetMarkings": [],
+          "languageMarkings": [],
+          "copyright": [],
+          "proposedReleaseYear": "2019",
+          "modelConfidence": 50
+        }
+      },
+      "originalIdentityObservation": {
+        "identifiedRarity": null,
+        "identityReadings": [
+          {
+            "field": "subject",
+            "text": "Fraxure",
+            "certainty": "clear",
+            "side": "front",
+            "area": "name",
+            "alternatives": []
+          },
+          {
+            "field": "cardNumber",
+            "text": "155/236",
+            "certainty": "clear",
+            "side": "front",
+            "area": "collector_line",
+            "alternatives": []
+          }
+        ],
+        "identifiedLanguage": "English",
+        "identifiedFranchise": null,
+        "identifiedYear": "2019",
+        "identifiedManufacturer": "Pokemon",
+        "identifiedSport": null,
+        "identifiedTeam": null,
+        "identifiedSerialNumber": null,
+        "identifiedBrandSet": "Cosmic Eclipse",
+        "identifiedSubject": "Fraxure",
+        "identifiedCardNumber": "155/236",
+        "identifiedParallel": "Reverse Holo",
+        "identifiedAutoOrRelic": "none",
+        "identityConfidence": 50,
+        "identityNotes": "Card identity could not be confidently determined."
+      },
+      "originalCanonicalCard": {
+        "subject": "Fraxure",
+        "year": "2019",
+        "brandSet": "Cosmic Eclipse",
+        "parallel": "Reverse Holo",
+        "cardNumber": "155/236",
+        "autoOrRelic": "none",
+        "language": "English",
+        "confidence": 50,
+        "displayName": "2019 Cosmic Eclipse Fraxure Reverse Holo #155/236",
+        "notes": "Card identity could not be confidently determined."
+      },
+      "userIdentityConflicts": [],
+      "variantVerification": {
+        "status": "needs_confirmation",
+        "originalProposal": {
+          "parallel": "Reverse Holo",
+          "autoOrRelic": "none",
+          "printRun": null
+        },
+        "value": {
+          "kind": null,
+          "finish": "reverse-holo",
+          "art": null,
+          "color": null,
+          "treatment": null,
+          "printRun": null,
+          "autograph": false,
+          "relic": false,
+          "ambiguous": false,
+          "unrecognized": false
+        },
+        "fields": {
+          "kind": {
+            "originalValue": null,
+            "value": null,
+            "supportingListingCount": 0,
+            "informativeEvidenceCount": 0,
+            "consensus": 0,
+            "evidenceReferences": []
+          },
+          "finish": {
+            "originalValue": "reverse-holo",
+            "value": "reverse-holo",
+            "supportingListingCount": 0,
+            "informativeEvidenceCount": 0,
+            "consensus": 0,
+            "evidenceReferences": []
+          },
+          "art": {
+            "originalValue": null,
+            "value": null,
+            "supportingListingCount": 0,
+            "informativeEvidenceCount": 0,
+            "consensus": 0,
+            "evidenceReferences": []
+          },
+          "color": {
+            "originalValue": null,
+            "value": null,
+            "supportingListingCount": 0,
+            "informativeEvidenceCount": 0,
+            "consensus": 0,
+            "evidenceReferences": []
+          },
+          "treatment": {
+            "originalValue": null,
+            "value": null,
+            "supportingListingCount": 0,
+            "informativeEvidenceCount": 0,
+            "consensus": 0,
+            "evidenceReferences": []
+          },
+          "printRun": {
+            "originalValue": null,
+            "value": null,
+            "supportingListingCount": 0,
+            "informativeEvidenceCount": 0,
+            "consensus": 0,
+            "evidenceReferences": []
+          },
+          "autograph": {
+            "originalValue": false,
+            "value": false,
+            "supportingListingCount": 0,
+            "informativeEvidenceCount": 0,
+            "consensus": 0,
+            "evidenceReferences": []
+          },
+          "relic": {
+            "originalValue": false,
+            "value": false,
+            "supportingListingCount": 0,
+            "informativeEvidenceCount": 0,
+            "consensus": 0,
+            "evidenceReferences": []
+          }
+        },
+        "materialAmbiguity": false,
+        "explanation": "Catalog identity is conflicting, incomplete or unconfirmed; physical printing and financial analysis remain unverified.",
+        "conflicts": [],
+        "excludedEvidenceReferences": [],
+        "evidenceReferences": []
+      },
+      "artworkStatus": {
+        "status": "not_verified",
+        "verified": false
+      },
+      "physicalPrintingStatus": {
+        "status": "unverified",
+        "verified": false
+      },
+      "identityEvidenceItems": [],
+      "identityEvidenceExclusions": [],
+      "identityEvidenceSearch": {
+        "query": "Fraxure 155/236",
+        "status": "retrieved",
+        "retrievedAt": "2026-11-10T12:00:00Z",
+        "returnedCount": 0,
+        "total": 0
+      },
+      "runtimeCatalogAssets": {
+        "snapshot": true,
+        "license": true
+      },
+      "catalogCrossCheck": {
+        "provider": "TCGdex",
+        "status": "conflict",
+        "verified": false,
+        "catalogId": "sm11-155",
+        "catalogName": "Fraxure",
+        "catalogSet": "Unified Minds",
+        "catalogRarity": "Uncommon",
+        "conflicts": [
+          "finish"
+        ],
+        "agreements": [],
+        "candidateCount": 1,
+        "artwork": {
+          "status": "not_verified",
+          "verified": false
+        },
+        "note": "Catalog evidence and original AI observations are separate. Physical printing is not verified."
+      },
+      "soldIdentityGate": {
+        "status": "blocked",
+        "allowed": false,
+        "reason": "identity_conflict",
+        "identity": null
+      },
+      "hasImageAnalysis": true,
+      "remaining": 4,
+      "emailSaved": false,
+      "sourceCatalogEvidence": {
+        "status": "unavailable",
+        "reason": "reviewed_source_unavailable_or_identity_mismatch",
+        "requiresReview": false,
+        "photoVerified": false
+      },
+      "pokemonIdentityStatus": {
+        "comparison": {
+          "candidateCompared": true,
+          "initialConflicts": [
+            "brandSet",
+            "finish"
+          ],
+          "postCorrectionConflicts": [
+            "finish"
+          ],
+          "finalConflicts": [
+            "finish"
+          ],
+          "initialMissingFields": [],
+          "finalMissingFields": [],
+          "candidateMissingFields": [],
+          "core": {
+            "status": "supported",
+            "supported": true,
+            "conflicts": [],
+            "missingFields": [],
+            "blockers": []
+          },
+          "printing": {
+            "status": "unresolved",
+            "reason": "printing_evidence_incomplete",
+            "conflicts": [
+              "finish"
+            ],
+            "retainedConflicts": [
+              "finish"
+            ],
+            "initialProposedFinishes": [
+              "reverse"
+            ],
+            "proposedFinishes": [
+              "reverse"
+            ],
+            "catalogFinishFlags": {
+              "normal": null,
+              "holo": null,
+              "reverse": null
+            },
+            "verified": false
+          },
+          "requiresConfirmation": true,
+          "confirmationReasons": [
+            "catalog_field_conflict"
+          ]
+        },
+        "coreCatalogIdentity": {
+          "status": "supported",
+          "supported": true,
+          "conflicts": [],
+          "missingFields": [],
+          "blockers": []
+        },
+        "printingComparison": {
+          "status": "unresolved",
+          "reason": "printing_evidence_incomplete",
+          "conflicts": [
+            "finish"
+          ],
+          "retainedConflicts": [
+            "finish"
+          ],
+          "initialProposedFinishes": [
+            "reverse"
+          ],
+          "proposedFinishes": [
+            "reverse"
+          ],
+          "catalogFinishFlags": {
+            "normal": null,
+            "holo": null,
+            "reverse": null
+          },
+          "verified": false
+        },
+        "catalogOutcome": "conflict",
+        "catalogVerified": false,
+        "physicalPrintingVerified": false,
+        "artworkVerified": false,
+        "gate": {
+          "allowed": false,
+          "reason": "identity_unresolved",
+          "unresolvedFields": [],
+          "invalidFields": [],
+          "catalogStatus": "conflict",
+          "conflicts": [
+            "finish"
+          ]
+        },
+        "conflicts": [
+          "finish"
+        ],
+        "source": "tcgdex",
+        "referenceId": "sm11-155"
+      },
+      "coreCatalogIdentity": {
+        "status": "supported",
+        "supported": true,
+        "conflicts": [],
+        "missingFields": [],
+        "blockers": []
+      },
+      "catalogComparison": {
+        "candidateCompared": true,
+        "initialConflicts": [
+          "brandSet",
+          "finish"
+        ],
+        "postCorrectionConflicts": [
+          "finish"
+        ],
+        "finalConflicts": [
+          "finish"
+        ],
+        "initialMissingFields": [],
+        "finalMissingFields": [],
+        "candidateMissingFields": [],
+        "core": {
+          "status": "supported",
+          "supported": true,
+          "conflicts": [],
+          "missingFields": [],
+          "blockers": []
+        },
+        "printing": {
+          "status": "unresolved",
+          "reason": "printing_evidence_incomplete",
+          "conflicts": [
+            "finish"
+          ],
+          "retainedConflicts": [
+            "finish"
+          ],
+          "initialProposedFinishes": [
+            "reverse"
+          ],
+          "proposedFinishes": [
+            "reverse"
+          ],
+          "catalogFinishFlags": {
+            "normal": null,
+            "holo": null,
+            "reverse": null
+          },
+          "verified": false
+        },
+        "requiresConfirmation": true,
+        "confirmationReasons": [
+          "catalog_field_conflict"
+        ]
+      },
+      "valuationIdentityGate": {
+        "allowed": false,
+        "reason": "identity_unresolved",
+        "unresolvedFields": [],
+        "invalidFields": [],
+        "catalogStatus": "conflict",
+        "conflicts": [
+          "finish"
+        ]
+      },
+      "financialDecision": {
+        "version": 1,
+        "status": "withheld",
+        "allowed": false,
+        "actionable": false,
+        "reasons": [
+          "independent_identity_unverified",
+          "physical_printing_unverified",
+          "qualified_completed_sales_bridge_unavailable"
+        ]
+      },
+      "valuationVerification": {
+        "status": "untrusted",
+        "reason": "independent_identity_unverified",
+        "explanation": "Valuation and grading recommendations are withheld. Exact identity, physical printing and qualified completed-sale evidence have not been independently verified."
+      },
+      "cardTitle": "2019 Unified Minds Fraxure #155/236",
+      "cardMeta": "Unified Minds",
+      "rawValue": null,
+      "psa9Value": null,
+      "psa10Value": null,
+      "psa10Probability": null,
+      "psa9Probability": null,
+      "gradingUpside": null,
+      "expectedGradedValue": null,
+      "expectedNetValue": null,
+      "decisionConfidence": null,
+      "gemPredictScore": null,
+      "psa9Pop": null,
+      "psa10Pop": null,
+      "populationInsight": null,
+      "verdict": "withheld",
+      "action": "Valuation and grading recommendations are withheld. Exact identity, physical printing and qualified completed-sale evidence have not been independently verified.",
+      "analysis": "Valuation and grading recommendations are withheld. Exact identity, physical printing and qualified completed-sale evidence have not been independently verified.",
+      "financialBasis": null,
+      "recommendation": null
+    },
+    "sports": {
+      "success": true,
+      "scanNotices": [],
+      "identityV2": {
+        "schemaVersion": 2,
+        "category": "sports",
+        "subject": "Konnor Griffin",
+        "player": "Konnor Griffin",
+        "sport": null,
+        "team": null,
+        "manufacturer": "Bowman",
+        "year": "2024",
+        "set": "Bowman Chrome Prospects",
+        "collectorNumber": "BCP-86",
+        "parallel": "Mojo Refractor",
+        "autograph": "none",
+        "catalog": null,
+        "identityStatus": "unverified",
+        "identityVerified": false,
+        "printingVerified": false,
+        "title": "2024 Bowman Chrome Prospects Konnor Griffin Mojo Refractor #BCP-86",
+        "priceLookupEligible": false,
+        "evidence": {
+          "visionPresent": true,
+          "catalogAligned": false,
+          "materialConflict": false,
+          "userReviewed": false
+        }
+      },
+      "graderScenariosV2": [
+        {
+          "company": "PSA",
+          "serviceTier": null,
+          "gradingFee": null,
+          "shippingCost": null,
+          "insuranceCost": null,
+          "turnaroundDays": null,
+          "declaredValueLimit": null,
+          "gradeDistribution": null,
+          "soldPriceByGrade": null,
+          "expectedNet": null,
+          "status": "not_evaluated"
+        },
+        {
+          "company": "BGS",
+          "serviceTier": null,
+          "gradingFee": null,
+          "shippingCost": null,
+          "insuranceCost": null,
+          "turnaroundDays": null,
+          "declaredValueLimit": null,
+          "gradeDistribution": null,
+          "soldPriceByGrade": null,
+          "expectedNet": null,
+          "status": "not_evaluated"
+        },
+        {
+          "company": "TAG",
+          "serviceTier": null,
+          "gradingFee": null,
+          "shippingCost": null,
+          "insuranceCost": null,
+          "turnaroundDays": null,
+          "declaredValueLimit": null,
+          "gradeDistribution": null,
+          "soldPriceByGrade": null,
+          "expectedNet": null,
+          "status": "not_evaluated"
+        },
+        {
+          "company": "CGC",
+          "serviceTier": null,
+          "gradingFee": null,
+          "shippingCost": null,
+          "insuranceCost": null,
+          "turnaroundDays": null,
+          "declaredValueLimit": null,
+          "gradeDistribution": null,
+          "soldPriceByGrade": null,
+          "expectedNet": null,
+          "status": "not_evaluated"
+        },
+        {
+          "company": "SGC",
+          "serviceTier": null,
+          "gradingFee": null,
+          "shippingCost": null,
+          "insuranceCost": null,
+          "turnaroundDays": null,
+          "declaredValueLimit": null,
+          "gradeDistribution": null,
+          "soldPriceByGrade": null,
+          "expectedNet": null,
+          "status": "not_evaluated"
+        }
+      ],
+      "sportsIdentityAudit": {
+        "category": "sports",
+        "benchmarkType": "unspecified",
+        "fields": {
+          "player": "Konnor Griffin",
+          "year": "2024",
+          "manufacturer": "Bowman",
+          "product": "Bowman Chrome Prospects",
+          "cardNumber": "BCP-86",
+          "parallel": "Mojo Refractor",
+          "team": null,
+          "sport": null,
+          "serialNumber": null,
+          "autoOrRelic": "none"
+        },
+        "missing": [],
+        "issues": [],
+        "status": "complete_unverified",
+        "catalogVerified": false,
+        "photoVerified": false,
+        "soldLookupEligible": false
+      },
+      "marketData": {
+        "success": true,
+        "count": 1,
+        "items": [
+          {
+            "title": "DEMO — SYNTHETIC DATA — 2024 Bowman Chrome Prospects Konnor Griffin Mojo Refractor #BCP-86",
+            "itemId": "v1|123456789012|0",
+            "itemWebUrl": "https://www.ebay.com/itm/123456789012",
+            "image": null,
+            "price": {
+              "value": "42.50",
+              "currency": "USD"
+            },
+            "condition": "Synthetic ungraded listing example",
+            "accepted": true,
+            "rejectionReasons": []
+          }
+        ],
+        "rawComparableItems": [],
+        "rejectedItems": [],
+        "marketSummary": {}
+      },
+      "imageAnalysis": {
+        "identifiedLanguage": "English",
+        "identifiedFranchise": null,
+        "identifiedYear": "2024",
+        "identifiedManufacturer": "Bowman",
+        "identifiedSport": null,
+        "identifiedTeam": null,
+        "identifiedSerialNumber": null,
+        "identifiedBrandSet": "Bowman Chrome Prospects",
+        "identifiedSubject": "Konnor Griffin",
+        "identifiedCardNumber": "BCP-86",
+        "identifiedParallel": "Mojo Refractor",
+        "identifiedAutoOrRelic": "none",
+        "identityConfidence": 98,
+        "identityNotes": "Card identity could not be confidently determined.",
+        "centering": null,
+        "corners": null,
+        "edges": null,
+        "surface": null,
+        "centeringNote": "Unassessable centering; a defect cannot be established.",
+        "cornersNote": "Possible corners whitening; unconfirmed, inspect the physical card. Possible corners whitening; unconfirmed, inspect the physical card. Possible corners whitening; unconfirmed, inspect the physical card.",
+        "edgesNote": "Possible edges whitening; unconfirmed, inspect the physical card.",
+        "surfaceNote": "Unassessable surface; a defect cannot be established. Unassessable surface; a defect cannot be established.",
+        "overallScore": null,
+        "gradingRisk": "Photo inspection can miss defects; inspect the physical card.",
+        "estimatedGrade": null,
+        "worthGrading": null,
+        "worthGradingReason": "Grading recommendations are withheld until identity, version and matching market evidence are verified. Visual condition observations remain available.",
+        "gradeCeiling": null,
+        "primaryLimiter": "Possible corners whitening; unconfirmed, inspect the physical card.",
+        "majorGradeCap": "A grade ceiling cannot be established from these observations.",
+        "confidenceLevel": null,
+        "imageSummary": "Card identity is unverified. Photo observations: Possible corners whitening; unconfirmed, inspect the physical card. Possible corners whitening; unconfirmed, inspect the physical card. Possible corners whitening; unconfirmed, inspect the physical card. Possible edges whitening; unconfirmed, inspect the physical card. Unassessable surface; a defect cannot be established. Unassessable surface; a defect cannot be established. Unassessable centering; a defect cannot be established. Image resolution limits inspection. Camera angle limits inspection and centering measurement. These observations do not establish a PSA grade.",
+        "mostLikelyGradeRange": null,
+        "psa10Upside": null,
+        "gemRiskFactors": [
+          "Possible corners whitening; unconfirmed, inspect the physical card.",
+          "Possible corners whitening; unconfirmed, inspect the physical card.",
+          "Possible corners whitening; unconfirmed, inspect the physical card.",
+          "Possible edges whitening; unconfirmed, inspect the physical card.",
+          "Unassessable surface; a defect cannot be established.",
+          "Unassessable surface; a defect cannot be established.",
+          "Unassessable centering; a defect cannot be established.",
+          "Image resolution limits inspection.",
+          "Camera angle limits inspection and centering measurement."
+        ],
+        "minorConcerns": "Possible corners whitening; unconfirmed, inspect the physical card. Possible corners whitening; unconfirmed, inspect the physical card. Possible corners whitening; unconfirmed, inspect the physical card. Possible edges whitening; unconfirmed, inspect the physical card. Unassessable surface; a defect cannot be established. Unassessable surface; a defect cannot be established. Unassessable centering; a defect cannot be established.",
+        "conditionAssessments": {
+          "centering": {
+            "observations": [
+              {
+                "side": "front",
+                "certainty": "unassessable",
+                "region": [
+                  0,
+                  0,
+                  0.1,
+                  0.1
+                ],
+                "cue": "truncated_print_border",
+                "code": "miscut",
+                "reasonCodes": [
+                  "global_photo_limitation",
+                  "support_confidence_insufficient"
+                ],
+                "text": "Unassessable centering; a defect cannot be established."
+              }
+            ],
+            "sides": [
+              "front"
+            ],
+            "state": "unassessable"
+          },
+          "corners": {
+            "observations": [
+              {
+                "side": "back",
+                "certainty": "suspected",
+                "region": [
+                  0.01,
+                  0.01,
+                  0.08,
+                  0.08
+                ],
+                "cue": "localized_color_loss",
+                "code": "whitening",
+                "reasonCodes": [
+                  "global_photo_limitation"
+                ],
+                "text": "Possible corners whitening; unconfirmed, inspect the physical card."
+              },
+              {
+                "side": "back",
+                "certainty": "suspected",
+                "region": [
+                  0.9,
+                  0.01,
+                  0.08,
+                  0.08
+                ],
+                "cue": "localized_color_loss",
+                "code": "whitening",
+                "reasonCodes": [
+                  "global_photo_limitation"
+                ],
+                "text": "Possible corners whitening; unconfirmed, inspect the physical card."
+              },
+              {
+                "side": "back",
+                "certainty": "suspected",
+                "region": [
+                  0.01,
+                  0.9,
+                  0.08,
+                  0.08
+                ],
+                "cue": "localized_color_loss",
+                "code": "whitening",
+                "reasonCodes": [
+                  "global_photo_limitation"
+                ],
+                "text": "Possible corners whitening; unconfirmed, inspect the physical card."
+              }
+            ],
+            "sides": [
+              "back"
+            ],
+            "state": "suspected_defect"
+          },
+          "edges": {
+            "observations": [
+              {
+                "side": "back",
+                "certainty": "suspected",
+                "region": [
+                  0.01,
+                  0.4,
+                  0.03,
+                  0.1
+                ],
+                "cue": "localized_color_loss",
+                "code": "whitening",
+                "reasonCodes": [
+                  "global_photo_limitation"
+                ],
+                "text": "Possible edges whitening; unconfirmed, inspect the physical card."
+              }
+            ],
+            "sides": [
+              "back"
+            ],
+            "state": "suspected_defect"
+          },
+          "surface": {
+            "observations": [
+              {
+                "side": "front",
+                "certainty": "unassessable",
+                "region": [
+                  0.4,
+                  0.4,
+                  0.1,
+                  0.1
+                ],
+                "cue": "surface_line",
+                "code": "scratches",
+                "reasonCodes": [
+                  "global_photo_limitation",
+                  "support_confidence_insufficient"
+                ],
+                "text": "Unassessable surface; a defect cannot be established."
+              },
+              {
+                "side": "back",
+                "certainty": "unassessable",
+                "region": [
+                  0.4,
+                  0.4,
+                  0.1,
+                  0.1
+                ],
+                "cue": "surface_line",
+                "code": "scratches",
+                "reasonCodes": [
+                  "global_photo_limitation",
+                  "support_confidence_insufficient"
+                ],
+                "text": "Unassessable surface; a defect cannot be established."
+              }
+            ],
+            "sides": [
+              "front",
+              "back"
+            ],
+            "state": "unassessable"
+          }
+        },
+        "visualEvidenceVersion": 4,
+        "conditionEvidenceLimits": {
+          "observationsExceeded": false,
+          "coverageExceeded": false
+        },
+        "inspectionCoverage": [
+          {
+            "side": "front",
+            "attribute": "centering",
+            "status": "unassessable",
+            "regions": [],
+            "limitations": [],
+            "reason": "coverage_not_established",
+            "basis": "model_observation",
+            "wholeAttributeVerified": false
+          },
+          {
+            "side": "front",
+            "attribute": "corners",
+            "status": "unassessable",
+            "regions": [],
+            "limitations": [],
+            "reason": "coverage_not_established",
+            "basis": "model_observation",
+            "wholeAttributeVerified": false
+          },
+          {
+            "side": "front",
+            "attribute": "edges",
+            "status": "unassessable",
+            "regions": [],
+            "limitations": [],
+            "reason": "coverage_not_established",
+            "basis": "model_observation",
+            "wholeAttributeVerified": false
+          },
+          {
+            "side": "front",
+            "attribute": "surface",
+            "status": "unassessable",
+            "regions": [],
+            "limitations": [],
+            "reason": "coverage_not_established",
+            "basis": "model_observation",
+            "wholeAttributeVerified": false
+          },
+          {
+            "side": "back",
+            "attribute": "centering",
+            "status": "unassessable",
+            "regions": [],
+            "limitations": [],
+            "reason": "coverage_not_established",
+            "basis": "model_observation",
+            "wholeAttributeVerified": false
+          },
+          {
+            "side": "back",
+            "attribute": "corners",
+            "status": "unassessable",
+            "regions": [],
+            "limitations": [],
+            "reason": "coverage_not_established",
+            "basis": "model_observation",
+            "wholeAttributeVerified": false
+          },
+          {
+            "side": "back",
+            "attribute": "edges",
+            "status": "unassessable",
+            "regions": [],
+            "limitations": [],
+            "reason": "coverage_not_established",
+            "basis": "model_observation",
+            "wholeAttributeVerified": false
+          },
+          {
+            "side": "back",
+            "attribute": "surface",
+            "status": "unassessable",
+            "regions": [],
+            "limitations": [],
+            "reason": "coverage_not_established",
+            "basis": "model_observation",
+            "wholeAttributeVerified": false
+          }
+        ],
+        "localizationVerified": false,
+        "centeringGeometryVerified": false,
+        "centeringMeasurementStatus": "unavailable",
+        "modelPhotoNotes": [],
+        "inspectedSides": [
+          "front",
+          "back"
+        ],
+        "visualObservations": [
+          {
+            "attribute": "corners",
+            "code": "whitening",
+            "certainty": "suspected",
+            "reportedCertainty": "suspected",
+            "evidence": {
+              "side": "back",
+              "region": [
+                0.01,
+                0.01,
+                0.08,
+                0.08
+              ],
+              "cue": "localized_color_loss",
+              "confidence": 0.6
+            },
+            "localizationStatus": "model_proposed",
+            "reasonCodes": [
+              "global_photo_limitation"
+            ]
+          },
+          {
+            "attribute": "corners",
+            "code": "whitening",
+            "certainty": "suspected",
+            "reportedCertainty": "suspected",
+            "evidence": {
+              "side": "back",
+              "region": [
+                0.9,
+                0.01,
+                0.08,
+                0.08
+              ],
+              "cue": "localized_color_loss",
+              "confidence": 0.6
+            },
+            "localizationStatus": "model_proposed",
+            "reasonCodes": [
+              "global_photo_limitation"
+            ]
+          },
+          {
+            "attribute": "corners",
+            "code": "whitening",
+            "certainty": "suspected",
+            "reportedCertainty": "suspected",
+            "evidence": {
+              "side": "back",
+              "region": [
+                0.01,
+                0.9,
+                0.08,
+                0.08
+              ],
+              "cue": "localized_color_loss",
+              "confidence": 0.6
+            },
+            "localizationStatus": "model_proposed",
+            "reasonCodes": [
+              "global_photo_limitation"
+            ]
+          },
+          {
+            "attribute": "edges",
+            "code": "whitening",
+            "certainty": "suspected",
+            "reportedCertainty": "suspected",
+            "evidence": {
+              "side": "back",
+              "region": [
+                0.01,
+                0.4,
+                0.03,
+                0.1
+              ],
+              "cue": "localized_color_loss",
+              "confidence": 0.6
+            },
+            "localizationStatus": "model_proposed",
+            "reasonCodes": [
+              "global_photo_limitation"
+            ]
+          },
+          {
+            "attribute": "surface",
+            "code": "scratches",
+            "certainty": "unassessable",
+            "reportedCertainty": "unassessable",
+            "evidence": {
+              "side": "front",
+              "region": [
+                0.4,
+                0.4,
+                0.1,
+                0.1
+              ],
+              "cue": "surface_line",
+              "confidence": 0.2
+            },
+            "localizationStatus": "model_proposed",
+            "reasonCodes": [
+              "global_photo_limitation",
+              "support_confidence_insufficient"
+            ]
+          },
+          {
+            "attribute": "surface",
+            "code": "scratches",
+            "certainty": "unassessable",
+            "reportedCertainty": "unassessable",
+            "evidence": {
+              "side": "back",
+              "region": [
+                0.4,
+                0.4,
+                0.1,
+                0.1
+              ],
+              "cue": "surface_line",
+              "confidence": 0.2
+            },
+            "localizationStatus": "model_proposed",
+            "reasonCodes": [
+              "global_photo_limitation",
+              "support_confidence_insufficient"
+            ]
+          },
+          {
+            "attribute": "centering",
+            "code": "miscut",
+            "certainty": "unassessable",
+            "reportedCertainty": "unassessable",
+            "evidence": {
+              "side": "front",
+              "region": [
+                0,
+                0,
+                0.1,
+                0.1
+              ],
+              "cue": "truncated_print_border",
+              "confidence": 0.2
+            },
+            "localizationStatus": "model_proposed",
+            "reasonCodes": [
+              "global_photo_limitation",
+              "support_confidence_insufficient"
+            ]
+          }
+        ],
+        "imageLimitations": [
+          "limited_resolution",
+          "perspective"
+        ],
+        "visualSafetyFlags": {
+          "structuralDamage": false,
+          "unverifiedStructuralRisk": false,
+          "imageQualityLimited": true
+        },
+        "psa9Probability": null,
+        "psa10Probability": null,
+        "gradeProbabilities": null,
+        "gradingRecommendation": null,
+        "submissionRecommendation": null,
+        "identityReadings": [],
+        "identityObservationOnly": true
+      },
+      "atlas": null,
+      "atlasIdentityConfidence": {
+        "score": 100,
+        "level": "Very High",
+        "reasons": [
+          "Subject identified",
+          "Set identified",
+          "Collector number identified",
+          "Parallel identified",
+          "Manufacturer identified",
+          "Language identified",
+          "Year identified"
+        ]
+      },
+      "canonicalCard": {
+        "subject": "Konnor Griffin",
+        "year": "2024",
+        "brandSet": "Bowman Chrome Prospects",
+        "parallel": "Mojo Refractor",
+        "cardNumber": "BCP-86",
+        "autoOrRelic": "none",
+        "confidence": 98,
+        "displayName": "2024 Bowman Chrome Prospects Konnor Griffin Mojo Refractor #BCP-86",
+        "notes": "Card identity could not be confidently determined."
+      },
+      "identityEvidence": {
+        "status": "unverified",
+        "verified": false,
+        "contradictions": [],
+        "missing": [],
+        "observed": {
+          "subject": "Konnor Griffin",
+          "set": "Bowman Chrome Prospects",
+          "number": "BCP-86",
+          "year": "2024",
+          "parallel": "Mojo Refractor"
+        },
+        "supplied": {
+          "cardName": null,
+          "cardSet": null
+        },
+        "candidatesComplete": true,
+        "note": "Photo fields are provisional until verified against a catalog and card artwork."
+      },
+      "catalogCrossCheck": {
+        "status": "not_checked",
+        "verified": false
+      },
+      "soldIdentityGate": {
+        "status": "blocked",
+        "allowed": false,
+        "reason": "unsupported_catalog",
+        "identity": null
+      },
+      "hasImageAnalysis": true,
+      "remaining": 4,
+      "emailSaved": false,
+      "financialDecision": {
+        "version": 1,
+        "status": "withheld",
+        "allowed": false,
+        "actionable": false,
+        "reasons": [
+          "independent_identity_unverified",
+          "physical_printing_unverified",
+          "qualified_completed_sales_bridge_unavailable"
+        ]
+      },
+      "valuationVerification": {
+        "status": "untrusted",
+        "reason": "independent_identity_unverified",
+        "explanation": "Valuation and grading recommendations are withheld. Exact identity, physical printing and qualified completed-sale evidence have not been independently verified."
+      },
+      "cardTitle": "2024 Bowman Chrome Prospects Konnor Griffin Mojo Refractor #BCP-86",
+      "cardMeta": "2024 Bowman Chrome Prospects",
+      "rawValue": null,
+      "psa9Value": null,
+      "psa10Value": null,
+      "psa10Probability": null,
+      "psa9Probability": null,
+      "gradingUpside": null,
+      "expectedGradedValue": null,
+      "expectedNetValue": null,
+      "decisionConfidence": null,
+      "gemPredictScore": null,
+      "psa9Pop": null,
+      "psa10Pop": null,
+      "populationInsight": null,
+      "verdict": "withheld",
+      "action": "Valuation and grading recommendations are withheld. Exact identity, physical printing and qualified completed-sale evidence have not been independently verified.",
+      "analysis": "Valuation and grading recommendations are withheld. Exact identity, physical printing and qualified completed-sale evidence have not been independently verified.",
+      "financialBasis": null,
+      "recommendation": null
+    }
+  },
+  "demoFixtureBundleMarker": "gempredict-private-synthetic-fixtures-v1"
+}

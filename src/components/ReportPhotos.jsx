@@ -1,0 +1,12 @@
+import React,{useState,useEffect} from 'react';
+export default function ReportPhotos({photos}){
+ const [side,setSide]=useState('front'),[urls,setUrls]=useState({}),[failed,setFailed]=useState({});
+ useEffect(()=>{const next={};for(const s of ['front','back'])if(photos?.[s] instanceof Blob&&photos[s].type==='image/jpeg')next[s]=URL.createObjectURL(photos[s]);setUrls(next);setFailed({});return ()=>Object.values(next).forEach(url=>URL.revokeObjectURL(url));},[photos]);
+ const available=urls[side]&&!failed[side];
+ if(!photos)return <section className="gp-report-photo gp-photo-empty" aria-label="Submitted card photographs" style={{padding:14,background:'#f5f3ee',border:'1px solid #e3e0d8',borderRadius:14,color:'#66695f'}}><p style={{fontSize:13,margin:0}}>Photo unavailable</p><details style={{fontSize:11,marginTop:8}}><summary>Photo availability</summary><p>Submitted photos are not retained in saved or restored reports. Re-upload to view them. No catalog artwork is substituted.</p></details></section>;
+ return <section className={available?'gp-report-photo':'gp-report-photo gp-photo-empty'} aria-label="Submitted card photographs" style={{padding:14,background:'#f5f3ee',border:'1px solid #e3e0d8',borderRadius:14,color:'#171914'}}>
+  <div style={{display:'flex',alignItems:'center',justifyContent:'space-between',gap:8,marginBottom:available?12:4}}><span style={{fontSize:11,color:'#66695f'}}>Your photograph</span><div style={{display:'flex',gap:4}}>{['front','back'].map(s=><button type="button" key={s} aria-pressed={side===s} onClick={()=>setSide(s)} style={{padding:'8px 12px',minHeight:44,border:side===s?'1px solid #7b6740':'1px solid transparent',borderRadius:8,background:side===s?'#fff5d9':'transparent',color:side===s?'#835419':'#5e6355',fontSize:12}}>{s==='front'?'Front':'Back'}</button>)}</div></div>
+  {available?<img src={urls[side]} alt={`${side==='front'?'Front':'Back'} submitted card photograph`} onError={()=>setFailed(f=>({...f,[side]:true}))} style={{display:'block',width:'100%',maxHeight:360,objectFit:'contain',imageOrientation:'from-image',borderRadius:8}}/>:<p style={{fontSize:14,margin:'10px 0',color:'#62675b'}}>Photo unavailable</p>}
+  <details style={{fontSize:11}}><summary>Photo privacy &amp; availability</summary><p>{photos?.[side]?'Your submitted photograph · session only.':photos?'This photograph was not supplied.':'Submitted photos are not retained in saved or restored reports. Re-upload to view them.'} No catalog artwork is substituted.</p></details>
+ </section>;
+}

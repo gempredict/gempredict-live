@@ -1,0 +1,16 @@
+{
+  "evidenceKind": "owner_reported_historical_diagnostic_summary",
+  "scanId": "45296da2-85b0-47d9-b4f7-824e11538b0d",
+  "contextCommit": "1579cf6b5c80fa433e7d5aece4429c0390e7f891",
+  "deploymentCommit": null,
+  "reportedOriginalProposal": {"subject":"Fraxure","year":"2019","cardNumber":"155/236","set":"Cosmic Eclipse","finish":"Reverse Holo"},
+  "ownerReviewedCoreIdentity": {"subject":"Fraxure","year":"2019","cardNumber":"155/236","set":"Sun & Moon—Unified Minds"},
+  "reportedCatalogReference": "sm11-155",
+  "reportedResult": {"displayedSet":"Cosmic Eclipse","catalogAndFinishConflictsPresent":true},
+  "rawDiagnosticAvailable": false,
+  "originalUserFields": null,
+  "hostedFinishFlags": null,
+  "physicalPrintingVerified": false,
+  "accuracyScoringEligible": false,
+  "note": "Historical owner summary retained unchanged. Full diagnostic, inputs and exact hosted finish schema not retained. Offline fixtures and their schema-valid release-date/rarity/variant values are synthetic; they are not recovered provider responses or a new scan."
+}

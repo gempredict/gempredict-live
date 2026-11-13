@@ -1,0 +1,336 @@
+{
+  "version": 1,
+  "baselineCommit": "2e7f53177d7118d875943eee69a3ef45d42a1140",
+  "cohortId": "phase3l-reference-pair-v1",
+  "categoryPlan": {
+    "pokemon_standard": 1,
+    "sports_parallel": 1
+  },
+  "samplingPolicy": "Each owner-initiated attempt is retained separately. Synthetic/historical fixtures are never new real-card outcomes. No aggregate accuracy percentage.",
+  "cards": [
+    {
+      "id": "GP-3L-FRAXURE",
+      "category": "pokemon_standard",
+      "displayName": "2019 Unified Minds Fraxure #155/236 — Reverse Holo",
+      "physicalCardId": null,
+      "selection": "owner_reference_pending_photo_review",
+      "photos": {
+        "front": {
+          "status": "not_retained",
+          "sha256": null
+        },
+        "back": {
+          "status": "not_retained",
+          "sha256": null
+        }
+      },
+      "groundTruth": {
+        "status": "owner_declared_not_independently_reviewed",
+        "reviewer": null,
+        "reviewedAt": null,
+        "fields": {
+          "subject": {
+            "value": "Fraxure",
+            "status": "known",
+            "assertionStatus": "owner_supplied",
+            "source": "owner_phase3l_assignment",
+            "approvedAliases": []
+          },
+          "year": {
+            "value": "2019",
+            "status": "known",
+            "assertionStatus": "owner_supplied",
+            "source": "owner_phase3l_assignment",
+            "approvedAliases": []
+          },
+          "set": {
+            "value": "Sun & Moon Unified Minds",
+            "status": "known",
+            "assertionStatus": "owner_supplied",
+            "source": "owner_phase3l_assignment",
+            "approvedAliases": [
+              "Unified Minds",
+              "Sun & Moon—Unified Minds",
+              "Sun & Moon: Unified Minds"
+            ]
+          },
+          "cardNumber": {
+            "value": "155/236",
+            "status": "known",
+            "assertionStatus": "owner_supplied",
+            "source": "owner_phase3l_assignment",
+            "approvedAliases": []
+          },
+          "parallel": {
+            "value": "Reverse Holo",
+            "status": "known",
+            "assertionStatus": "owner_supplied",
+            "source": "owner_phase3l_assignment",
+            "approvedAliases": [
+              "Reverse-Holo"
+            ]
+          },
+          "finish": {
+            "value": "reverse-holo",
+            "status": "known",
+            "assertionStatus": "owner_supplied",
+            "source": "owner_phase3l_assignment",
+            "approvedAliases": [
+              "Reverse Holo"
+            ]
+          },
+          "language": {
+            "value": null,
+            "status": "unknown",
+            "assertionStatus": "not_established",
+            "source": null,
+            "approvedAliases": []
+          },
+          "autoOrRelic": {
+            "value": null,
+            "status": "unknown",
+            "assertionStatus": "not_established",
+            "source": null,
+            "approvedAliases": []
+          },
+          "serialNumber": {
+            "value": null,
+            "status": "unknown",
+            "assertionStatus": "not_established",
+            "source": null,
+            "approvedAliases": []
+          },
+          "printRun": {
+            "value": null,
+            "status": "unknown",
+            "assertionStatus": "not_established",
+            "source": null,
+            "approvedAliases": []
+          }
+        },
+        "sources": [
+          {
+            "kind": "owner_summary",
+            "path": "benchmarks/identity/phase3l/README.md",
+            "supports": [
+              "subject",
+              "year",
+              "set",
+              "cardNumber",
+              "parallel",
+              "finish"
+            ]
+          }
+        ]
+      },
+      "independentReferences": [
+        {
+          "provider": "tcgdex",
+          "id": "sm11-155",
+          "status": "historically_reported_not_independently_retained",
+          "supports": [
+            "subject",
+            "year",
+            "set",
+            "cardNumber"
+          ],
+          "sourcePath": "benchmarks/identity/supplemental/FRAXURE-summary.json",
+          "physicalPrintingVerified": false
+        }
+      ],
+      "independentVerificationStatus": "not_established_for_physical_copy",
+      "conditionReference": {
+        "status": "not_assessed",
+        "ownerApproved": false,
+        "preparedHashes": {
+          "front": null,
+          "back": null
+        },
+        "categories": {
+          "corners": {
+            "status": "NOT TESTED",
+            "referenceId": null
+          },
+          "edges": {
+            "status": "NOT TESTED",
+            "referenceId": null
+          },
+          "surface": {
+            "status": "NOT TESTED",
+            "referenceId": null
+          },
+          "centering": {
+            "status": "NOT TESTED",
+            "referenceId": null
+          }
+        }
+      },
+      "requiredExactFields": [
+        "parallel",
+        "finish",
+        "language",
+        "autoOrRelic",
+        "serialNumber",
+        "printRun"
+      ],
+      "gaps": [
+        "private_prepared_front_and_back",
+        "owner_physical_copy_review",
+        "independent_exact_printing_review",
+        "human_condition_reference",
+        "new_owner_authorized_scan"
+      ]
+    },
+    {
+      "id": "GP-3L-KONNOR",
+      "category": "sports_parallel",
+      "displayName": "2024 Bowman Chrome Prospects Konnor Griffin #BCP-86 — Mojo Refractor",
+      "physicalCardId": null,
+      "selection": "owner_reference_pending_photo_review",
+      "photos": {
+        "front": {
+          "status": "not_retained",
+          "sha256": null
+        },
+        "back": {
+          "status": "not_retained",
+          "sha256": null
+        }
+      },
+      "groundTruth": {
+        "status": "owner_declared_not_independently_reviewed",
+        "reviewer": null,
+        "reviewedAt": null,
+        "fields": {
+          "subject": {
+            "value": "Konnor Griffin",
+            "status": "known",
+            "assertionStatus": "owner_supplied",
+            "source": "owner_phase3l_assignment",
+            "approvedAliases": []
+          },
+          "year": {
+            "value": "2024",
+            "status": "known",
+            "assertionStatus": "owner_supplied",
+            "source": "owner_phase3l_assignment",
+            "approvedAliases": []
+          },
+          "set": {
+            "value": "Bowman Chrome Prospects",
+            "status": "known",
+            "assertionStatus": "owner_supplied",
+            "source": "owner_phase3l_assignment",
+            "approvedAliases": []
+          },
+          "cardNumber": {
+            "value": "BCP-86",
+            "status": "known",
+            "assertionStatus": "owner_supplied",
+            "source": "owner_phase3l_assignment",
+            "approvedAliases": []
+          },
+          "parallel": {
+            "value": "Mojo Refractor",
+            "status": "known",
+            "assertionStatus": "owner_supplied",
+            "source": "owner_phase3l_assignment",
+            "approvedAliases": []
+          },
+          "finish": {
+            "value": "Mojo Refractor",
+            "status": "known",
+            "assertionStatus": "owner_supplied",
+            "source": "owner_phase3l_assignment",
+            "approvedAliases": []
+          },
+          "language": {
+            "value": null,
+            "status": "unknown",
+            "assertionStatus": "not_established",
+            "source": null,
+            "approvedAliases": []
+          },
+          "autoOrRelic": {
+            "value": null,
+            "status": "unknown",
+            "assertionStatus": "not_established",
+            "source": null,
+            "approvedAliases": []
+          },
+          "serialNumber": {
+            "value": null,
+            "status": "unknown",
+            "assertionStatus": "not_established",
+            "source": null,
+            "approvedAliases": []
+          },
+          "printRun": {
+            "value": null,
+            "status": "unknown",
+            "assertionStatus": "not_established",
+            "source": null,
+            "approvedAliases": []
+          }
+        },
+        "sources": [
+          {
+            "kind": "owner_summary",
+            "path": "benchmarks/identity/phase3l/README.md",
+            "supports": [
+              "subject",
+              "year",
+              "set",
+              "cardNumber",
+              "parallel",
+              "finish"
+            ]
+          }
+        ]
+      },
+      "independentReferences": [],
+      "independentVerificationStatus": "not_established_for_physical_copy",
+      "conditionReference": {
+        "status": "not_assessed",
+        "ownerApproved": false,
+        "preparedHashes": {
+          "front": null,
+          "back": null
+        },
+        "categories": {
+          "corners": {
+            "status": "NOT TESTED",
+            "referenceId": null
+          },
+          "edges": {
+            "status": "NOT TESTED",
+            "referenceId": null
+          },
+          "surface": {
+            "status": "NOT TESTED",
+            "referenceId": null
+          },
+          "centering": {
+            "status": "NOT TESTED",
+            "referenceId": null
+          }
+        }
+      },
+      "requiredExactFields": [
+        "parallel",
+        "finish",
+        "language",
+        "autoOrRelic",
+        "serialNumber",
+        "printRun"
+      ],
+      "gaps": [
+        "private_prepared_front_and_back",
+        "owner_physical_copy_review",
+        "independent_exact_printing_review",
+        "human_condition_reference",
+        "new_owner_authorized_scan"
+      ]
+    }
+  ]
+}

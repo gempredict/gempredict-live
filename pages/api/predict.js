@@ -1,3 +1,16 @@
+import {structuredExperimentPreflight,requireStructuredExperiment} from '../../lib/structuredExperiment.mjs';
+import {fullAnalysisStructuredEnabled,fullAnalysisOutputFormat,parseFullAnalysisMessage,fullAnalysisStructuredGuidance} from '../../lib/fullAnalysisSchema.mjs';
+import {verifyConditionValidation} from '../../lib/conditionValidationServer.mjs';
+import {safeIdentityValidation} from '../../lib/identityValidation.mjs';
+import {identifyFromPhotos} from '../../lib/identityStage.mjs';
+import {VISION_MODEL,visionOutputBudget,parseVisionMessage,safeVisionValidation,retainSportsVisionEvidence} from '../../lib/visionResponsePolicy.mjs';
+import {buildSportsVisionPrompt} from '../../lib/visionPromptContract.mjs';
+import {scanFailure,providerFailure} from '../../lib/scanFailures.mjs';
+import {beginScanDiagnostics} from '../../lib/scanDiagnostics.mjs';
+import {conditionPresentation} from '../../lib/visualEvidence.mjs';
+import {buildVisionPrompt} from '../../lib/pokemonVisionPrompt.mjs';
+import {resolvePokemonIdentity} from '../../lib/pokemonIdentityPipeline.mjs';
+import {readIdentityReadings} from '../../lib/visionIdentityEvidence.mjs';
 // pages/api/predict.js
 // GemPredict — Card grading prediction API route
 //
@@ -11,6 +24,9 @@
 //   Text-only (JSON) requests also work: the handler detects content-type
 //   and falls back to req.body when no image is present.
 
+import { financialEligibility, protectFinancialReport } from "../../lib/financialSafety.mjs";
+import { internalMarketContext } from "../../lib/internalMarketAuth.mjs";
+import { identityComplete } from "../../lib/ebayIdentityMatch.mjs";
 import atlasOrchestrator from "../../lib/atlasOrchestrator";
 
 import calculateIdentityConfidence from "../../lib/calculateIdentityConfidence";
@@ -22,6 +38,8 @@ import { canonicalIdentityV2, emptyGraderScenarios } from "../../lib/canonicalId
 import { auditSportsIdentity } from "../../lib/sportsIdentityAudit.mjs";
 import { issueIdentityReviewToken } from "../../lib/identityReviewToken.mjs";
 import { assessArtworkSimilarity } from "../../lib/artworkSimilarity.mjs";
+import { validateAnalysisImage } from "../../lib/uploadValidation.mjs";
+import { MAX_IMAGE_BYTES } from "../../lib/mobileImages.mjs";
 
 import buildSearchCandidates from "../../lib/buildSearchCandidates";
 
@@ -46,7 +64,7 @@ const RATE_LIMIT_WINDOW = 60 * 60 * 1000;
 const CARD_NAME_MIN     = 2;
 const CARD_NAME_MAX     = 80;
 const CARD_SET_MAX      = 60;
-const IMAGE_MAX_BYTES   = 10 * 1024 * 1024;
+const IMAGE_MAX_BYTES   = MAX_IMAGE_BYTES;
 
 const VALID_CARD_TYPES = new Set([
   "pokemon", "sports", "mtg", "yugioh", "dragonball", "onepiece", "tcg",
@@ -130,60 +148,34 @@ async function parseRequest(req) {
     return new Promise(function(resolve, reject) {
       const form = formidable({
         maxFileSize: IMAGE_MAX_BYTES,
+        maxTotalFileSize: 2 * IMAGE_MAX_BYTES,
+        maxFiles: 2,
+        maxFieldsSize: 64 * 1024,
         uploadDir: "/tmp",
-        keepExtensions: true,
-        filter: function(part) {
-          // Only allow image files through
-          return part.mimetype && part.mimetype.startsWith("image/");
-        },
+        keepExtensions: false,
       });
-
-      form.parse(req, function(err, fields, files) {
-        if (err) { reject(err); return; }
-
-        // formidable v3 returns arrays for all values
-        const flat = {};
-        for (const key of Object.keys(fields)) {
-          flat[key] = Array.isArray(fields[key]) ? fields[key][0] : fields[key];
+      form.parse(req, async function(err, fields, files) {
+        const uploaded = Object.values(files || {}).flat();
+        try {
+          if (err) throw err;
+          if (Object.keys(files).some(key => !['image', 'backImage'].includes(key)) ||
+              Object.values(files).some(value => Array.isArray(value) && value.length !== 1)) throw new Error('Unexpected image fields');
+          const flat = {};
+          for (const key of Object.keys(fields)) flat[key] = Array.isArray(fields[key]) ? fields[key][0] : fields[key];
+          const readImage = async key => {
+            const file = Array.isArray(files[key]) ? files[key][0] : files[key];
+            if (!file) return { buffer: null, mime: null };
+            const buffer = fs.readFileSync(file.filepath);
+            return { buffer, mime: await validateAnalysisImage(buffer) };
+          };
+          const front = await readImage('image');
+          const back = await readImage('backImage');
+          if (back.buffer && !front.buffer) throw new Error('Front photo required');
+          resolve({ fields: flat, imageBuffer: front.buffer, imageMimeType: front.mime, backImageBuffer: back.buffer, backImageMimeType: back.mime });
+        } catch (error) { reject(error); }
+        finally {
+          for (const file of uploaded) { try { fs.unlinkSync(file.filepath); } catch {} }
         }
-
-        let imageBuffer = null;
-        let imageMimeType = null;
-        let backImageBuffer = null;
-        let backImageMimeType = null;
-
-        const imageFile = files.image ? (Array.isArray(files.image) ? files.image[0] : files.image) : null;
-        if (imageFile && imageFile.filepath) {
-          try {
-            imageBuffer = fs.readFileSync(imageFile.filepath);
-            imageMimeType = imageFile.mimetype || "image/jpeg";
-            // Clean up temp file — non-fatal
-            try { fs.unlinkSync(imageFile.filepath); } catch {}
-          } catch (readErr) {
-            console.error("[GemPredict] Image read error:", readErr.message);
-          }
-        }
-
-        const backImageFile = files.backImage ? (Array.isArray(files.backImage) ? files.backImage[0] : files.backImage) : null;
-if (backImageFile && backImageFile.filepath) {
-  try {
-    backImageBuffer = fs.readFileSync(backImageFile.filepath);
-    backImageMimeType = backImageFile.mimetype || "image/jpeg";
-
-    // Clean up temp file — non-fatal
-    try { fs.unlinkSync(backImageFile.filepath); } catch {}
-  } catch (readErr) {
-    console.error("[GemPredict] Back image read error:", readErr.message);
-  }
-}
-
-     resolve({
-          fields: flat,
-          imageBuffer,
-          imageMimeType,
-          backImageBuffer,
-          backImageMimeType,
-        });
       });
     });
   }
@@ -303,7 +295,7 @@ gemPredictScore,
 }
 
 // Validate and normalise image analysis response from Claude Vision
-function normaliseImageAnalysis(raw) {
+function normaliseImageAnalysis(raw,inspectedSides=['front'],cardType=null) {
   if (!raw || typeof raw !== "object") return null;
 
   function safeStr(val, fallback) {
@@ -365,6 +357,9 @@ else if (hasObviousStructuralDamage && !saysNoStructuralDamage) {
 }  
   return {  
     // Card identity
+    ...(cardType==='pokemon'?{identifiedRarity:raw.identifiedRarity!=null?safeStr(raw.identifiedRarity,null):null,identityReadings:readIdentityReadings(raw.identityReadings).filter(r=>inspectedSides.includes(r.side))}:{}),
+    identifiedLanguage: raw.identifiedLanguage != null ? safeStr(raw.identifiedLanguage,null) : null,
+    identifiedFranchise: raw.identifiedFranchise != null ? safeStr(raw.identifiedFranchise,null) : null,
     identifiedYear: raw.identifiedYear != null ? safeStr(raw.identifiedYear, null) : null,
     identifiedManufacturer: raw.identifiedManufacturer != null ? safeStr(raw.identifiedManufacturer, null) : null,
     identifiedSport: raw.identifiedSport != null ? safeStr(raw.identifiedSport, null) : null,
@@ -433,11 +428,13 @@ gemRiskFactors:
     : [],
 
 minorConcerns: safeStr(raw.minorConcerns, "No additional visible concerns identified."),
+    ...conditionPresentation({...raw,inspectedSides,imageLimitations:[...(Array.isArray(raw.imageLimitations)?raw.imageLimitations:[]),...(!inspectedSides.includes('back')?['back_not_visible']:[])]}),
+    ...(cardType!=='pokemon'?{identityReadings:retainSportsVisionEvidence(raw,inspectedSides).identityReadings}:{}),
   };
 }
 // ─── Anthropic client ─────────────────────────────────────────────────────────
 const anthropic = process.env.CLAUDE_API_KEY
-  ? new Anthropic({ apiKey: process.env.CLAUDE_API_KEY })
+  ? new Anthropic({ apiKey: process.env.CLAUDE_API_KEY, maxRetries: 0, logLevel: 'off' })
   : null;
 
 // ─── Text-only prediction (existing logic, unchanged) ─────────────────────────
@@ -453,51 +450,9 @@ async function fetchPrediction(
 const setLabel       = cardSet || "not specified";
 const conditionLabel = CONDITION_LABELS[condition] || CONDITION_LABELS.strong;
 
-let preMarketData = null;
-let preLiveRawMarket = null;
+// Preliminary unstructured pricing was removed. Only canonical local screening may supply discovery evidence.
+const marketContext = "";
 
-try {
-  const preMarketQuery = [
-    cardName,
-    cardSet,
-  ]
-    .filter(Boolean)
-    .join(" ")
-    .replace(/Prospect Auto or Base/gi, "")
-    .replace(/Prospects/gi, "")
-    .replace(/Auto/gi, "")
-    .replace(/Base/gi, "")
-    .replace(/Parallel/gi, "")
-    .replace(/,/g, " ")
-    .replace(/\s+/g, " ")
-    .trim();
-
-  const baseUrl =
-    process.env.NEXT_PUBLIC_SITE_URL || "https://gempredict-live.vercel.app";
-
-  const preMarketUrl =
-    `${baseUrl}/api/ebay-search?q=` + encodeURIComponent(preMarketQuery);
-
-  const preMarketRes = await fetch(preMarketUrl);
-  const preMarketJson = await preMarketRes.json();
-
-  if (preMarketRes.ok && preMarketJson.success) {
-    preMarketData = preMarketJson;
-    preLiveRawMarket = preMarketJson?.marketSummary?.rawMedian ?? null;
-  }
-} catch (err) {
-  preMarketData = null;
-  preLiveRawMarket = null;
-}
-
-const marketContext =
-  preLiveRawMarket != null
-    ? "\n\nLIVE MARKET DATA:\n" +
-      "- Median active eBay asking price: $" + preLiveRawMarket + "\n" +
-      "- This is NOT a sold price or verified fair market value.\n" +
-      "- Do not treat this ask median as an authoritative valuation baseline.\n"
-    : "";
-  
   const prompt =
   "IMPORTANT MARKET RULES:\n" +
 "- Active eBay listing prices are asking prices, NOT verified completed sales or authoritative market value.\n" +
@@ -577,7 +532,9 @@ async function fetchImageAnalysis(
   backImageBuffer,
   backImageMimeType,
   cardName,
-  cardType
+  cardType,
+  scanDiagnostics=null,
+  structured=false
 ) {
   if (!anthropic) throw new Error("NO_API_KEY");
   if (!imageBuffer || imageBuffer.length === 0) return null;
@@ -601,111 +558,18 @@ const backMime = backImageMimeType &&
   ? backImageMimeType
   : "image/jpeg";
 
-  const imagePrompt =
-  "You are an expert card pre-grader helping a collector decide whether this card is worth submitting to PSA.\n\n" +
-  "Card name: " + (cardName || "unknown") + "\n" +
-  "Card type: " + typeLabel + "\n\n" +
+  const imagePrompt=buildSportsVisionPrompt({cardName,typeLabel,hasBack:!!backBase64});
 
-  "Your job is NOT to guarantee a PSA grade. Your job is to identify visible grade limiters and estimate the card's realistic grading ceiling from the image.\n\n" +
-
-  "Assess ONLY what is visible in the uploaded image. If the back of the card is not visible, say that this limits confidence. If glare, sleeve reflection, angle, blur, or low resolution limits surface inspection, say so.\n\n" +
-
-  "Think like a strict PSA pre-screen reviewer:\n" +
-  "- Centering can cap the grade even if the card is otherwise clean.\n" +
-  "- Surface defects are often the biggest hidden risk, especially for holo, chrome, foil, and glossy cards.\n" +
-    "- Surface analysis is confidence-sensitive. If glare, shadows, sleeve plastic, blur, reflections, or low image quality prevent reliable inspection, clearly explain that surface confidence is limited instead of assuming the surface is clean.\n" +
-  "- Corners and edges should be evaluated for whitening, chipping, fraying, soft corners, dents, and rough cuts.\n" +
-  "- One moderate defect can cap the card below a PSA 10 even if other categories look strong.\n" +
-    "If any visible crease, bend, dent, corner bend, surface indentation, peeling, major whitening, heavy edge wear, or wrinkle is detected, it MUST be listed as the primaryLimiter and majorGradeCap. Do not say 'no major limiter identified' when a visible crease, bend, or corner damage exists.\n" +
-    "Avoid generic grading summaries. Identify the most likely grade cap first, then describe smaller concerns separately.\n" +
-    "Hard grading rules:\n" +
-"- If a visible crease, wrinkle, bend, dent, peeling layer, or corner fold exists, PSA 10 is impossible.\n" +
-"- Visible structural damage must always appear in both primaryLimiter and majorGradeCap.\n" +
-"- If visible whitening exists, do not say 'no concerns identified'.\n" +
-"- If surface glare or image quality prevents reliable inspection, confidenceLevel cannot be 'high'.\n" +
-"- If corners show visible bends or softening, those issues must appear in minorConcerns or majorGradeCap.\n" +
-"- If multiple moderate flaws exist together, the grade ceiling should drop accordingly.\n" +
-"- Do not give optimistic grades when visible defects clearly cap the card lower.\n\n" +
-    "- If visible surface scratches, print lines, chrome lines, dents, dimples, roller marks, or holo scratches are present, surface cannot be rated excellent.\n" +
-"- If surface scratches or print lines are clearly visible, they must appear in primaryLimiter, majorGradeCap, or minorConcerns depending on severity.\n" +
-"- For Pokemon holo, foil, chrome, and glossy cards, visible surface scratches should materially reduce PSA 10 confidence.\n" +
-  "- Do not give a PSA 10 candidate label unless all visible categories look exceptionally clean and image quality is good enough to justify it.\n\n" +
-
-  "Use card-type awareness:\n" +
-  "- Pokemon/TCG: pay close attention to holo scratches, whitening, silvering, edge chipping, print lines, and surface dents.\n" +
-  "- Chrome/sports parallels: pay close attention to centering, surface lines, dimples, print defects, roller marks, and corner sharpness.\n" +
-  "- Vintage cards: be stricter about corner softness, edge wear, print registration, staining, and overall eye appeal.\n\n" +
-
-  "Important consistency rule:\n" +
-  "The final overallScore and estimatedGrade MUST logically follow the category ratings and notes. If centering, corners, edges, and surface are all good or excellent with no meaningful defect, the card should generally project as PSA 9 or better unless image confidence is low. If you assign a lower score, explicitly explain the grade-capping issue.\n\n" +
-
-"Card identification task:\n" +
-"- Identify the card as specifically as possible from the image and provided card name.\n" +
-"- Look for year, brand, set, player/character, card number, parallel, serial numbering, autograph/relic indicators, and visible text.\n" +
-"- Do not invent details. If a detail is uncertain, use null and explain uncertainty in identityNotes.\n" +
-"- identityConfidence should be high only when visible card text and provided card name strongly agree.\n\n" +
-
-  "Respond with ONLY a single raw JSON object. No markdown. No backticks. No extra text.\n\n" +
-
-  "Required fields:\n" +
-  "identifiedYear - likely card year if visible or inferable, otherwise null (string or null)\n" +
-"identifiedFranchise - broad card universe such as Pokemon, Baseball, Basketball, Football, Hockey, Soccer, Disney Lorcana, Star Wars, One Piece, Magic, Yu-Gi-Oh, Marvel, Garbage Pail Kids, or unknown (string)\n" +
-"identifiedManufacturer - likely maker/publisher such as Pokemon, Topps, Panini, Upper Deck, Wizards of the Coast, Ravensburger, Bandai, Konami, or unknown (string)\n" +
-"identifiedBrandSet - likely brand, product, set, or release name if visible or inferable, otherwise null (string or null)\n" +
-"identifiedSubject - player, character, creature, team, or card subject if visible or inferable, otherwise null (string or null)\n" +
-"identifiedCardNumber - collector/card number exactly as visible if possible, otherwise null (string or null)\n" +
-"identifiedParallel - likely parallel, rarity, insert, variant, foil type, refractor type, color, numbered version, or special treatment if visible or inferable, otherwise null (string or null)\n" +
-"identifiedLanguage - likely card language such as English, Japanese, Korean, Chinese, Spanish, French, German, Italian, Portuguese, or unknown (string)\n" +
-"identifiedAutoOrRelic - one of: auto, relic, auto relic, none, unknown (string)\n" +
-"identityConfidence - 0-100 confidence in the card identity. Be conservative when set, number, language, or parallel are uncertain (integer)\n" +
-"identityNotes - one short sentence explaining which identity facts are strongly supported and which are uncertain (string)\n" +
-  "centering - one of: excellent, good, fair, poor (string)\n" +
-  "centeringNote - specific visible centering assessment, mention left/right and top/bottom if visible (string)\n" +
-  "corners - one of: excellent, good, fair, poor (string)\n" +
-  "cornersNote - specific visible corner assessment, mention any whitening, softness, fraying, bends, or unclear areas (string)\n" +
-  "edges - one of: excellent, good, fair, poor (string)\n" +
-  "edgesNote - specific visible edge assessment, mention whitening, chipping, rough cuts, or unclear areas (string)\n" +
-  "surface - one of: excellent, good, fair, poor (string)\n" +
-  "surfaceNote - specific visible surface assessment, mention scratches, print lines, dimples, glare limitations, haze, staining, or uncertainty (string)\n" +
-  "overallScore - realistic estimated grade ceiling from visible evidence, 1-10 integer (integer)\n" +
-    "gradeCeiling - realistic PSA ceiling based on visible condition like 'PSA 8 ceiling', 'PSA 9 candidate', or 'PSA 10 upside with risk' (string)\n" +
-"primaryLimiter - the single biggest visible issue or uncertainty likely limiting the grade ceiling (string)\n" +
-    "majorGradeCap - the biggest visible issue most likely preventing a higher grade, written collector-style (string)\n" +
-"minorConcerns - short collector-style list of smaller visible risks or uncertainties separated by commas (string)\n" +
-"confidenceLevel - one of: high, moderate, low (string)\n" +
-  "gradingRisk - 1-2 sentences explaining the main grade cap or uncertainty. This must directly justify the overallScore (string)\n" +
-  "estimatedGrade - short collector-friendly label like 'PSA 8 ceiling', 'PSA 9 candidate', 'PSA 9 with PSA 10 upside', or 'PSA 10 candidate but confidence limited' (string)\n" +
-  "mostLikelyGradeRange - short realistic range like 'PSA 8-9 likely' or 'PSA 9 with outside PSA 10 upside' (string)\n" +
-  "psa10Upside - one sentence explaining whether PSA 10 is realistically achievable from the visible image (string)\n" +
-  "gemRiskFactors - array of 2-4 short PSA 10 risk factors focused on collector submission concerns (array of strings)\n" +
-  "worthGrading - based only on visible condition, whether the card appears worth grading before considering market value (boolean)\n" +
-  "worthGradingReason - 1 sentence explaining the grading recommendation from visible condition only (string)\n" +
-  "imageSummary - 1-2 sentences summarizing the card's visible condition and confidence level (string)\n\n" +
-
-  "Rating scale:\n" +
-  "excellent = no meaningful visible flaw in that category\n" +
-  "good = minor visible flaw or slight uncertainty\n" +
-  "fair = moderate visible flaw that may cap grade\n" +
-  "poor = significant visible flaw likely to strongly cap grade\n\n" +
-
-  "Scoring guidance:\n" +
-  "10 = only if all visible categories are excellent and image quality is strong\n" +
-  "9 = strong card with only minor visible concerns or limited image uncertainty\n" +
-  "8 = clean-looking card with one meaningful limiter or moderate uncertainty\n" +
-  "7 or below = visible moderate-to-major flaw, multiple issues, or poor image confidence\n\n" +
-
-    "Confidence guidance:\n" +
-"high = strong image quality with clearly visible surfaces, corners, and edges\n" +
-"moderate = some uncertainty from glare, angle, reflections, or missing card back\n" +
-"low = image quality too limited for confident grading assessment\n\n" +
-
-  "Be strict, specific, and internally consistent. Avoid canned language.";
-
+  scanDiagnostics?.vision('request_started',cardType,structured?'json_schema':'prompt_json');
+  const visionStarted=Date.now();
+  scanDiagnostics?.providerAttempt(structured);
   const message = await anthropic.messages.create({
-    model: "claude-sonnet-4-6", max_tokens: 2400,
+    model: VISION_MODEL, max_tokens: visionOutputBudget(!!backBase64),
+    ...(structured?{output_config:{format:fullAnalysisOutputFormat(!!backBase64,cardType)}}:{}),
     messages: [{
       role: "user",
       content: [
+  ...(cardType==='pokemon'?[{type:"text",text:"Image 1 — FRONT photo."}]:[]),
   {
     type: "image",
     source: {
@@ -716,7 +580,7 @@ const backMime = backImageMimeType &&
   },
 
   ...(backBase64
-    ? [{
+    ? [...(cardType==='pokemon'?[{type:"text",text:"Image 2 — BACK photo."}]:[]),{
         type: "image",
         source: {
           type: "base64",
@@ -728,36 +592,40 @@ const backMime = backImageMimeType &&
 
   {
     type: "text",
-    text: imagePrompt +
-      (backBase64
-        ? "\n\nBoth front and back images are provided. Evaluate both sides when assessing confidence, corners, edges, whitening, and grading risk."
-        : "\n\nOnly the front image is provided. Missing back image should reduce confidence where appropriate."),
+    text: (cardType==='pokemon'?buildVisionPrompt({cardName,typeLabel,hasBack:!!backBase64}):imagePrompt)+(structured?fullAnalysisStructuredGuidance:''),
   },
       ],
     }],
+  }).catch(error=>{
+    scanDiagnostics?.providerLatency(Date.now()-visionStarted);
+    if(structured){
+      scanDiagnostics?.providerRequestFailed(error);
+      const rule=[400,422].includes(error?.status)?'request_rejected':error instanceof SyntaxError||error?.cause instanceof SyntaxError?'transport_invalid':null;
+      if(rule){error.visionValidation=safeVisionValidation({phase:'request',rule});scanDiagnostics?.visionValidation(error.visionValidation);}
+    }
+    throw error; // Never retry or fall back to prompt JSON.
   });
 
-  const text = (message.content || []).map(function(b) { return b.type === "text" ? b.text : ""; }).join("").trim();
-  if (!text) {
-    console.error("[GemPredict] Vision returned empty text", { stopReason: message.stop_reason || "unknown" });
-    return null;
+  scanDiagnostics?.providerLatency(Date.now()-visionStarted);
+  scanDiagnostics?.visionCompletion(message,{maxOutputTokens:visionOutputBudget(!!backBase64),mechanism:structured?'json_schema':'prompt_json'});
+  let parsed;
+  try{parsed=structured?parseFullAnalysisMessage(message,backBase64?['front','back']:['front'],cardType):parseVisionMessage(message);}
+  catch(error){scanDiagnostics?.visionValidation(error.visionValidation);throw error;}
+  scanDiagnostics?.model(parsed);
+  let normalized;
+  try{normalized=normaliseImageAnalysis(parsed,backImageBuffer?['front','back']:['front'],cardType);if(!normalized)throw Error();}
+  catch{scanDiagnostics?.normalized(null);const error=Error('ANALYSIS_NORMALIZATION_FAILED');error.visionValidation=safeVisionValidation({phase:'normalization',rule:'normalization_failed'});scanDiagnostics?.visionValidation(error.visionValidation);throw error;}
+  if(structured){
+    // Preserve the exact validated proposal separately from later canonical corrections.
+    normalized={...normalized,originalIdentityObservation:parsed,identityReadings:parsed.identityReadings,...(parsed.sportsIdentity?{sportsIdentity:parsed.sportsIdentity}:{}),identityConfidence:parsed.identityConfidence};
   }
-  const parsed = extractJSON(text);
-  if (!parsed) {
-    console.error("[GemPredict] Vision JSON parse failed", {
-      stopReason: message.stop_reason || "unknown",
-      textLength: text.length,
-      outputTokens: message.usage?.output_tokens ?? null,
-    });
-    return null;
-  }
-  const normalized = normaliseImageAnalysis(parsed);
-  if (!normalized) console.error("[GemPredict] Vision normalization failed", { stopReason: message.stop_reason || "unknown" });
+  scanDiagnostics?.normalized(normalized);
   return normalized;
 }
 
 // ─── Main handler ─────────────────────────────────────────────────────────────
 export default async function handler(req, res) {
+  const scanDiagnostics = beginScanDiagnostics(req,res);
   if (req.method !== "POST") return res.status(405).json({ error: "Method not allowed." });
 
   const ip = (req.headers["x-forwarded-for"] || "").split(",")[0].trim() || req.socket?.remoteAddress || "unknown";
@@ -785,9 +653,9 @@ imageBuffer = parsed.imageBuffer;
 imageMimeType = parsed.imageMimeType;
 backImageBuffer = parsed.backImageBuffer;
 backImageMimeType = parsed.backImageMimeType;
+await scanDiagnostics?.images(imageBuffer,backImageBuffer);
   } catch (parseErr) {
-    console.error("[GemPredict] Request parse error", parseErr);
-    return res.status(400).json({ error: "Could not read request. Please try again." });
+    const failure=scanFailure('UPLOAD_PROCESSING_FAILED');return res.status(failure.status).json(failure.payload);
   }
 
   const cardName  = sanitiseString(fields.cardName  || "");
@@ -797,6 +665,8 @@ backImageMimeType = parsed.backImageMimeType;
   const cardTypeRaw = typeof fields.cardType === "string" ? fields.cardType.trim().toLowerCase() : "";
   const cardType    = VALID_CARD_TYPES.has(cardTypeRaw) ? cardTypeRaw : "tcg";
 
+  scanDiagnostics?.category(cardType);
+  if(['condition-validation','condition-preflight'].includes(fields.mode))scanDiagnostics?.categorySelection(fields);
   const hasImage = !!imageBuffer;
 const hasTypedCardName = !!(cardName && cardName.trim());
 
@@ -868,7 +738,39 @@ if (hasTypedCardName && looksLikeJunk(cardName)) {
 
   // Image size guard (redundant with formidable limit but belt-and-suspenders)
   if (imageBuffer && imageBuffer.length > IMAGE_MAX_BYTES) {
-    return res.status(400).json({ error: "Image file is too large. Please upload an image under 10 MB." });
+    return res.status(400).json({ error: "Image file is too large. Please upload a prepared image under 1.6 MB." });
+  }
+
+  // Explicitly isolated mode shares the same parser, image checks and hourly cap.
+  if(fields.mode && !['identity','full','condition-validation','condition-preflight'].includes(fields.mode))return res.status(400).json({error:'Unsupported scan mode.'});
+  let conditionValidation=null;
+  if(['condition-validation','condition-preflight'].includes(fields.mode)){
+    try{conditionValidation=await verifyConditionValidation(req,fields,imageBuffer,backImageBuffer);}
+    catch{return res.status(403).json({error:'Controlled validation requires current Preview owner authorization, matching exported prepared files and explicit matching category confirmation.'});}
+    scanDiagnostics?.conditionValidation(conditionValidation);
+  }
+  if(fields.mode==='condition-preflight'){
+    try{res.setHeader('Cache-Control','private, no-store');return res.status(200).json(structuredExperimentPreflight(req,fields,conditionValidation));}
+    catch{return res.status(403).json({error:'Structured preflight requires a current owner session, Sports category and matching frozen pair. No provider request was made.'});}
+  }
+  if(fields.validationMechanism&&!conditionValidation)return res.status(403).json({error:'An explicit experimental mechanism requires verified controlled owner authorization. No provider request or prompt-JSON fallback was made.'});
+  let structuredAnalysis=false;
+  if(conditionValidation&&(fields.validationMechanism||fullAnalysisStructuredEnabled(req,conditionValidation,cardType))){
+    try{structuredAnalysis=requireStructuredExperiment(req,fields,conditionValidation);}
+    catch{return res.status(403).json({error:'Structured experiment blocked: flag, owner authorization, mechanism, cost approval or preflight is missing, stale or mismatched. Run the no-charge preflight again; do not repeat a submitted scan. No provider request or prompt-JSON fallback was made.'});}
+  }
+  if(fields.mode==='identity'){
+    scanDiagnostics?.stage('identity');
+    if(!imageBuffer)return res.status(400).json({error:'A front photograph is required to identify a card.'});
+    try{
+      const identity=await identifyFromPhotos({client:anthropic,front:imageBuffer,frontMime:imageMimeType,back:backImageBuffer,backMime:backImageMimeType,cardType,fields,diagnostics:scanDiagnostics,fetchImpl:fetch});
+      return res.status(200).json({...identity,remaining:rateCheck.remaining});
+    }catch(error){
+      const runtime=error.message==='IDENTITY_VERIFICATION_RUNTIME_FAILED';
+      const failure=runtime?scanFailure('VERIFICATION_RUNTIME_FAILED'):providerFailure(error);
+      if(!runtime&&!['ANALYSIS_PROVIDER_REQUEST_REJECTED','ANALYSIS_PROVIDER_REFUSED','ANALYSIS_TRANSPORT_INVALID','ANALYSIS_RESPONSE_INCOMPLETE','ANALYSIS_EMPTY_RESPONSE','ANALYSIS_RESPONSE_INVALID'].includes(error.message))scanDiagnostics?.vision(error.message==='NO_API_KEY'?'provider_not_configured':[401,403].includes(error.status)?'provider_authentication_failed':error.status===429?'rate_limited':'request_failed');
+      return res.status(failure.status).json({...failure.payload,...(safeIdentityValidation(error.identityValidation)?{identityValidation:safeIdentityValidation(error.identityValidation)}:{})});
+    }
   }
 
   let emailSaved = false;
@@ -883,8 +785,10 @@ if (hasTypedCardName && looksLikeJunk(cardName)) {
     emailSaved = true;
   }
 
+  let failureStage='analysis';
   try {
     let imageAnalysis = null;
+    let analysisFailure=null;
 
     if (imageBuffer) {
       imageAnalysis = await fetchImageAnalysis(
@@ -893,9 +797,13 @@ if (hasTypedCardName && looksLikeJunk(cardName)) {
         backImageBuffer,
         backImageMimeType,
         cardName,
-        cardType
+        cardType,
+        scanDiagnostics,
+        structuredAnalysis
       ).catch(function(err) {
-        console.error("[GemPredict] Image analysis error (non-fatal):", err.message);
+        analysisFailure=providerFailure(err);
+        if(!safeVisionValidation(err.visionValidation)&&!['ANALYSIS_RESPONSE_INCOMPLETE','ANALYSIS_EMPTY_RESPONSE','ANALYSIS_RESPONSE_INVALID','ANALYSIS_NORMALIZATION_FAILED'].includes(err.message))scanDiagnostics?.vision(err.message==='NO_API_KEY'?'provider_not_configured':[401,403].includes(err.status)?'provider_authentication_failed':err.status===429?'rate_limited':'request_failed');
+        console.error('[GemPredict] Image analysis failed',analysisFailure.payload.code,safeVisionValidation(err.visionValidation));
         return null;
       });
     }
@@ -904,12 +812,11 @@ if (hasTypedCardName && looksLikeJunk(cardName)) {
     // Retain the original full report behavior whenever vision actually succeeds.
     if (imageBuffer && !imageAnalysis) {
       console.error("[GemPredict] Photo scan stopped: no usable image-analysis result");
-      return res.status(422).json({
-        error: "Photo analysis could not be completed. No card valuation was generated. Please try again later or use clearer front and back photos.",
-        code: "PHOTO_ANALYSIS_UNAVAILABLE",
-      });
+      const failure=analysisFailure||scanFailure('ANALYSIS_NORMALIZATION_FAILED');
+      return res.status(failure.status).json(failure.payload);
     }
 
+    failureStage='verification';
     const identifiedCardName = imageAnalysis
       ? [
           imageAnalysis.identifiedYear,
@@ -970,51 +877,20 @@ const atlasIdentityConfidence =
   calculateIdentityConfidence(imageAnalysis || {});
 const identityEvidence = assessIdentityEvidence(imageAnalysis, { cardName, cardSet });
 
-// Read-only diagnostic: no changes to title, pricing, scoring or photo grading.
-let catalogCrossCheck = { status: "not_checked", verified: false };
-let catalogTitleCandidate = null;
-if (imageAnalysis && cardType === "pokemon") {
-  const observed = {
-    subject: imageAnalysis.identifiedSubject,
-    cardNumber: imageAnalysis.identifiedCardNumber,
-    set: imageAnalysis.identifiedBrandSet,
-  };
-  try {
-    const result = await findTcgdexCandidates(observed);
-    const candidates = result.candidates || [];
-    if (candidates.length === 1 && candidates[0].id) {
-      const fullCard = await fetchFullTcgdexCard(candidates[0].id);
-      catalogCrossCheck = {
-        ...crossCheckIdentity(imageAnalysis, fullCard),
-        provider: "TCGdex",
-        candidateCount: candidates.length,
-      };
-      // Compare photo pixels against catalog art without an additional AI call.
-      // Diagnostic only: never declare a card verified from perceptual similarity.
-      if (imageBuffer && fullCard?.image) {
-        catalogCrossCheck.artwork = await assessArtworkSimilarity(imageBuffer, fullCard.image);
-      } else {
-        catalogCrossCheck.artwork = { status: "inconclusive", verified: false, reason: "reference_or_photo_missing" };
-      }
-      if (fullCard && catalogCrossCheck.agreements?.includes("subject") && catalogCrossCheck.agreements?.includes("collectorNumber") && fullCard.set?.name) {
-        catalogTitleCandidate = fullCard;
-      }
-    } else {
-      catalogCrossCheck = {
-        status: result.status || "needs_review",
-        verified: false,
-        provider: "TCGdex",
-        candidateCount: candidates.length,
-        note: "No unique catalog candidate was established. Report title remains unchanged.",
-      };
-    }
-  } catch {
-    catalogCrossCheck = { status: "catalog_unavailable", verified: false, provider: "TCGdex" };
-  }
+// Pokémon uses the independent October pipeline; sports retains its current path.
+let pokemonIdentity=null;
+let catalogCrossCheck={status:'not_checked',verified:false};
+let catalogTitleCandidate=null;
+if(imageAnalysis&&cardType==='pokemon'){
+ pokemonIdentity=await resolvePokemonIdentity(imageAnalysis,fields,{fetchImpl:fetch,clientId:process.env.EBAY_PROD_CLIENT_ID,clientSecret:process.env.EBAY_PROD_CLIENT_SECRET,...(conditionValidation?{skipMarketplace:true}:{})});
+ if(conditionValidation&&pokemonIdentity.search?.status==='not_requested')pokemonIdentity.search.reason='owner_condition_validation';
+ canonicalCard=pokemonIdentity.canonicalCard;
+ catalogCrossCheck=pokemonIdentity.catalogCrossCheck;
+ effectiveCardName=canonicalCard?.displayName||effectiveCardName;
+ effectiveCardSet=canonicalCard?.brandSet||effectiveCardSet;
 }
 
-
-const identityReviewToken = imageBuffer ? issueIdentityReviewToken({catalogId:catalogCrossCheck.catalogId, subject:imageAnalysis?.identifiedSubject, number:imageAnalysis?.identifiedCardNumber, set:imageAnalysis?.identifiedBrandSet, conflicts:catalogCrossCheck.conflicts||[],imageAnalyzed:Boolean(imageAnalysis)}) : null;
+const identityReviewToken = imageBuffer ? issueIdentityReviewToken({catalogId:catalogCrossCheck.catalogId, subject:pokemonIdentity?canonicalCard?.subject:imageAnalysis?.identifiedSubject, number:pokemonIdentity?canonicalCard?.cardNumber:imageAnalysis?.identifiedCardNumber, set:pokemonIdentity?canonicalCard?.brandSet:imageAnalysis?.identifiedBrandSet, conflicts:catalogCrossCheck.conflicts||[],imageAnalyzed:Boolean(imageAnalysis)}) : null;
 const soldIdentityGate = assessSoldIdentityGate({
   cardType,
   crossCheck: catalogCrossCheck,
@@ -1023,53 +899,22 @@ const soldIdentityGate = assessSoldIdentityGate({
     set: imageAnalysis?.identifiedBrandSet, printingConfirmed: false }
 });
 
-// Prefer independently sourced catalog name and set over contradictory model set guesses.
-// Still provisional: artwork and printing are NOT verified.
-if (catalogTitleCandidate) {
-  const c = catalogTitleCandidate;
-  const fullNumber = imageAnalysis?.identifiedCardNumber || c.localId;
-  effectiveCardName = [c.set?.name, c.name, "#" + fullNumber].filter(Boolean).join(" ");
-  effectiveCardSet = c.set.name;
-  canonicalCard = { ...(canonicalCard || {}), subject: c.name, brandSet: c.set.name, cardNumber: fullNumber, displayName: effectiveCardName, catalogId: c.id, catalogStatus: "provisional" };
-  // Keep both visible reports consistent with the selected catalog candidate.
-  // Preserve the model's original claims for audit; this is NOT artwork verification.
-  catalogCrossCheck.originalImageIdentity = {
-    identifiedBrandSet: imageAnalysis?.identifiedBrandSet || null,
-    identifiedYear: imageAnalysis?.identifiedYear || null,
-    identifiedParallel: imageAnalysis?.identifiedParallel || null,
-    identityNotes: imageAnalysis?.identityNotes || null,
-  };
-  if (imageAnalysis) {
-    imageAnalysis.identifiedBrandSet = c.set.name;
-    imageAnalysis.identifiedSubject = c.name;
-    imageAnalysis.identifiedCardNumber = fullNumber;
-    imageAnalysis.identityNotes = "Catalog candidate: " + c.set.name + " " + c.name + " #" + fullNumber + ". Artwork and exact printing remain unverified.";
-  }
-  catalogCrossCheck.titleSource = "TCGdex provisional";
-}
-
-    const prediction = await fetchPrediction(
-      effectiveCardName,
-      cardType,
-      effectiveCardSet,
-      condition
-    );
+    const identityV2 = canonicalIdentityV2({category:cardType === 'pokemon' ? 'pokemon' : cardType === 'sports' ? 'sports' : 'unknown',vision:imageAnalysis||{},catalog:catalogCrossCheck});
+    const sportsIdentityAudit = cardType === 'sports' ? auditSportsIdentity(imageAnalysis||{},'unspecified') : null;
+    const financialDecision = financialEligibility(identityV2);
+    const prediction = !conditionValidation && financialDecision.allowed
+      ? await fetchPrediction(effectiveCardName,cardType,effectiveCardSet,condition)
+      : {cardTitle:canonicalCard?.displayName||effectiveCardName,cardMeta:effectiveCardSet};
 
     if (catalogTitleCandidate) {
       prediction.cardTitle = effectiveCardName;
       prediction.cardMeta = effectiveCardSet + " — Catalog candidate; artwork/printing not verified";
-    } else if (imageAnalysis && !hasUserCardName && identifiedCardName) {
+    } else if (!pokemonIdentity && imageAnalysis && !hasUserCardName && identifiedCardName) {
       prediction.cardTitle = identifiedCardName;
       prediction.cardMeta = effectiveCardSet || prediction.cardMeta;
     }
 
-const atlas = atlasOrchestrator({
-  imageAnalysis,
-  canonicalCard,
-  marketData: null,
-  gpScore: null,
-  prediction,
-});
+const atlas = null; // Financial recommendations require independent identity and qualified sales.
 
     logRequest({
   ip,
@@ -1083,11 +928,14 @@ const atlas = atlasOrchestrator({
   let marketData = null;
 
   try {
-    const baseUrl =
-      process.env.NEXT_PUBLIC_SITE_URL || "https://gempredict-live.vercel.app";
+    if(conditionValidation)throw new Error('condition_validation_marketplace_disabled');
+    const context = internalMarketContext(process.env.NEXT_PUBLIC_SITE_URL,process.env,req.headers);
+    scanDiagnostics?.market('routing',context.ok);
+    if (!context.ok) throw new Error(context.reason);
+    const baseUrl = context.baseUrl;
   
       const marketQueries = [
-        ...buildSearchCandidates(catalogTitleCandidate ? { ...imageAnalysis, identifiedSubject: catalogTitleCandidate.name, identifiedBrandSet: catalogTitleCandidate.set.name } : (imageAnalysis || {})),
+        ...buildSearchCandidates(pokemonIdentity ? {...imageAnalysis,identifiedYear:canonicalCard.year,identifiedBrandSet:canonicalCard.brandSet,identifiedSubject:canonicalCard.subject,identifiedCardNumber:canonicalCard.cardNumber,identifiedParallel:canonicalCard.parallel} : catalogTitleCandidate ? { ...imageAnalysis, identifiedSubject: catalogTitleCandidate.name, identifiedBrandSet: catalogTitleCandidate.set.name } : (imageAnalysis || {})),
         buildMarketQueryFromCanonicalCard(canonicalCard),
         effectiveCardName,
         prediction.cardTitle,
@@ -1104,20 +952,29 @@ const atlas = atlasOrchestrator({
         });
   
     const lookupIdentity = {
-      year: imageAnalysis?.identifiedYear || "",
+      year: canonicalCard?.year || "",
       brand: imageAnalysis?.identifiedManufacturer || "",
-      set: catalogTitleCandidate?.set?.name || imageAnalysis?.identifiedBrandSet || "",
-      player: imageAnalysis?.identifiedSubject || "",
-      cardNumber: imageAnalysis?.identifiedCardNumber || "",
-      parallel: imageAnalysis?.identifiedParallel || "",
+      set: canonicalCard?.brandSet || "",
+      player: canonicalCard?.subject || "",
+      cardNumber: canonicalCard?.cardNumber || "",
+      parallel: canonicalCard?.parallel || "",
       autoOrRelic: imageAnalysis?.identifiedAutoOrRelic || "",
     };
+    const stamp=imageAnalysis?.identifiedSerialNumber?.match(/^\s*\d+\s*\/\s*(\d+)\s*$/);
+    if(stamp)lookupIdentity.printRun=stamp[1];
+    if(!identityComplete(lookupIdentity))throw new Error('identity_incomplete');
+    if(pokemonIdentity){
+      if(!pokemonIdentity.valuationIdentityGate.allowed)throw new Error('identity_incomplete');
+      Object.assign(lookupIdentity,{game:'pokemon',brand:'',language:canonicalCard.language||'',variantIdentity:JSON.stringify(canonicalCard.variant||{})});
+    }
     const attempts = [];
     // Bounded progressively broader discovery; acceptance remains identity-strict.
     for (const q of marketQueries.slice(0, 6)) {
       const params = new URLSearchParams({q});
       for (const [k,v] of Object.entries(lookupIdentity)) if(v)params.set(k,v);
-      const response = await fetch(baseUrl + "/api/ebay-search?" + params.toString());
+      scanDiagnostics?.market('request');
+      const response = await fetch(baseUrl + "/api/ebay-search?" + params.toString(),{headers:context.headers,redirect:"manual",signal:AbortSignal.timeout(12000)});
+      scanDiagnostics?.market('status',response.status);
       if (!response.ok) continue;
       const candidate = await response.json();
       if (!candidate.success) continue;
@@ -1131,50 +988,41 @@ const atlas = atlasOrchestrator({
   } catch (marketErr) {
   marketData = {
     success: false,
-    error: "Market data unavailable",
+    error: conditionValidation?"Marketplace intentionally disabled for controlled validation.":"Market data unavailable",
+    reason: /^(?:production_host_blocked|missing_or_invalid_deployment_origin|mismatched_deployment_origin|preview_protection_token_unavailable|condition_validation_marketplace_disabled|invalid_internal_base_url|missing_internal_base_url|identity_incomplete)$/.test(marketErr.message) ? marketErr.message : "market_request_unavailable",
   };
 }
 
-    // Shared identity and grader contracts: read-only diagnostics during migration.
-    // No changes to existing report titles, scores, lookups or economics.
-    const identityV2 = canonicalIdentityV2({
-      category: cardType === "pokemon" ? "pokemon" : (cardType === "sports" ? "sports" : "unknown"),
-      vision: imageAnalysis || {},
-      catalog: catalogCrossCheck,
-    });
+    failureStage='report';
     const graderScenariosV2 = emptyGraderScenarios();
-    const sportsIdentityAudit = cardType === "sports" ? auditSportsIdentity(imageAnalysis || {}, "unspecified") : null;
 
-    return res.status(200).json({
+    return res.status(200).json(protectFinancialReport({
   success: true,
+  scanNotices:[...(!conditionValidation&&(!marketData||marketData.success===false)?[scanFailure('MARKETPLACE_UNAVAILABLE').payload]:[]),...(pokemonIdentity&&!pokemonIdentity.valuationIdentityGate.allowed?[scanFailure('VERIFICATION_UNRESOLVED').payload]:[])],
   identityV2,
   graderScenariosV2,
   sportsIdentityAudit,
+  ...(conditionValidation?{conditionValidation}:{}),
   prediction,
   marketData,
   imageAnalysis,
   atlas,
   atlasIdentityConfidence,
   canonicalCard,
+  ...(process.env.NODE_ENV==='development'&&pokemonIdentity?{identityDiagnostics:{catalog:{...pokemonIdentity.identityVerification.catalog,diagnostics:pokemonIdentity.catalogDiagnostics}}}:{}),
   identityEvidence,
+  ...(pokemonIdentity?{identityVerification:pokemonIdentity.identityVerification,originalIdentityObservation:pokemonIdentity.originalIdentityObservation,originalCanonicalCard:pokemonIdentity.originalCanonicalCard,userIdentityConflicts:pokemonIdentity.userIdentityConflicts,variantVerification:pokemonIdentity.variantVerification,artworkStatus:pokemonIdentity.artworkStatus,physicalPrintingStatus:pokemonIdentity.physicalPrintingStatus,identityEvidenceItems:pokemonIdentity.identityEvidenceItems,identityEvidenceExclusions:pokemonIdentity.identityEvidenceExclusions,identityEvidenceSearch:pokemonIdentity.search,runtimeCatalogAssets:pokemonIdentity.runtimeCatalogAssets}:{}),
   catalogCrossCheck,
   soldIdentityGate,
   identityReviewToken,
   hasImageAnalysis: imageAnalysis !== null,
   remaining: rateCheck.remaining,
   emailSaved,
-});
+}));
 
   } catch (err) {
-    console.error("[GemPredict] Prediction error:", err.status || "", err.message);
-    let userMessage = "Something went wrong. Please try again.";
-    let logLabel    = err.message || "unknown";
-    if (err.message === "NO_API_KEY")           { userMessage = "Service is not configured. Please contact support."; logLabel = "missing_api_key"; }
-    else if (err.status === 401)                { userMessage = "Service configuration error. Please contact support."; logLabel = "anthropic_auth_failed"; }
-    else if (err.status === 429)                { userMessage = "The AI service is temporarily busy. Please try again in a moment."; logLabel = "anthropic_rate_limit"; }
-    else if (err.status === 529 || err.status === 500) { userMessage = "The AI service is temporarily unavailable. Please try again shortly."; logLabel = "anthropic_server_error"; }
-    else if (["EMPTY_RESPONSE","PARSE_FAILED","NORMALISE_FAILED"].includes(err.message)) { userMessage = "The AI returned an unexpected response. Please try your search again."; }
-    logRequest({ ip, cardName, cardType, cardSet, status: "failed", errorMessage: logLabel });
-    return res.status(500).json({ error: userMessage });
+    const failure=scanFailure(failureStage==='verification'?'VERIFICATION_RUNTIME_FAILED':'UNEXPECTED_SCAN_ERROR');
+    console.error('[GemPredict] Scan failure',failure.payload.code);
+    return res.status(failure.status).json(failure.payload);
   }
 }
