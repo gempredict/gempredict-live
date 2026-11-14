@@ -298,6 +298,7 @@ gemPredictScore,
 function normaliseImageAnalysis(raw,inspectedSides=['front'],cardType=null) {
   if (!raw || typeof raw !== "object") return null;
 
+  const sportsEvidence=cardType==='sports'?retainSportsVisionEvidence(raw,inspectedSides,{extended:true}):null;
   function safeStr(val, fallback) {
     return typeof val === "string" && val.trim() ? val.trim().slice(0, 400) : fallback;
   }
@@ -429,7 +430,7 @@ gemRiskFactors:
 
 minorConcerns: safeStr(raw.minorConcerns, "No additional visible concerns identified."),
     ...conditionPresentation({...raw,inspectedSides,imageLimitations:[...(Array.isArray(raw.imageLimitations)?raw.imageLimitations:[]),...(!inspectedSides.includes('back')?['back_not_visible']:[])]}),
-    ...(cardType!=='pokemon'?{identityReadings:retainSportsVisionEvidence(raw,inspectedSides).identityReadings}:{}),
+    ...(sportsEvidence?{identifiedRarity:sportsEvidence.originalIdentityObservation.identifiedRarity,identityReadings:sportsEvidence.identityReadings,sportsIdentity:sportsEvidence.sportsIdentity,sportsIdentityEvidence:sportsEvidence.sportsIdentityEvidence,originalIdentityObservation:sportsEvidence.originalIdentityObservation,identityConfidence:sportsEvidence.identityConfidence}:cardType!=='pokemon'?{identityReadings:retainSportsVisionEvidence(raw,inspectedSides).identityReadings}:{}),
   };
 }
 // ─── Anthropic client ─────────────────────────────────────────────────────────
@@ -558,7 +559,7 @@ const backMime = backImageMimeType &&
   ? backImageMimeType
   : "image/jpeg";
 
-  const imagePrompt=buildSportsVisionPrompt({cardName,typeLabel,hasBack:!!backBase64});
+  const imagePrompt=buildSportsVisionPrompt({cardName,typeLabel,hasBack:!!backBase64,category:cardType});
 
   scanDiagnostics?.vision('request_started',cardType,structured?'json_schema':'prompt_json');
   const visionStarted=Date.now();
@@ -1003,6 +1004,7 @@ const atlas = null; // Financial recommendations require independent identity an
   identityV2,
   graderScenariosV2,
   sportsIdentityAudit,
+  ...(cardType==='sports'&&imageAnalysis?{originalIdentityObservation:imageAnalysis.originalIdentityObservation,sportsIdentityEvidence:imageAnalysis.sportsIdentityEvidence}:{}),
   ...(conditionValidation?{conditionValidation}:{}),
   prediction,
   marketData,

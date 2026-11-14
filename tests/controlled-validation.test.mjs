@@ -314,3 +314,8 @@ test('installed SDK rejection exports distinguish upstream 400/422/auth failures
   assert.doesNotMatch(JSON.stringify(f),/SYNTHETIC|private-photo|sk-not|message|headers|requestID/);assert.equal(r.payload.imageAnalysis,undefined);
  }
 });
+test('owner Mets Full Analysis uses prompt JSON with no experimental flag, preflight or schema acceptance',async()=>{
+ const {metsFullAnalysisObservation}=await import('./helpers/fullAnalysisFixtures.mjs');const raw=metsFullAnalysisObservation(),s=await verified({category:'sports'}),headers=auth();
+ const r=await controlled(s,{headers,visionResponse:fullMessage(raw)});assert.equal(r.status,200);assert.equal(r.metrics.sdkRequest.output_config,undefined);assert.equal(r.metrics.sdkMaxRetries,0);assert.equal(r.metrics.vision,1);noMarket(r);assert.equal(r.payload.hasImageAnalysis,true);assert.equal(r.payload.imageAnalysis.sportsIdentity.subjects.length,2);
+ const d=readDiagnosticTicket({method:'POST',headers},r.responseHeaders[TICKET_HEADER],r.responseHeaders[SCAN_HEADER],env);assert.equal(d.visionRequest.mechanism,'prompt_json');assert.equal(d.visionCompletion.mechanism,'prompt_json');assert.equal(d.categoryRouting.executed,'sports');assert.equal(d.categoryRouting.sportsAuditRan,true);assert.equal(d.model.sportsDetails.subset,'It Takes Two');assert.equal(r.payload.financialDecision.allowed,false);
+});
