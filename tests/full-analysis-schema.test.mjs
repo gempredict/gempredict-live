@@ -16,7 +16,15 @@ for(const example of compatibilityExamples)test('synthetic compatibility: '+exam
 test('provider subset stays within documented explicit complexity limits; local bounds retained',()=>{
  for(const category of ['pokemon','sports']){
   let unions=0,optional=0;
-  const walk=s=>{if(!s||typeof s!=='object')return;if(Array.isArray(s.type))unions++;if(s.properties){optional+=Object.keys(s.properties).filter(k=>!s.required.includes(k)).length;assert.equal(s.additionalProperties,false);for(const v of Object.values(s.properties))walk(v);}if(s.items)walk(s.items);for(const k of ['minimum','maximum','minItems','maxItems','maxLength'])assert.equal(s[k],undefined);};
+  const walk=s=>{
+   assert.ok(s&&typeof s==='object'&&!Array.isArray(s));
+   for(const key of Object.keys(s))assert.ok(['type','description','properties','required','additionalProperties','items','enum'].includes(key),key);
+   const types=Array.isArray(s.type)?s.type:[s.type];assert.ok(types.length>0&&new Set(types).size===types.length);for(const t of types)assert.ok(['object','array','string','integer','number','boolean','null'].includes(t));
+   if(Array.isArray(s.type))unions++;
+   if(s.enum)for(const value of s.enum){assert.ok(value===null||['string','number','boolean'].includes(typeof value));assert.ok(types.includes(value===null?'null':typeof value)||Number.isInteger(value)&&types.includes('integer'));}
+   if(types.includes('object')){assert.ok(s.properties);assert.ok(Array.isArray(s.required));assert.equal(new Set(s.required).size,s.required.length);assert.ok(s.required.every(k=>Object.hasOwn(s.properties,k)));optional+=Object.keys(s.properties).filter(k=>!s.required.includes(k)).length;assert.equal(s.additionalProperties,false);for(const v of Object.values(s.properties))walk(v);}
+   if(types.includes('array')){assert.ok(s.items);walk(s.items);}
+  };
   walk(fullAnalysisOutputFormat(true,category).schema);assert.ok(unions<=16);assert.ok(optional<=24);assert.ok(fullAnalysisSchema(true,category).properties.visualObservations.maxItems);
  }
 });

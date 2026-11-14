@@ -78,3 +78,14 @@ test('completion observability contains only fixed block types, bounded lengths,
  const meta=safeVisionCompletion(m,{maxOutputTokens:4800});assert.equal(meta.mechanism,'prompt_json');assert.equal(meta.stopReason,'unknown');assert.deepEqual(meta.blockTypes,{text:1,other:1,thinking:1});assert.equal(meta.maxOutputTokens,4800);assert.equal(meta.usage.outputTokens,4800);assert.doesNotMatch(JSON.stringify(meta),/RAW_PRIVATE|sk-private|private-response|private-image|unknown-private/);assert.equal(safeVisionValidation({phase:'json',rule:'json_syntax',path:'private'}).path,undefined);
  const huge=safeVisionCompletion({stop_reason:'end_turn',content:Array.from({length:100},()=>({type:'text',text:'x'.repeat(1000)}))});assert.equal(huge.contentBlocks,32);assert.equal(huge.contentBlocksTruncated,true);assert.equal(huge.textUtf8Bytes,32769);
 });
+test('provider rejection metadata preserves only upstream status and published fixed vocabulary',async()=>{
+ const {safeVisionProviderFailure}=await import('../lib/visionResponsePolicy.mjs');
+ const marker='sk-synthetic-credential private-photo.jpg https://private.invalid/owner';
+ const unknown=safeVisionProviderFailure({status:422,type:marker,errorCode:marker,message:marker,apiMessage:marker,headers:{secret:marker},error:{details:{error_code:marker}}});
+ assert.deepEqual(unknown,{version:1,upstreamHttpStatus:422,providerErrorType:null,providerErrorCode:null,requestContractReason:'not_identified',reasonBasis:'not_established'});
+ for(const status of ['400',NaN,Infinity,99,600,undefined])assert.equal(safeVisionProviderFailure({status}).upstreamHttpStatus,null);
+ const nested=safeVisionProviderFailure({status:400,error:{error:{type:'invalid_request_error',message:marker,details:{error_code:'enforced_spend_limit_reached'}}}});
+ assert.equal(nested.providerErrorType,'invalid_request_error');assert.equal(nested.providerErrorCode,'enforced_spend_limit_reached');assert.equal(nested.reasonBasis,'provider_error_code');assert.doesNotMatch(JSON.stringify(nested),/sk-|private|\.jpg/);
+ const hint=safeVisionProviderFailure({status:400,apiMessage:'Schema is too complex for compilation. '+marker});assert.equal(hint.requestContractReason,'schema_complexity_message_hint');assert.equal(hint.reasonBasis,'recognized_message_hint');assert.ok(!JSON.stringify(hint).includes(marker));
+ assert.equal(safeVisionProviderFailure({status:400,apiMessage:'x'.repeat(4096)+'Schema is too complex for compilation.'}).requestContractReason,'not_identified');
+});

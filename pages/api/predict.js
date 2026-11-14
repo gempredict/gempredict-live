@@ -3,7 +3,7 @@ import {fullAnalysisStructuredEnabled,fullAnalysisOutputFormat,parseFullAnalysis
 import {verifyConditionValidation} from '../../lib/conditionValidationServer.mjs';
 import {safeIdentityValidation} from '../../lib/identityValidation.mjs';
 import {identifyFromPhotos} from '../../lib/identityStage.mjs';
-import {VISION_MODEL,visionOutputBudget,parseVisionMessage,safeVisionValidation,retainSportsVisionEvidence} from '../../lib/visionResponsePolicy.mjs';
+import {VISION_MODEL,visionOutputBudget,parseVisionMessage,safeVisionValidation,safeVisionProviderFailure,retainSportsVisionEvidence} from '../../lib/visionResponsePolicy.mjs';
 import {buildSportsVisionPrompt} from '../../lib/visionPromptContract.mjs';
 import {scanFailure,providerFailure} from '../../lib/scanFailures.mjs';
 import {beginScanDiagnostics} from '../../lib/scanDiagnostics.mjs';
@@ -600,6 +600,7 @@ const backMime = backImageMimeType &&
     scanDiagnostics?.providerLatency(Date.now()-visionStarted);
     if(structured){
       scanDiagnostics?.providerRequestFailed(error);
+      console.error('[GemPredict] Structured provider rejection',safeVisionProviderFailure(error));
       const rule=[400,422].includes(error?.status)?'request_rejected':error instanceof SyntaxError||error?.cause instanceof SyntaxError?'transport_invalid':null;
       if(rule){error.visionValidation=safeVisionValidation({phase:'request',rule});scanDiagnostics?.visionValidation(error.visionValidation);}
     }

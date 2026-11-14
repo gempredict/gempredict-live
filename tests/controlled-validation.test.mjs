@@ -1,3 +1,4 @@
+import {fullAnalysisOutputFormat} from '../lib/fullAnalysisSchema.mjs';
 import {compatibilityExamples,fullMessage} from './helpers/fullAnalysisFixtures.mjs';
 // Synthetic JPEGs + actual multipart/SDK mocks. Never a live provider request.
 import test from 'node:test';
@@ -214,7 +215,15 @@ async function structuredControlled(s,patch={}){
 test('owner-only Preview structured prototype sends one schema request, preserves dual players and withholds finance',async()=>{
  const s=await verified({category:'sports'}),raw=structuredClone(compatibilityExamples[2].raw);
  const flag={...env,GEMPREDICT_PREVIEW_FULL_STRUCTURED_OUTPUT_ENABLED:'true'},headers=auth();
+ const mixed=compatibilityExamples[5].raw;for(const key of ['visualObservations','inspectionCoverage','imageLimitations','photoNotes'])raw[key]=structuredClone(mixed[key]);
+ raw.visualObservations.push({attribute:'corners',code:'whitening',certainty:'suspected',evidence:{side:'front',region:[.01,.01,.08,.08],cue:'localized_color_loss',confidence:.6}},{attribute:'edges',code:'wear',certainty:'suspected',evidence:{side:'back',region:[.01,.1,.05,.2],cue:'localized_color_loss',confidence:.6}},{attribute:'centering',code:'off_center',certainty:'suspected',evidence:{side:'front',region:[0,0,1,1],cue:'border_width_difference',confidence:.6,measurement:{axis:'horizontal',ratio:[60,40]}}});
  const r=await structuredControlled(s,{env:flag,headers,actualSdkFetch:async()=>new Response(JSON.stringify({...fullMessage(raw),type:'message',role:'assistant',id:'msg_synthetic',model:'claude-sonnet-4-6',usage:{input_tokens:100,output_tokens:100}}),{status:200,headers:{'content-type':'application/json'}})});
+ assert.deepEqual(r.metrics.sdkRequest.output_config,{format:fullAnalysisOutputFormat(true,'sports')});
+ assert.equal(r.metrics.sdkRequest.output_format,undefined);assert.equal(r.metrics.sdkRequest.response_format,undefined);assert.equal(r.metrics.sdkRequest.tools,undefined);assert.equal(r.metrics.sdkRequest.thinking,undefined);assert.equal(r.metrics.sdkRequest.model,'claude-sonnet-4-6');assert.equal(r.metrics.sdkRequest.max_tokens,4800);
+ assert.equal(r.metrics.sdkRequest.messages[0].content.filter(b=>b.type==='image').length,2);assert.doesNotMatch(JSON.stringify(r.metrics.sdkRequest.messages),/Lindor|Soto|Celebration Confetti/);
+ assert.equal(r.payload.imageAnalysis.sportsIdentity.subset,'It Takes Two');assert.equal(r.payload.imageAnalysis.sportsIdentity.foilTreatment,'confetti-like foil');assert.equal(r.payload.imageAnalysis.identifiedSerialNumber,null);
+ for(const attribute of ['centering','corners','edges','surface'])assert.ok(r.payload.imageAnalysis.visualObservations.some(o=>o.attribute===attribute),attribute);
+ assert.ok(r.payload.imageAnalysis.visualObservations.some(o=>o.evidence?.side==='front'));assert.ok(r.payload.imageAnalysis.visualObservations.some(o=>o.evidence?.side==='back'));assert.ok(r.payload.imageAnalysis.visualObservations.some(o=>o.certainty==='suspected'));assert.ok(JSON.stringify(r.payload.imageAnalysis).includes('unassessable'));
  assert.equal(r.status,200);assert.equal(r.metrics.sdkRequest.output_config.format.type,'json_schema');assert.equal(r.metrics.vision,1);assert.equal(r.metrics.sdkMaxRetries,0);noMarket(r);
  assert.equal(r.payload.imageAnalysis.sportsIdentity.subjects.length,2);assert.equal(r.payload.imageAnalysis.identifiedParallel,'Celebration Confetti');assert.equal(r.payload.imageAnalysis.originalIdentityObservation.identifiedSubject,raw.identifiedSubject);assert.equal(r.payload.sportsIdentityAudit.catalogVerified,false);assert.equal(r.payload.financialDecision.allowed,false);
  const d=readDiagnosticTicket({method:'POST',headers},r.responseHeaders[TICKET_HEADER],r.responseHeaders[SCAN_HEADER],flag);
@@ -294,4 +303,14 @@ test('expired permits, expired owners, unregistered worker permits and Productio
  t.mock.timers.tick(120001);const expired=await controlled(s,{env:flag,headers,fields});assert.equal(expired.status,403);assert.equal(expired.metrics.vision,0);
  t.mock.timers.tick(900000);const ownerExpired=await controlled(s,{env:flag,headers,fields});assert.equal(ownerExpired.status,403);assert.equal(ownerExpired.metrics.vision,0);
  const production=await controlled(s,{env:{...flag,VERCEL_ENV:'production'},headers:auth(),fields});assert.equal(production.status,403);assert.equal(production.metrics.vision,0);
+});
+test('installed SDK rejection exports distinguish upstream 400/422/auth failures from the app response without extra calls',async()=>{
+ for(const [status,type,code]of [[400,'invalid_request_error','request_body_encoding_invalid'],[400,'invalid_request_error','enforced_spend_limit_reached'],[422,'invalid_request_error',null],[401,'authentication_error',null],[403,'permission_error',null],[429,'rate_limit_error',null],[500,'api_error',null]]){
+  const s=await verified({category:'sports'}),flag={...env,GEMPREDICT_PREVIEW_FULL_STRUCTURED_OUTPUT_ENABLED:'true'},headers=auth();
+  const r=await structuredControlled(s,{env:flag,headers,actualSdkFetch:async()=>new Response(JSON.stringify({type:'error',error:{type,message:'SYNTHETIC private-photo.jpg sk-not-a-real-secret',...(code?{details:{error_code:code}}:{})}}),{status,headers:{'content-type':'application/json'}})});
+  assert.notEqual(r.status,200);assert.equal(r.metrics.vision,1);assert.equal(r.metrics.sdkMaxRetries,0);noMarket(r);
+  const d=readDiagnosticTicket({method:'POST',headers},r.responseHeaders[TICKET_HEADER],r.responseHeaders[SCAN_HEADER],flag),f=d.provider.rejection;
+  assert.equal(f.upstreamHttpStatus,status);assert.equal(f.providerErrorType,type);assert.equal(f.providerErrorCode,code);assert.equal(d.responseStatus,r.status);assert.equal(d.categoryRouting.sportsAuditRan,false);assert.equal(d.model,null);
+  assert.doesNotMatch(JSON.stringify(f),/SYNTHETIC|private-photo|sk-not|message|headers|requestID/);assert.equal(r.payload.imageAnalysis,undefined);
+ }
 });
