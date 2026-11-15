@@ -95,6 +95,7 @@ export default async function handler(req, res) {
   cardName: typeof req.query.cardName === "string" ? req.query.cardName.trim() : null,
   cardNumber: typeof req.query.cardNumber === "string" ? req.query.cardNumber.trim() : null,
   parallel: typeof req.query.parallel === "string" ? req.query.parallel.trim() : null,
+  subset: typeof req.query.subset === "string" && req.query.subset.length<=80 ? req.query.subset.trim() : null,
   printRun: typeof req.query.printRun === "string" ? req.query.printRun.trim() : null,
   autoOrRelic: typeof req.query.autoOrRelic === "string" ? req.query.autoOrRelic.trim() : null,
 };

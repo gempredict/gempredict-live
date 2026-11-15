@@ -42,7 +42,7 @@ export function renderReports(report,completedSalesEvidence=null,props={}){
 export async function renderDiagnosticControl(authorization,report=null){
  const {scanDiagnosticAccess}=await import('../../lib/scanDiagnosticClient.mjs');
  let calls=0;
- const {default:Control}=components('src/components/ScanDiagnostics.jsx',{safeVisionValidation,scanDiagnosticAccess,useEffect(){},useState(initial){return [calls++===0?authorization:initial,()=>{}];}});
+ const {default:Control}=components('src/components/ScanDiagnostics.jsx',{safeVisionValidation,scanDiagnosticAccess,useRef:React.useRef,useEffect(){},useState(initial){return [calls++===0?authorization:typeof initial==='function'?initial():initial,()=>{}];}});
  return renderToStaticMarkup(React.createElement(Control,{report}));
 }
 

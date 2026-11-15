@@ -10,7 +10,7 @@ export default function ScanDiagnostics({report=null,prominent=false,scrollToCap
 }
 function OrdinaryDiagnostics({report}){
  const [access,setAccess]=useState(null),[message,setMessage]=useState('');
- useEffect(()=>{let active=true;fetch('/api/scan-diagnostics',{cache:'no-store',credentials:'same-origin',redirect:'error'}).then(async r=>{if(active&&r.ok)setAccess(await r.json());}).catch(()=>{});return()=>{active=false;};},[]);
+ useEffect(()=>{let active=true;fetch('/api/scan-diagnostics',{cache:'no-store',credentials:'same-origin',redirect:'error'}).then(async r=>{if(active&&r.ok)setAccess(await r.json());else if(active&&r.status!==404)setAccess({enabled:true,authorized:false,checkFailed:true});}).catch(()=>{if(active)setAccess({enabled:true,authorized:false,checkFailed:true});});return()=>{active=false;};},[]);
  useEffect(()=>{if(!access?.expiresAt)return;const timer=setTimeout(()=>setAccess({enabled:true,authorized:false}),Math.max(0,access.expiresAt-Date.now()));return()=>clearTimeout(timer);},[access?.expiresAt]);
  if(!access?.enabled)return null;
  const handle=scanDiagnosticAccess(report);
@@ -18,25 +18,22 @@ function OrdinaryDiagnostics({report}){
   const key=window.prompt('Enter the Preview owner diagnostic key. It will not be saved.');if(!key)return;
   try{const r=await fetch('/api/scan-diagnostics',{method:'POST',credentials:'same-origin',redirect:'error',headers:{'Content-Type':'application/json'},body:JSON.stringify({action:'authorize',key})});if(!r.ok)throw Error();const data=await r.json();setAccess({enabled:true,authorized:true,expiresAt:data.expiresAt});setMessage('Authorized for 15 minutes. Diagnostics will be available for the next scan.');}catch{setMessage('Diagnostic authorization unavailable.');}
  }
- async function download(){
-  try{const r=await fetch('/api/scan-diagnostics',{method:'POST',credentials:'same-origin',redirect:'error',headers:{'Content-Type':'application/json'},body:JSON.stringify({action:'download',...handle})});if(!r.ok)throw Error();const blob=await r.blob();const url=URL.createObjectURL(blob);const a=document.createElement('a');a.href=url;a.download='gempredict-scan-'+handle.scanId+'.json';document.body.appendChild(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(url),30000);}catch{setMessage('Export unavailable or expired. Authorize and capture a fresh scan.');}
- }
- if(report&&(!access.authorized||!handle))return null;
+ if(report)return <ControlledCapture key={handle?.scanId||'unavailable'} handle={handle||{controlled:false,unavailableReason:'missing_handle'}} initialAccess={access}/>;
  return <div style={{fontSize:'0.75rem',margin:'0.6rem 0'}}>
-  {report?<button type="button" onClick={download}>Download Scan Diagnostics</button>:access.authorized?<span>Preview diagnostics authorized for new scans.</span>:<button type="button" onClick={authorize}>Authorize Preview Scan Diagnostics</button>}
+  {access.authorized?<span>Preview diagnostics authorized for new scans.</span>:<button type="button" onClick={authorize}>Authorize Preview Scan Diagnostics</button>}
   {message&&<p role="status">{message}</p>}
  </div>;
 }
 
-function ControlledCapture({handle,scrollToCapture=false}){
- const [access,setAccess]=useState(null),[clock,setClock]=useState(Date.now),[buffer,setBuffer]=useState(null),[busy,setBusy]=useState(false),[message,setMessage]=useState(''),[initiated,setInitiated]=useState(false);
+function ControlledCapture({handle,scrollToCapture=false,initialAccess=null}){
+ const [access,setAccess]=useState(initialAccess),[clock,setClock]=useState(Date.now),[buffer,setBuffer]=useState(null),[busy,setBusy]=useState(false),[message,setMessage]=useState(''),[initiated,setInitiated]=useState(false);
  const [failureDetail,setFailureDetail]=useState(null);
  const panel=useRef(null),lock=useRef(false),alive=useRef(false),request=useRef(null),release=useRef(null);
  const available=!!handle.ticket&&!!handle.expiresAt,expired=available&&clock>=handle.expiresAt;
  const ownerExpired=!!access&&(!access.authorized||!access.expiresAt||clock>=access.expiresAt);
  useEffect(()=>{
   alive.current=true;const abort=new AbortController();
-  checkAccess(abort.signal);
+  if(!initialAccess)checkAccess(abort.signal);
   if(scrollToCapture)panel.current?.scrollIntoView({block:'start',behavior:'smooth'});
   const tick=()=>setClock(Date.now()),timer=setInterval(tick,1000);
   const leave=()=>{setBuffer(null);request.current?.abort();};
@@ -68,15 +65,15 @@ function ControlledCapture({handle,scrollToCapture=false}){
   }).catch(e=>{if(alive.current)setMessage(e.name==='AbortError'?'Export interrupted, timed out or expired. Check the availability below; retry only the diagnostic export while valid. Do not repeat the paid scan.':e.message||'Export failed. Retry the diagnostic export before expiry; do not rescan.');})
    .finally(()=>{clearTimeout(timeout);lock.current=false;if(alive.current)setBusy(false);});
  }
- return <section ref={panel} aria-label="Controlled scan validation evidence" style={{background:'#fffbeb',border:'2px solid #b78738',borderRadius:12,padding:16,marginBottom:16,overflowWrap:'anywhere'}}>
-  <h3 style={{marginTop:0}}>{handle.failed?'Controlled Scan Failed — Save Validation Evidence':'Controlled Scan Complete — Save Validation Evidence'}</h3>
+ return <section ref={panel} aria-label={handle.controlled?'Controlled scan validation evidence':'Scan diagnostic evidence'} style={{background:'#fffbeb',border:'2px solid #b78738',borderRadius:12,padding:16,marginBottom:16,overflowWrap:'anywhere'}}>
+  <h3 style={{marginTop:0}}>{handle.controlled?(handle.failed?'Controlled Scan Failed — Save Validation Evidence':'Controlled Scan Complete — Save Validation Evidence'):(handle.failed?'Analysis Failed — Save Diagnostic Evidence':'Analysis Complete — Save Diagnostic Evidence')}</h3>
   {handle.failed&&<p>Analysis failed. No usable report or valuation was generated. Save diagnostics and stop for review; do not repeat the paid scan.</p>}
   {failureDetail&&<p>Failure category: {failureDetail.phase} / {failureDetail.rule}. The diagnostic file includes the available stop reason and output-limit metadata; no raw model text is retained.</p>}
-  <p role="status">Diagnostic availability: {!available?'Unavailable — no usable export handle or server expiry was returned.':expired?'Expired — the server export window has ended.':!access?'Checking owner authorization.':ownerExpired?'Owner authorization expired or unavailable.':buffer?'Export prepared in memory; ready to download.':'Available for owner export.'}</p>
+  <p role="status">Diagnostic availability: {!available?(handle.unavailableReason==='size_limit'?'Unavailable — sanitized diagnostic exceeded the export size limit.':handle.unavailableReason==='generation_failed'?'Unavailable — sanitized diagnostic generation failed.':'Unavailable — no usable export handle or server expiry was returned. Prior owner authorization is required; saved or reloaded reports cannot recover it.'):expired?'Expired — the server export window has ended.':!access?'Checking owner authorization.':access.checkFailed?'Unavailable — owner authorization could not be checked. Retry only the authorization check before expiry.':ownerExpired?'Owner authorization expired or unavailable.':buffer?'Export prepared in memory; ready to download.':'Available for owner export.'}</p>
   {handle.expiresAt&&<p>Export expires at {new Date(handle.expiresAt).toLocaleTimeString()} ({Math.max(0,Math.ceil((handle.expiresAt-clock)/1000))} seconds remaining). Owner authorization may expire sooner.</p>}
-  <p>Save to <strong>Files → Downloads</strong>, not Photos. First tap prepares the export; second tap starts the download. Keep the exact prepared front/back JPEGs and manifest with this JSON.</p>
+  <p>Save to <strong>Files → Downloads</strong>, not Photos. First tap prepares the export; second tap starts the download. {handle.controlled?'Keep the exact prepared front/back JPEGs and manifest with this JSON.':'Keep this diagnostic with your existing evidence; no new scan is needed.'}</p>
   <button type="button" onClick={download} disabled={busy||!available||expired||ownerExpired||!access?.authorized} style={{width:'100%',minHeight:48,whiteSpace:'normal',padding:12,fontWeight:700}}>Download Scan Diagnostics</button>
-  {!access&&!expired&&available&&<button type="button" onClick={()=>checkAccess()}>Check owner authorization</button>}
+  {(!access||access.checkFailed)&&!expired&&available&&<button type="button" onClick={()=>checkAccess()}>Check owner authorization</button>}
   <p>{initiated?'Download was initiated; filesystem saving is not confirmed.':'No diagnostic download initiated yet.'}</p>
   {message&&<p role="alert">{message}</p>}
   {(expired||ownerExpired||!available)&&<p>Keep existing prepared files and reference notes. This page cannot recover an expired diagnostic. Do not repeat a paid scan to recover it.</p>}

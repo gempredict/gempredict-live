@@ -620,7 +620,7 @@ const emailRef    = useRef(null);
       if (!res.ok) { setError(data.error || "Something went wrong. Please try again."); setLoading(false); return; }
 
       if(mode==='identity'){
-        const identified=attachReportPhotos(reportFromResponse(data),{front:controlled?prepared.front:imageFile,back:controlled?prepared.back:backImageFile});rememberScanDiagnostic(identified,res);setIdentityResult(identified);
+        const identified=attachReportPhotos(reportFromResponse(data),{front:controlled?prepared.front:imageFile,back:controlled?prepared.back:backImageFile});rememberScanDiagnostic(identified,res,{stage:'identity'});setIdentityResult(identified);
         if(data.remaining!=null)setRemaining(data.remaining);
         return;
       }

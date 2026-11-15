@@ -113,12 +113,12 @@ test('configured but unauthenticated and Production scans never receive diagnost
  const unauth=await scan({env,headers:request('',{'x-diagnostics-enabled':'true'}).headers,fields:{cardType:'pokemon',diagnostics:true}});assert.equal(unauth.responseHeaders[TICKET_HEADER],undefined);
  const prod=await scan({env:{...env,VERCEL_ENV:'production'},headers:request(cookie()).headers});assert.equal(prod.responseHeaders[TICKET_HEADER],undefined);
 });
-test('actual diagnostic control hides download for denied/unauthorized states and restored reports',async()=>{
+test('actual diagnostic control hides disabled access and explains unauthorized or restored exports',async()=>{
  const {renderDiagnosticControl}=await import('./helpers/renderReports.mjs');
  const {r,id,ticket}=await captured();const report=reportFromResponse(r.payload);rememberScanDiagnostic(report,{headers:{get:k=>k.includes('Ticket')?ticket:id}});
- assert.equal(await renderDiagnosticControl(null,report),'');assert.equal(await renderDiagnosticControl({enabled:true,authorized:false},report),'');
+ assert.equal(await renderDiagnosticControl(null,report),'');assert.match(await renderDiagnosticControl({enabled:true,authorized:false},report),/Unavailable — no usable export handle/);
  assert.match(await renderDiagnosticControl({enabled:true,authorized:true},report),/Download Scan Diagnostics/);
- assert.equal(await renderDiagnosticControl({enabled:true,authorized:true},JSON.parse(JSON.stringify(report))),'');
+ assert.match(await renderDiagnosticControl({enabled:true,authorized:true},JSON.parse(JSON.stringify(report))),/Unavailable — no usable export handle/);
 });
 
 import {diagnosticExpiry,EXPIRY_HEADER} from '../lib/scanDiagnosticsAuth.mjs';
@@ -166,7 +166,7 @@ test('controlled capture distinguishes expiry, owner expiry and persistent expor
 test('actual App places controlled diagnostic capture above its report without attaching evidence to saved reports',async()=>{
  const source=fs.readFileSync('src/App.jsx','utf8');const reportBlock=source.slice(source.indexOf('{results.map(function(saved'));
  assert.ok(reportBlock.indexOf('<ScanDiagnostics report={saved} prominent scrollToCapture={i===0} />')<reportBlock.indexOf('<ResultCard'));
- const {renderDiagnosticControl}=await import('./helpers/renderReports.mjs');const normal={};assert.equal(await renderDiagnosticControl({enabled:true,authorized:true},normal),'');
+ const {renderDiagnosticControl}=await import('./helpers/renderReports.mjs');const normal={};assert.match(await renderDiagnosticControl({enabled:true,authorized:true},normal),/Unavailable — no usable export handle/);
  // Existing actual App callback and report privacy/financial tests also run in the complete suite.
 });
 

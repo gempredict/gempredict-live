@@ -961,6 +961,7 @@ const atlas = null; // Financial recommendations require independent identity an
       cardNumber: canonicalCard?.cardNumber || "",
       parallel: canonicalCard?.parallel || "",
       autoOrRelic: imageAnalysis?.identifiedAutoOrRelic || "",
+      ...(cardType==='sports'&&imageAnalysis?.sportsIdentity?.subset?{subset:imageAnalysis.sportsIdentity.subset}:{}),
     };
     const stamp=imageAnalysis?.identifiedSerialNumber?.match(/^\s*\d+\s*\/\s*(\d+)\s*$/);
     if(stamp)lookupIdentity.printRun=stamp[1];
