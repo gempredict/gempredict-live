@@ -14,7 +14,7 @@ import IdentityResult from "./components/IdentityResult";
 import {safeScanFailure} from '../lib/scanFailures.mjs';
 import {conditionAssessmentLabels} from '../lib/photoConditionLabels.mjs';
 import ScanDiagnostics from './components/ScanDiagnostics';
-import {rememberScanDiagnostic} from '../lib/scanDiagnosticClient.mjs';
+import {rememberScanDiagnostic,requireOwnerDiagnosticAccess} from '../lib/scanDiagnosticClient.mjs';
 import {reportTitle,verificationRows} from '../lib/reportVerification.mjs';
 import {identitySummary} from '../lib/pokemonReportIdentity.mjs';
 import { protectFinancialReport, reportFromResponse, protectedCopySummary, WITHHELD_MESSAGE } from "../lib/financialSafety.mjs";
@@ -456,6 +456,7 @@ export default function App() {
   const [loading,         setLoading]         = useState(false);
   const [identityResult,setIdentityResult] = useState(null);
   const [activeStage,setActiveStage] = useState('full');
+  const [ownerValidation,setOwnerValidation] = useState(false);
   const scanInFlight = useRef(false);
   const [results,         setResults]         = useState([]);
   const [failedScanDiagnostic,setFailedScanDiagnostic] = useState(null);
@@ -586,13 +587,22 @@ const emailRef    = useRef(null);
     if (loading || processingImages || photoErrors.front || photoErrors.back || (!cardName.trim() && !imageFile)) return;
     if (email && !isValidEmail(email)) { setError("Please enter a valid email address."); return; }
     scanInFlight.current=true;setActiveStage(mode);if(mode==='identity')setIdentityResult(null);
-    setLoading(true); setError(""); setRateLimitMsg(""); setEmailConfirm(false); setImageAnalysis(null); setFailedScanDiagnostic(null);
+    setLoading(true); setError(""); setRateLimitMsg(""); setEmailConfirm(false); setImageAnalysis(null);
 
     try {
+      if(controlled||ownerValidation&&mode==='full'){
+        const validationSelection=selectionVersions.current.front+':'+selectionVersions.current.back,validationCategory=cardTypeCurrent.current;
+        if(!imageFile)throw new UploadError('owner_validation_blocked','Owner validation requires a front photograph. No scan submitted.');
+        try{await requireOwnerDiagnosticAccess();}catch(e){throw new UploadError('owner_validation_blocked',e.message);}
+        if(validationSelection!==selectionVersions.current.front+':'+selectionVersions.current.back||validationCategory!==cardTypeCurrent.current)throw new UploadError('owner_validation_blocked','Photos or category changed during the diagnostic authorization check. Review the selection before validation. No scan submitted.');
+        if(controlled&&(!controlledCategorySubmission(prepared,cardTypeCurrent.current)||prepared.version!==selectionVersions.current.front+':'+selectionVersions.current.back))throw new UploadError('owner_validation_blocked','Frozen preparation changed during the authorization check. Prepare and verify again. No scan submitted.');
+      }
+      setFailedScanDiagnostic(null);
       let result;
       if (imageFile) {
         // Multipart/form-data when image is present
         const formData = new FormData();
+        if(ownerValidation&&mode==='full')formData.append('ownerValidation','true');
         if(mode==='identity')formData.append("mode","identity");
         if(controlled){formData.append("mode","condition-validation");formData.append("validationManifest",prepared.manifest);formData.append("validationCategorySelected",prepared.category);formData.append("validationCategoryConfirmed",prepared.confirmedCategory);formData.append("validationCategoryAttempt",prepared.confirmationAttemptId);if(prepared.validationMechanism){formData.append("validationMechanism",prepared.validationMechanism);formData.append("validationPreflightTicket",prepared.validationPreflightTicket||'');formData.append("validationSpendApproval",prepared.validationSpendApproval||'');}}
         formData.append("cardName", controlled&&prepared.validationMechanism?'':cardName.trim());
@@ -643,7 +653,7 @@ if (data.imageAnalysis) setImageAnalysis(protectFinancialReport(data).imageAnaly
 });
     
 
-    } catch (error) { const response=predictionFailureResponse(error);if(response||controlled){const failed={};rememberScanDiagnostic(failed,response||{},{controlled,manifest:controlled?JSON.parse(prepared.manifest):null,failed:true});setFailedScanDiagnostic(failed);}setError(error instanceof UploadError ? error.message+(error.scanCode?" (Reference: "+error.scanCode+")":"") : "Unexpected report display error. No financial recommendation was generated."); }
+    } catch (error) { if(error instanceof UploadError&&error.code==='owner_validation_blocked'){setError(error.message);return;}const response=predictionFailureResponse(error);if(response||controlled){const failed={};rememberScanDiagnostic(failed,response||{},{controlled,manifest:controlled?JSON.parse(prepared.manifest):null,failed:true});setFailedScanDiagnostic(failed);}setError(error instanceof UploadError ? error.message+(error.scanCode?" (Reference: "+error.scanCode+")":"") : "Unexpected report display error. No financial recommendation was generated."); }
     finally   { scanInFlight.current=false;setLoading(false); }
   }
 
@@ -880,7 +890,7 @@ if (data.imageAnalysis) setImageAnalysis(protectFinancialReport(data).imageAnaly
                 {loading ? (<><span style={{ width: 18, height: 18, border: "2px solid rgba(255,255,255,0.4)", borderTopColor: "#fff", borderRadius: "50%", animation: "spin 0.7s linear infinite", flexShrink: 0 }} />Analyzing...</>) : "Analyze My Card"}
               </button>
             </div>
-            <ScanDiagnostics />
+            <ScanDiagnostics validationRequired={ownerValidation} onValidationChange={setOwnerValidation} busy={loading||processingImages>0}/>
             <DemoReportAction />
             {failedScanDiagnostic && <><ScanDiagnostics report={failedScanDiagnostic} prominent scrollToCapture/><ScanDiagnostics report={failedScanDiagnostic}/></>}
             {/* Condition */}

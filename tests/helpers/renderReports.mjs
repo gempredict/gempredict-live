@@ -39,11 +39,11 @@ export function renderReports(report,completedSalesEvidence=null,props={}){
  return {upper:renderToStaticMarkup(React.createElement(ResultCard,{data:report,index:0,onSave(){},isSaved:false,completedSalesEvidence,...props})),lower:renderToStaticMarkup(React.createElement(ImageAnalysisCard,{report}))};
 }
 // Isolate server authorization states without starting a browser or network.
-export async function renderDiagnosticControl(authorization,report=null){
+export async function renderDiagnosticControl(authorization,report=null,props={}){
  const {scanDiagnosticAccess}=await import('../../lib/scanDiagnosticClient.mjs');
  let calls=0;
  const {default:Control}=components('src/components/ScanDiagnostics.jsx',{safeVisionValidation,scanDiagnosticAccess,useRef:React.useRef,useEffect(){},useState(initial){return [calls++===0?authorization:typeof initial==='function'?initial():initial,()=>{}];}});
- return renderToStaticMarkup(React.createElement(Control,{report}));
+ return renderToStaticMarkup(React.createElement(Control,{report,...props}));
 }
 
 export function renderIdentityResult(report){
@@ -55,7 +55,7 @@ export function renderIdentityResult(report){
 export function appInteraction(bindings={}){
  const slots=[];let index=0;
  const hook=initial=>{const i=index++;if(!(i in slots))slots[i]=typeof initial==='function'?initial():initial;return [slots[i],value=>{slots[i]=typeof value==='function'?value(slots[i]):value;}];};
- const {default:App}=components('src/App.jsx',{controlledCategorySubmission,attachReportPhotos,reportPhotos,reportListings,ReportPhotos,CompletedSalesSection,ConditionSnapshot,ReportStyle,reportHero,unifiedReportPresentation,GradingScenarioCalculator,...collector,...financial,identitySummary,reportTitle,verificationRows,safeScanFailure,conditionAssessmentLabels,buildGemPredictScore,AtlasPanel,IdentityResult:()=>null,ScanDiagnostics:()=>null,ControlledValidation:()=>null,DemoReportAction:()=>null,useState:hook,useRef:initial=>hook({current:initial})[0],useEffect(){},track(){},...bindings});
+ const {default:App}=components('src/App.jsx',{requireOwnerDiagnosticAccess:async()=>({enabled:true,authorized:true,conditionValidationAvailable:true,expiresAt:Date.now()+60000}),controlledCategorySubmission,attachReportPhotos,reportPhotos,reportListings,ReportPhotos,CompletedSalesSection,ConditionSnapshot,ReportStyle,reportHero,unifiedReportPresentation,GradingScenarioCalculator,...collector,...financial,identitySummary,reportTitle,verificationRows,safeScanFailure,conditionAssessmentLabels,buildGemPredictScore,AtlasPanel,IdentityResult:()=>null,ScanDiagnostics:()=>null,ControlledValidation:()=>null,DemoReportAction:()=>null,useState:hook,useRef:initial=>hook({current:initial})[0],useEffect(){},track(){},...bindings});
  function render(){index=0;return App();}
  function nodes(root,predicate){const found=[];function walk(node){if(!node||typeof node!=='object')return;if(Array.isArray(node)){node.forEach(walk);return;}if(predicate(node))found.push(node);walk(node.props?.children);}walk(root);return found;}
  return {render,nodes};

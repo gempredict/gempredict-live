@@ -1,6 +1,6 @@
 import {structuredExperimentPreflight,requireStructuredExperiment} from '../../lib/structuredExperiment.mjs';
 import {fullAnalysisStructuredEnabled,fullAnalysisOutputFormat,parseFullAnalysisMessage,fullAnalysisStructuredGuidance} from '../../lib/fullAnalysisSchema.mjs';
-import {verifyConditionValidation} from '../../lib/conditionValidationServer.mjs';
+import {verifyConditionValidation,requireValidationDiagnostics} from '../../lib/conditionValidationServer.mjs';
 import {safeIdentityValidation} from '../../lib/identityValidation.mjs';
 import {identifyFromPhotos} from '../../lib/identityStage.mjs';
 import {VISION_MODEL,visionOutputBudget,parseVisionMessage,safeVisionValidation,safeVisionProviderFailure,retainSportsVisionEvidence} from '../../lib/visionResponsePolicy.mjs';
@@ -535,7 +535,8 @@ async function fetchImageAnalysis(
   cardName,
   cardType,
   scanDiagnostics=null,
-  structured=false
+  structured=false,
+  validationRequest=null
 ) {
   if (!anthropic) throw new Error("NO_API_KEY");
   if (!imageBuffer || imageBuffer.length === 0) return null;
@@ -561,6 +562,7 @@ const backMime = backImageMimeType &&
 
   const imagePrompt=buildSportsVisionPrompt({cardName,typeLabel,hasBack:!!backBase64,category:cardType});
 
+  if(validationRequest)requireValidationDiagnostics(validationRequest,scanDiagnostics);
   scanDiagnostics?.vision('request_started',cardType,structured?'json_schema':'prompt_json');
   const visionStarted=Date.now();
   scanDiagnostics?.providerAttempt(structured);
@@ -745,6 +747,13 @@ if (hasTypedCardName && looksLikeJunk(cardName)) {
 
   // Explicitly isolated mode shares the same parser, image checks and hourly cap.
   if(fields.mode && !['identity','full','condition-validation','condition-preflight'].includes(fields.mode))return res.status(400).json({error:'Unsupported scan mode.'});
+  if(fields.ownerValidation!==undefined&&!['true','false',true,false].includes(fields.ownerValidation))return res.status(400).json({error:'Invalid owner-validation selection. No provider request was made.'});
+  const ownerValidation=fields.ownerValidation==='true'||fields.ownerValidation===true;
+  const diagnosticValidation=ownerValidation||['condition-validation','condition-preflight'].includes(fields.mode);
+  if(diagnosticValidation){
+    try{requireValidationDiagnostics(req,scanDiagnostics);}catch{return res.status(403).json({error:'Owner validation blocked: active Preview Scan Diagnostics authorization and available diagnostic capture are required. Authorize diagnostics before validation. No provider request was made.'});}
+    if(ownerValidation&&(!imageBuffer||fields.mode&&fields.mode!=='full'))return res.status(400).json({error:'Owner validation requires photographic Full Analysis. No provider request was made.'});
+  }
   let conditionValidation=null;
   if(['condition-validation','condition-preflight'].includes(fields.mode)){
     try{conditionValidation=await verifyConditionValidation(req,fields,imageBuffer,backImageBuffer);}
@@ -801,8 +810,10 @@ if (hasTypedCardName && looksLikeJunk(cardName)) {
         cardName,
         cardType,
         scanDiagnostics,
-        structuredAnalysis
+        structuredAnalysis,
+        diagnosticValidation?req:null
       ).catch(function(err) {
+        if(err.message==='validation_diagnostics_required'){analysisFailure={status:403,payload:{error:'Owner validation blocked: diagnostic authorization expired or capture became unavailable before analysis. Reauthorize diagnostics; no provider request was made.'}};return null;}
         analysisFailure=providerFailure(err);
         if(!safeVisionValidation(err.visionValidation)&&!['ANALYSIS_RESPONSE_INCOMPLETE','ANALYSIS_EMPTY_RESPONSE','ANALYSIS_RESPONSE_INVALID','ANALYSIS_NORMALIZATION_FAILED'].includes(err.message))scanDiagnostics?.vision(err.message==='NO_API_KEY'?'provider_not_configured':[401,403].includes(err.status)?'provider_authentication_failed':err.status===429?'rate_limited':'request_failed');
         console.error('[GemPredict] Image analysis failed',analysisFailure.payload.code,safeVisionValidation(err.visionValidation));

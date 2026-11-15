@@ -18,7 +18,7 @@ export default function ControlledValidation({front,back,busy,cardType,onCategor
   invalidate('Owner authorization expired. No controlled scan was submitted by verification. Reauthorize Preview Scan Diagnostics, refresh owner authorization here, then freeze, download and verify all three files again.');
   setStatus(Object.fromEntries(kinds.map(k=>[k,'Authorization expired — prepare again'])));
  }
- function requireOwner(){if(!owner.current?.authorized||owner.current.expiresAt<=Date.now()){expire();throw Error('Owner authorization unavailable or expired. Reauthorize Preview Scan Diagnostics, refresh here, then prepare again.');}}
+ function requireOwner(){if(!owner.current?.conditionValidationAvailable||owner.current?.enabled===false)throw Error('Controlled validation blocked: diagnostic capability is unavailable. Refresh owner authorization; no scan submitted.');if(!owner.current?.authorized||owner.current.expiresAt<=Date.now()){expire();throw Error('Owner authorization unavailable or expired. Reauthorize Preview Scan Diagnostics, refresh here, then prepare again.');}}
  async function refresh(){
   const id=++refreshId.current;invalidate();setWorking(true);
   try{
@@ -73,6 +73,7 @@ export default function ControlledValidation({front,back,busy,cardType,onCategor
  }
  return <section aria-label="Controlled Preview validation" style={{padding:16,border:'1px solid #d2b48c',borderRadius:12,marginTop:16}}>
   <h3>Owner-only controlled card validation</h3>
+  <p role="status">Diagnostic authorization: {access.authorized&&access.expiresAt>Date.now()?'active until '+new Date(access.expiresAt).toLocaleTimeString():'missing or expired — authorize Preview Scan Diagnostics before submission'}.</p>
   <p><strong>Selected card category: {CONTROLLED_CATEGORIES[cardType]||'Unresolved'}</strong></p>
   <label>Category for this controlled test <select aria-label="Controlled card category" value={categoryChoice===cardType?cardType:''} disabled={!access.authorized||busy||working} onChange={e=>{const value=e.target.value;invalidate('Category selection changed. Choose the category, then freeze, download and verify again.');setStatus(emptyStatus());setCategoryChoice(validControlledCategory(value)?value:null);if(validControlledCategory(value))onCategoryChange(value);}}><option value="">Choose category explicitly</option>{Object.entries(CONTROLLED_CATEGORIES).map(([value,label])=><option key={value} value={value}>{label}</option>)}</select></label>
   <label style={{display:'block',marginTop:12}}>Controlled analysis mechanism <select aria-label="Controlled analysis mechanism" value={experimental?'json_schema':'prompt_json'} disabled={busy||working} onChange={e=>{invalidate('Analysis mechanism changed. Freeze and verify the pair again.');setStatus(emptyStatus());setExperimental(e.target.value==='json_schema');}}><option value="prompt_json">Prompt JSON (existing path)</option><option value="json_schema">Structured JSON Schema — experimental Sports preflight</option></select></label>
