@@ -1,0 +1,105 @@
+{
+  "cardId": "GP-ID-008",
+  "scanId": "9ad2042b-9cd1-46e3-8e9e-8e1d6bda386c",
+  "deploymentCommit": "3cc855b598bb2c5625e84fd6f6aa2fdcf1781215",
+  "evidencePolicy": "Sanitized adjudication only; photographs, archive manifest, original diagnostic and imported observation remain private and are not committed.",
+  "technicalCompletion": "completed",
+  "photoLinkage": {
+    "status": "unestablished",
+    "archiveFileHashes": "matched",
+    "suppliedImageDimensions": {
+      "front": [
+        1152,
+        1536
+      ],
+      "back": [
+        1152,
+        1536
+      ]
+    },
+    "diagnosticPreparedDimensions": {
+      "front": [
+        1920,
+        2560
+      ],
+      "back": [
+        1920,
+        2560
+      ]
+    },
+    "serverPreparedDigestsRetained": false,
+    "accuracyEligible": false
+  },
+  "groundTruthReview": {
+    "coreFields": "independently_reviewed_photos_and_checklists",
+    "exactPhysicalPrinting": "unresolved"
+  },
+  "proposalComparison": {
+    "scope": "Literal diagnostic proposal compared with independently reviewed supplied-card label; not a scored photo-linked accuracy attempt.",
+    "subject": {
+      "proposed": "Babe Ruth",
+      "reference": "Babe Ruth",
+      "result": "consistent"
+    },
+    "year": {
+      "proposed": "2025",
+      "reference": "2025",
+      "result": "consistent"
+    },
+    "manufacturer": {
+      "proposed": "Topps",
+      "reference": "Topps",
+      "result": "consistent"
+    },
+    "mainProduct": {
+      "proposedComponent": "Allen & Ginter",
+      "reference": "Allen & Ginter",
+      "result": "consistent_literal_component",
+      "note": "Component appears in compound identifiedBrandSet; original compound value is unchanged."
+    },
+    "subset": {
+      "proposedComponent": "Storied Victories",
+      "reference": "Sweet Victory",
+      "result": "incorrect_component"
+    },
+    "cardNumber": {
+      "proposed": "SV-40",
+      "reference": "SV-40",
+      "result": "consistent"
+    }
+  },
+  "subjectConflict": {
+    "status": "exact_cause_not_recoverable_from_export",
+    "clearSubjectReadings": {
+      "front": 1,
+      "back": 1
+    },
+    "literalReadingTextsRetained": false,
+    "readingAreasRetained": false,
+    "hypothesis": "A front team/headline may have been mislabeled as subject; no exact transcription is asserted."
+  },
+  "usage": {
+    "inputTokens": 4811,
+    "outputTokens": 351,
+    "cacheCreationInputTokens": 0,
+    "cacheReadInputTokens": 0,
+    "actualCostUsd": null,
+    "latencyMs": null
+  },
+  "verification": {
+    "sportsCatalogCompared": false,
+    "photoSupported": false,
+    "financialOutputs": "withheld",
+    "falseIndependentVerificationObserved": false
+  },
+  "sources": [
+    {
+      "url": "https://www.tcdb.com/ViewCard.cfm/sid/579607/cid/32681153/2025-Topps-Allen-%26-Ginter---Sweet-Victory-SV-40-Babe-Ruth",
+      "type": "independent_catalog"
+    },
+    {
+      "url": "https://baseballcardpedia.com/index.php/2025_Topps_Allen_%26_Ginter",
+      "type": "independent_checklist"
+    }
+  ]
+}

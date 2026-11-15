@@ -1,0 +1,29 @@
+{
+  "source": "Owner-reported diagnostic summary, not a retained provider response",
+  "scanId": "ebc24d1e-ab56-49b6-b190-0ebc56abc524",
+  "observed": {
+    "mode": "identity",
+    "frontOnly": true,
+    "httpStatus": 200,
+    "stopReason": "end_turn",
+    "outputTokens": 405,
+    "subject": "Zapdos",
+    "collectorNumber": "133/128",
+    "language": "English",
+    "confidence": 72,
+    "proposedYear": null,
+    "proposedSet": null,
+    "printedSet": {"text": "J 30CEN", "certainty": "uncertain"},
+    "copyright": {"containsYear": "2026", "certainty": "uncertain", "rawText": null},
+    "catalogReference": "30th-133",
+    "catalogOutcome": "conflict",
+    "catalogReason": "catalog_candidate_conflict",
+    "exportedFinalConflicts": [],
+    "photoMissingClearReadings": ["setCode"],
+    "conditionRequested": false,
+    "marketplaceRequested": false,
+    "financialWithheld": true
+  },
+  "notRetained": ["identifiedParallel", "candidate.variants", "candidate.parallel", "copyright.rawText", "initialConflicts", "postCorrectionConflicts"],
+  "fixturePolicy": "HTTP/model wrappers reconstruct reported values for offline tests. Finish/parallel variations are explicitly synthetic hypotheses, not asserted live fields. Name/number/language reading wrappers model the reported final setCode-only gap; their literal transcriptions were not retained. Copyright wrapper uses only the reported year and stays uncertain."
+}

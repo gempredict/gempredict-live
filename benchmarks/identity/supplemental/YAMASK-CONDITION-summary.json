@@ -1,0 +1,60 @@
+{
+  "evidenceKind": "owner_reported_historical_diagnostic_findings",
+  "scanId": "b9a0cf4e-5222-4db5-a19d-b343a2f2a87d",
+  "contextCommit": "e44ae4ab41dcf8352fdbb4ffaa4bb536c01357a9",
+  "deploymentCommit": null,
+  "ownerReportedCardName": "Yamask",
+  "reportedFindings": [
+    {
+      "attribute": "corners",
+      "side": "back",
+      "certainty": "suspected",
+      "defect": "whitening",
+      "count": 3
+    },
+    {
+      "attribute": "edges",
+      "side": "back",
+      "certainty": "suspected",
+      "defect": "whitening",
+      "count": 1
+    },
+    {
+      "attribute": "surface",
+      "side": "front",
+      "certainty": "unassessable",
+      "defect": null,
+      "count": null
+    },
+    {
+      "attribute": "surface",
+      "side": "back",
+      "certainty": "unassessable",
+      "defect": null,
+      "count": null
+    },
+    {
+      "attribute": "centering",
+      "side": "front",
+      "certainty": "unassessable",
+      "defect": null,
+      "count": null
+    }
+  ],
+  "reportedLimitations": [
+    "resolution",
+    "perspective"
+  ],
+  "reportedFinancialRecommendations": "withheld",
+  "originalDiagnosticAvailable": false,
+  "coordinates": null,
+  "rawModelResponse": null,
+  "inspectionCoverage": null,
+  "preparedImageDigests": {
+    "front": null,
+    "back": null
+  },
+  "independentlyVerifiedLocations": false,
+  "accuracyScoringEligible": false,
+  "note": "Owner-supplied diagnostic findings, not a retained diagnostic import or new scan. Literal coordinates, confidence, coverage and unknown surface/centering defect codes are unavailable. Synthetic rendering fixtures are separate and must never be attributed to this historical scan."
+}

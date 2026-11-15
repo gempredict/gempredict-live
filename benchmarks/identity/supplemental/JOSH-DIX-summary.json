@@ -1,0 +1,24 @@
+{
+  "evidenceKind": "owner_summary_only",
+  "scanId": "43ec97ca-7d25-419b-a934-6a9ec389d4ac",
+  "contextCommit": "63798d3f5acd99152ae35eca20fb84a19d7fd7a5",
+  "deploymentCommit": null,
+  "ownerReportedProposal": {
+    "subject": "Josh Dix",
+    "year": "2025",
+    "product": "Bowman University Basketball",
+    "collectorNumber": "PA-JD",
+    "autograph": true
+  },
+  "reportedHistoricalResult": {
+    "subjectGroup": "supported",
+    "serialObservationPresent": true,
+    "serialObservationValue": null,
+    "photoIdentityMissingReadings": ["cardNumber"],
+    "collectorReadingDisposition": "unsupported_or_invalid"
+  },
+  "originalDiagnosticAvailable": false,
+  "preparedImageDigests": {"front": null, "back": null},
+  "accuracyScoringEligible": false,
+  "note": "Owner-reported historical observation only. Diagnostic, literal serial and full output not supplied. No historical result rewritten or imported as a retained live diagnostic. Synthetic offline regression is not a new scan."
+}

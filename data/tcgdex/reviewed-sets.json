@@ -1,0 +1,14 @@
+{
+  "repository": "tcgdex/cards-database",
+  "revision": "a8fe5736aef9bd6be2436e3be730109030f4c6e2",
+  "sources": [
+    {
+      "path": "data/Scarlet & Violet/151.ts",
+      "content": "import { Set } from '../../interfaces'\nimport serie from '../Scarlet & Violet'\n\nconst set: Set = {\n\tid: \"sv03.5\",\n\n\tname: {\n\t\tde: \"151\",\n\t\ten: \"151\",\n\t\tes: \"151\",\n\t\tfr: \"151\",\n\t\tit: \"151\",\n\t\tpt: \"151\"\n\t},\n\n\tserie: serie,\n\n\tcardCount: {\n\t\tofficial: 165\n\t},\n\n\treleaseDate: \"2023-09-22\",\n\n\tabbreviations: {\n\t\tofficial: \"MEW\",\n\t\tfr: \"151\"\n\t},\n\n\tthirdParty: {\n\t\tcardmarket: 5402,\n\t\ttcgplayer: 23237\n\t}\n}\n\nexport default set\n"
+    },
+    {
+      "path": "data/Mega Evolution/30th Celebration.ts",
+      "content": "import { Set } from '../../interfaces'\nimport serie from '../Mega Evolution'\n\nconst set: Set = {\n\tid: \"30th\",\n\n\tname: {\n\t\ten: \"30th Celebration\",\n\t\tfr: '30ᵉ Anniversaire',\n\t\tde: '30 Jahre',\n\t\tit: '30° Anniversario',\n\t\tpt: 'Celebração de 30 Anos',\n\t\tes: 'Celebración 30.º Aniversario',\n\t\t'es-mx': 'Celebración 30.º Aniversario'\n\t},\n\n\tserie: serie,\n\n\tcardCount: {\n\t\tofficial: 128\n\t},\n\n\treleaseDate: \"2026-09-16\",\n\n\tabbreviations: {\n\t\tofficial: \"30C\"\n\t},\n\n\tthirdParty: {\n\t\tcardmarket: 6601,\n\t\ttcgplayer: 24722\n\t}\n}\n\nexport default set\n"
+    }
+  ]
+}

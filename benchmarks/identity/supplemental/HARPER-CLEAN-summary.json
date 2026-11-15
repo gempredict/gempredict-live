@@ -1,0 +1,29 @@
+{
+  "evidenceKind": "owner_reported_historical_diagnostic_findings",
+  "scanId": "7d06a979-d50a-4c29-8427-a3b7eb83afc6",
+  "deploymentCommit": "e44ae4ab41dcf8352fdbb4ffaa4bb536c01357a9",
+  "investigationBaseCommit": "24afd423ed061cd327395c65c8806fe97fab20ae",
+  "ownerReportedCardName": "Bryce Harper",
+  "category": "sports",
+  "mode": "full_analysis",
+  "reportedCleanObservations": [
+    {"attribute":"corners","side":"front"},
+    {"attribute":"corners","side":"back"},
+    {"attribute":"edges","side":"front"},
+    {"attribute":"surface","side":"front"},
+    {"attribute":"surface","side":"back"}
+  ],
+  "reportedCleanDisposition": {"code":"no_defect_observed","count":5,"accepted":true,"result":"unassessable","diagnosticReason":"conflicting_or_insufficient_evidence"},
+  "reportedCentering": {"side":"front","result":"unassessable","reason":"invalid_localization_cue_or_measurement"},
+  "reportedGlobalPhotoLimitation": "perspective",
+  "reportedDamageFindingsPresent": false,
+  "financialOutputs": "withheld",
+  "originalDiagnosticAvailable": false,
+  "rawModelResponse": null,
+  "coordinates": null,
+  "inspectionCoverage": null,
+  "modelCertaintyAndSupportConfidence": null,
+  "independentlyVerifiedLocations": false,
+  "accuracyScoringEligible": false,
+  "note": "Historical summary supplied by owner; not a retained diagnostic import. Actual coordinates, coverage contents and individual downgrade causes are unknown. Offline fixtures are synthetic and do not amend or rerun this scan. No reported damage does not prove a clean card."
+}

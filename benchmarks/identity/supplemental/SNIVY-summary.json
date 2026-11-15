@@ -1,0 +1,13 @@
+{
+  "evidenceKind": "owner_summary_only",
+  "scanId": "41869bca-5bc5-49a7-a57b-81fd4fad7421",
+  "contextCommit": "d88a0d3b736c2d0ed4a3f86ba32d6e4506ef5f25",
+  "deploymentCommit": null,
+  "reportedOriginalProposal": {"subject":"Snivy","year":"2021","product":"McDonald's 25th Anniversary","cardNumber":"5/25","language":"English","parallel":"Holo"},
+  "reportedFinalCanonicalLanguage": "Illus. Ken Sugimori",
+  "originalDiagnosticAvailable": false,
+  "originalPrintedLanguageReading": null,
+  "userLanguageInput": null,
+  "accuracyScoringEligible": false,
+  "note": "Historical owner report retained unchanged. Raw readings, user input and catalog response unavailable. Offline reproduction of an invalid clear language row is synthetic, not a reconstruction or new live scan. Exact physical printing and catalog match not established."
+}

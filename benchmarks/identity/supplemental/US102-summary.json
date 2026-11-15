@@ -1,0 +1,39 @@
+{
+  "evidenceKind": "owner_summary_only",
+  "scanId": "888c1493-6bd5-4d9f-8d32-7946bc0e4bb7",
+  "contextCommit": "5d3fe66f15dd21cb6d071fae4d43dd5a90641d3d",
+  "deploymentCommit": null,
+  "ownerDescribedCard": {
+    "year": 2026,
+    "manufacturer": "Topps",
+    "product": "Update Series",
+    "collectorNumber": "US102",
+    "subjects": ["Shohei Ohtani", "Kyle Tucker"],
+    "subset": "Veteran Combos",
+    "printedTitle": "Rare Imports",
+    "foilDescription": "green foil",
+    "copySerial": "96/99",
+    "exactParallel": null
+  },
+  "reportedOriginalOutput": {
+    "identifiedRarity": "96/99",
+    "identifiedSerialNumber": null,
+    "subjectProposal": null,
+    "parallelProposal": null,
+    "omissions": ["subject and parallel proposal text redacted", "serial field reported missing"]
+  },
+  "reportedOutcomes": {
+    "identityRequest": "successful",
+    "clearSubjectReadingCount": 4,
+    "photoIdentityStatus": "conflict",
+    "independentSportsCatalogComparison": false,
+    "physicalPrintingVerified": false,
+    "financialOutputs": "withheld"
+  },
+  "preparedImageDigests": {"front": null, "back": null},
+  "originalDiagnosticAvailable": false,
+  "photoLinkage": "unestablished",
+  "privateImport": "blocked_missing_original_diagnostic_and_prepared_image_evidence",
+  "accuracyScoringEligible": false,
+  "note": "Owner-supplied summary preserved separately from measured benchmark observations. No omitted proposal text, hashes or live outcomes reconstructed. Not a new scan or offline replay of the original model response."
+}
