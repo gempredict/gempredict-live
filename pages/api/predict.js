@@ -1,3 +1,4 @@
+import { requestGeminiAnalysis } from '../../lib/geminiFullAnalysis.mjs';
 import {structuredExperimentPreflight,requireStructuredExperiment} from '../../lib/structuredExperiment.mjs';
 import {fullAnalysisStructuredEnabled,fullAnalysisOutputFormat,parseFullAnalysisMessage,fullAnalysisStructuredGuidance} from '../../lib/fullAnalysisSchema.mjs';
 import {verifyConditionValidation,requireValidationDiagnostics} from '../../lib/conditionValidationServer.mjs';
@@ -15,7 +16,8 @@ import {readIdentityReadings} from '../../lib/visionIdentityEvidence.mjs';
 // GemPredict — Card grading prediction API route
 //
 // ENVIRONMENT VARIABLES REQUIRED:
-//   CLAUDE_API_KEY               — Anthropic API key
+//   VISION_BENCH_GEMINI_KEY      — Gemini Full Analysis (protected Preview)
+//   CLAUDE_API_KEY               — separate identity/text actions and explicit Full Analysis rollback
 //   NEXT_PUBLIC_SUPABASE_URL     — Supabase project URL
 //   SUPABASE_SERVICE_ROLE_KEY    — Supabase service role secret
 //
@@ -527,7 +529,7 @@ marketContext +
 // ─── Vision analysis (new) ────────────────────────────────────────────────────
 // Sends the card image to Claude with a structured grading prompt.
 // Returns a normalised imageAnalysis object, or null on failure (non-fatal).
-async function fetchImageAnalysis(
+async function fetchClaudeImageAnalysis(
   imageBuffer,
   imageMimeType,
   backImageBuffer,
@@ -760,13 +762,21 @@ if (hasTypedCardName && looksLikeJunk(cardName)) {
     catch{return res.status(403).json({error:'Controlled validation requires current Preview owner authorization, matching exported prepared files and explicit matching category confirmation.'});}
     scanDiagnostics?.conditionValidation(conditionValidation);
   }
+  const claudeRollback=process.env.GEMPREDICT_FULL_ANALYSIS_CLAUDE_ROLLBACK==='true';
   if(fields.mode==='condition-preflight'){
+    if(!claudeRollback)return res.status(400).json({error:'The legacy Claude experiment is unavailable with Gemini Full Analysis.'});
     try{res.setHeader('Cache-Control','private, no-store');return res.status(200).json(structuredExperimentPreflight(req,fields,conditionValidation));}
     catch{return res.status(403).json({error:'Structured preflight requires a current owner session, Sports category and matching frozen pair. No provider request was made.'});}
   }
   if(fields.validationMechanism&&!conditionValidation)return res.status(403).json({error:'An explicit experimental mechanism requires verified controlled owner authorization. No provider request or prompt-JSON fallback was made.'});
+  const geminiPhotoAnalysis=imageBuffer&&fields.mode!=='identity'&&!claudeRollback;
+  if(geminiPhotoAnalysis){
+    try{requireValidationDiagnostics(req,scanDiagnostics);}
+    catch{return res.status(403).json({error:'Gemini Full Analysis requires an authorized Preview Scan Diagnostics session.'});}
+    if(fields.validationMechanism)return res.status(400).json({error:'The legacy Claude experiment is unavailable with Gemini Full Analysis.'});
+  }
   let structuredAnalysis=false;
-  if(conditionValidation&&(fields.validationMechanism||fullAnalysisStructuredEnabled(req,conditionValidation,cardType))){
+  if(claudeRollback&&conditionValidation&&(fields.validationMechanism||fullAnalysisStructuredEnabled(req,conditionValidation,cardType))){
     try{structuredAnalysis=requireStructuredExperiment(req,fields,conditionValidation);}
     catch{return res.status(403).json({error:'Structured experiment blocked: flag, owner authorization, mechanism, cost approval or preflight is missing, stale or mismatched. Run the no-charge preflight again; do not repeat a submitted scan. No provider request or prompt-JSON fallback was made.'});}
   }
@@ -802,7 +812,28 @@ if (hasTypedCardName && looksLikeJunk(cardName)) {
     let analysisFailure=null;
 
     if (imageBuffer) {
-      imageAnalysis = await fetchImageAnalysis(
+      const analyze = claudeRollback ? fetchClaudeImageAnalysis : async (
+        front, frontMime, back, backMime, _name, category, diagnostics
+      ) => {
+        requireValidationDiagnostics(req,diagnostics);
+        const parsed = await requestGeminiAnalysis({
+          images: [
+            { side: 'front', buffer: front, mimeType: frontMime },
+            ...(back ? [{ side: 'back', buffer: back, mimeType: backMime }] : []),
+          ],
+          cardType: category,
+          diagnostics,
+        });
+        diagnostics?.model(parsed);
+        const normalized=normaliseImageAnalysis(parsed,back?['front','back']:['front'],category);
+        if(!normalized)throw Error('ANALYSIS_NORMALIZATION_FAILED');
+        const result={...normalized,photoSideUncertain:parsed.photoSideUncertain,
+          ...(parsed.autographType?{observedAutographType:parsed.autographType}:{}),
+          ...(parsed.foilTreatment?{observedFoilTreatment:parsed.foilTreatment}:{})};
+        diagnostics?.normalized(result);
+        return result;
+      };
+      imageAnalysis = await analyze(
         imageBuffer,
         imageMimeType,
         backImageBuffer,

@@ -1,0 +1,19 @@
+# Gemini Full Analysis on protected Preview
+
+The existing POST /api/predict photo path calls the Gemini Developer API at POST /v1beta/models/gemini-4-carbon:generateContent through @google/genai 3.6.1. It submits one candidate, 4,096 maximum output tokens, low thinking, and high media resolution per photo with a 45-second deadline. Retries, redirects, and automatic provider fallback are disabled. The separate Identity and text-only actions retain their existing behavior. Set GEMPREDICT_FULL_ANALYSIS_CLAUDE_ROLLBACK=true only for an explicit rollback.
+
+The JSON schema separates identity proposals, literal readings, and named subjects from independent per-photo corner, edge, surface and centering observations. A finding records a verbal location and apparent, possible, or not assessable evidence. Photo limitations and uncertain side labels stay visible. The existing collector report shows qualitative notes without promoting them into verified observations, grade predictions or financial evidence. Catalog reconciliation still runs independently. Sports catalog records are used only through the existing source-backed rules, which continue to withhold verification when a source is unavailable.
+
+## Mobile image preparation
+
+The existing browser pipeline decodes JPEG with EXIF orientation and supports a bundled HEIC decoder when native decoding is unavailable. It preserves the full frame and fits within a 2,560-pixel long edge where the byte limit allows. JPEG encoding tries qualities 0.94, 0.90 and 0.86 before reducing dimensions. It preserves low-resolution input dimensions and sends a bounded JPEG for each side. The server validates actual decoded bytes. Gemini receives those prepared bytes verbatim in front/back order. An offline SDK wire test checks byte equality and protected diagnostic dimensions. The synthetic sideways 4,032 × 3,024 JPEG prepares as 1,920 × 2,560 at quality 0.94. The offline HEIC test exercises the preparation path with an injected decoder.
+
+## Vercel configuration and cost admission
+
+1. In the GemPredict Vercel project under **Settings → Environment Variables**, bind VISION_BENCH_GEMINI_KEY as a sensitive server-side variable scoped to Preview for feature/gemini-primary-phase5a. Verify the binding in Vercel. Codex Vault availability does not establish that binding.
+2. Keep Preview Deployment Protection active. Configure the existing GEMPREDICT_PREVIEW_SCAN_DIAGNOSTICS_ENABLED and separate owner and signing keys on that Preview. The Gemini photo path requires a valid owner diagnostics session.
+3. Verify Google’s rates and billing rules for this exact model and project, including high-resolution images and thinking. Set GEMPREDICT_GEMINI_INPUT_USD_PER_MILLION and GEMPREDICT_GEMINI_OUTPUT_USD_PER_MILLION to conservative verified upper rates, and set GEMPREDICT_GEMINI_MAX_SCAN_USD to the approved per-scan estimate. Enable GEMPREDICT_GEMINI_FULL_ANALYSIS=true only once those checks pass. Missing configuration or an estimate above the configured ceiling blocks the call.
+
+The conservative admission formula reserves 1,048,576 input tokens for the entire model context, including images and prompt, plus 4,096 output and a separate 32,768-token thinking allowance. In USD this is 1.048576 × the input rate plus 0.036864 × the output rate, where each rate is per million tokens. This is an estimate based on model limits, not an account billing cap. Protected diagnostics record request latency, model, token counts and a usage-based estimate. Official pricing and exact model billing rules could not be verified from this environment. No numeric rates or live spending are assumed.
+
+[Google pricing](https://ai.google.dev/gemini-api/docs/pricing) · [Media resolution](https://ai.google.dev/gemini-api/docs/media-resolution) · [Thinking](https://ai.google.dev/gemini-api/docs/thinking)
