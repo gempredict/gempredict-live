@@ -4,9 +4,10 @@
   "private": true,
   "scripts": {
     "dev": "next dev",
-    "build": "npm run test:gemini && npm run test:sold && npm run test:mobile && npm run test:reconciliation && npm run test:pokemon && npm run test:benchmark && npm run test:economics && next build && node scripts/check-tcgdex-packaging.mjs && node scripts/check-demo-packaging.mjs",
+    "build": "npm run test:library && npm run test:gemini && npm run test:sold && npm run test:mobile && npm run test:reconciliation && npm run test:pokemon && npm run test:benchmark && npm run test:economics && next build && node scripts/check-tcgdex-packaging.mjs && node scripts/check-demo-packaging.mjs",
     "start": "next start",
     "lint": "next lint",
+    "test:library": "node --test tests/saved-reports.test.mjs",
     "test:gemini": "node --test tests/gemini-full-analysis.test.mjs",
     "test:sold": "node --test tests/soldCompsFilter.test.mjs tests/soldIdentityGate.test.mjs tests/identityReviewToken.test.mjs tests/canonicalIdentityV2.test.mjs tests/sportsIdentityAudit.test.mjs tests/ebayIdentityMatch.test.mjs",
     "test:mobile": "node --test tests/mobile-reconciliation.test.mjs",

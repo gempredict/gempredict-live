@@ -55,7 +55,7 @@ export function renderIdentityResult(report){
 export function appInteraction(bindings={}){
  const slots=[];let index=0;
  const hook=initial=>{const i=index++;if(!(i in slots))slots[i]=typeof initial==='function'?initial():initial;return [slots[i],value=>{slots[i]=typeof value==='function'?value(slots[i]):value;}];};
- const {default:App}=components('src/App.jsx',{requireOwnerDiagnosticAccess:async()=>({enabled:true,authorized:true,conditionValidationAvailable:true,expiresAt:Date.now()+60000}),controlledCategorySubmission,attachReportPhotos,reportPhotos,reportListings,ReportPhotos,CompletedSalesSection,ConditionSnapshot,ReportStyle,reportHero,unifiedReportPresentation,GradingScenarioCalculator,...collector,...financial,identitySummary,reportTitle,verificationRows,safeScanFailure,conditionAssessmentLabels,buildGemPredictScore,AtlasPanel,IdentityResult:()=>null,ScanDiagnostics:()=>null,ControlledValidation:()=>null,DemoReportAction:()=>null,useState:hook,useRef:initial=>hook({current:initial})[0],useEffect(){},track(){},...bindings});
+ const {default:App}=components('src/App.jsx',{requireOwnerDiagnosticAccess:async()=>({enabled:true,authorized:true,conditionValidationAvailable:true,expiresAt:Date.now()+60000}),controlledCategorySubmission,attachReportPhotos,reportPhotos,reportListings,ReportPhotos,CompletedSalesSection,ConditionSnapshot,ReportStyle,reportHero,unifiedReportPresentation,GradingScenarioCalculator,...collector,...financial,identitySummary,reportTitle,verificationRows,safeScanFailure,conditionAssessmentLabels,buildGemPredictScore,AtlasPanel,IdentityResult:()=>null,ScanDiagnostics:()=>null,ControlledValidation:()=>null,DemoReportAction:()=>null,MyCardLibrary:()=>null,useState:hook,useRef:initial=>hook({current:initial})[0],useEffect(){},track(){},...bindings});
  function render(){index=0;return App();}
  function nodes(root,predicate){const found=[];function walk(node){if(!node||typeof node!=='object')return;if(Array.isArray(node)){node.forEach(walk);return;}if(predicate(node))found.push(node);walk(node.props?.children);}walk(root);return found;}
  return {render,nodes};
@@ -107,4 +107,14 @@ export function controlledDiagnosticInteraction(handle,bindings={}){
  const {ControlledCapture}=components('src/components/ScanDiagnostics.jsx',{safeVisionValidation,useState:hook,useRef:initial=>hook({current:initial})[0],useEffect(effect,deps){const i=index++,old=slots[i];if(!old||deps.some((v,j)=>v!==old.deps[j]))queued.push(()=>{old?.cleanup?.();slots[i]={deps,cleanup:effect()};});},...bindings},'export {ControlledCapture};');
  function nodes(root,predicate){const out=[];const walk=n=>{if(!n||typeof n!=='object')return;if(Array.isArray(n)){n.forEach(walk);return;}if(predicate(n))out.push(n);walk(n.props?.children);};walk(root);return out;}
  return {render(){index=0;const tree=ControlledCapture({handle});const effects=queued;queued=[];effects.forEach(fn=>fn());return tree;},nodes,unmount(){slots.forEach(s=>s?.cleanup?.());}};
+}
+
+export function renderLibraryMobile(report) {
+ const values=[{},true,{access_token:'offline'},[report]];
+ let state=0;
+ const {default:Library}=components('src/components/MyCardLibrary.jsx',{
+  useEffect(){},useRef:initial=>({current:initial}),
+  useState:initial=>[state<values.length?values[state++]:initial,()=>{}],
+ });
+ return renderToStaticMarkup(React.createElement(Library,{onSession(){},renderReport(){return null;}}));
 }

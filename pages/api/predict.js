@@ -1,3 +1,5 @@
+import { createLibraryScanId, saveCompletedLibraryReport } from '../../lib/savedReportsServer.mjs';
+import { GEMINI_MODEL } from '../../lib/geminiFullAnalysis.mjs';
 import { withCompactPhotoObservations } from '../../lib/compactPhotoObservations.mjs';
 import { requestGeminiAnalysis } from '../../lib/geminiFullAnalysis.mjs';
 import {structuredExperimentPreflight,requireStructuredExperiment} from '../../lib/structuredExperiment.mjs';
@@ -811,6 +813,7 @@ if (hasTypedCardName && looksLikeJunk(cardName)) {
   try {
     let imageAnalysis = null;
     let analysisFailure=null;
+    let analysisModelVersion=null;
 
     if (imageBuffer) {
       const analyze = claudeRollback ? fetchClaudeImageAnalysis : async (
@@ -825,6 +828,7 @@ if (hasTypedCardName && looksLikeJunk(cardName)) {
           cardType: category,
           diagnostics,
         });
+        analysisModelVersion=parsed.modelVersion??null;
         diagnostics?.model(parsed);
         const normalized=normaliseImageAnalysis(parsed,back?['front','back']:['front'],category);
         if(!normalized)throw Error('ANALYSIS_NORMALIZATION_FAILED');
@@ -1043,7 +1047,7 @@ const atlas = null; // Financial recommendations require independent identity an
     failureStage='report';
     const graderScenariosV2 = emptyGraderScenarios();
 
-    return res.status(200).json(protectFinancialReport({
+    const completedReport = protectFinancialReport({
   success: true,
   scanNotices:[...(!conditionValidation&&(!marketData||marketData.success===false)?[scanFailure('MARKETPLACE_UNAVAILABLE').payload]:[]),...(pokemonIdentity&&!pokemonIdentity.valuationIdentityGate.allowed?[scanFailure('VERIFICATION_UNRESOLVED').payload]:[])],
   identityV2,
@@ -1066,7 +1070,14 @@ const atlas = null; // Financial recommendations require independent identity an
   hasImageAnalysis: imageAnalysis !== null,
   remaining: rateCheck.remaining,
   emailSaved,
-}));
+});
+    if (imageAnalysis && !conditionValidation && req.headers.authorization) {
+      const scanId=createLibraryScanId(scanDiagnostics?.scanId());
+      completedReport.librarySave=await saveCompletedLibraryReport({
+        req, report:completedReport, scanId, category:cardType, model:claudeRollback?VISION_MODEL:GEMINI_MODEL, modelVersion:analysisModelVersion,
+      });
+    }
+    return res.status(200).json(completedReport);
 
   } catch (err) {
     const failure=scanFailure(failureStage==='verification'?'VERIFICATION_RUNTIME_FAILED':'UNEXPECTED_SCAN_ERROR');

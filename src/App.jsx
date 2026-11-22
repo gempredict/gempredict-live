@@ -1,3 +1,4 @@
+import MyCardLibrary from './components/MyCardLibrary';
 import {controlledCategorySubmission} from '../lib/controlledCategories.mjs';
 import ReportStyle from './components/ReportStyle.jsx';
 import ConditionSnapshot from './components/ConditionSnapshot.jsx';
@@ -117,7 +118,7 @@ function getVerdictBullets(data) {
   }
   return bullets.slice(0, 3);
 }
-function buildCopySummary(data) { return protectedCopySummary(data); }
+function buildCopySummary(data, historical) { return protectedCopySummary(data, { historical }); }
 
 // ─── CSS ──────────────────────────────────────────────────────────────────────
 const GLOBAL_CSS = `
@@ -405,12 +406,12 @@ function EmptyState() {
   );
 }
 
-export function ResultCard({ data, index, onSave, isSaved,photos=null,completedSalesEvidence=null,demo=false }) {
-  data = protectFinancialReport(data);
-  const view=unifiedReportPresentation(data),listings=reportListings(data),hero=reportHero(data),observation=data.originalIdentityObservation||data.imageAnalysis,prefix=`gp-report-${index}`;
+export function ResultCard({ data, index, onSave, isSaved,photos=null,completedSalesEvidence=null,demo=false,historical=false }) {
+  if(!historical) data = protectFinancialReport(data);
+  const view=unifiedReportPresentation(data),listings=historical?data.savedListingView:reportListings(data),hero=reportHero(data),observation=data.originalIdentityObservation||data.imageAnalysis,prefix=`gp-report-${index}`;
   const [copied,setCopied]=useState(false),[shared,setShared]=useState(false),[feedback,setFeedback]=useState(null);
-  function handleCopy(){try{navigator.clipboard.writeText(buildCopySummary(data));}catch{}setCopied(true);setTimeout(()=>setCopied(false),2000);}
-  function handleShare(){const summary=buildCopySummary(data);if(navigator.share)navigator.share({title:'GemPredict Report',text:summary}).catch(()=>{});else{try{navigator.clipboard.writeText(summary);}catch{}}setShared(true);setTimeout(()=>setShared(false),2000);}
+  function handleCopy(){try{navigator.clipboard.writeText(buildCopySummary(data,historical));}catch{}setCopied(true);setTimeout(()=>setCopied(false),2000);}
+  function handleShare(){const summary=buildCopySummary(data,historical);if(navigator.share)navigator.share({title:'GemPredict Report',text:summary}).catch(()=>{});else{try{navigator.clipboard.writeText(summary);}catch{}}setShared(true);setTimeout(()=>setShared(false),2000);}
   return <article className="gp-unified" aria-label="Unified card analysis report">
    <ReportStyle/>
    {demo&&<p className="gp-report-demo" role="note">DEMO — SYNTHETIC DATA · Mock observations and listings. No real valuation.</p>}
@@ -427,14 +428,14 @@ export function ResultCard({ data, index, onSave, isSaved,photos=null,completedS
      <section className="gp-reference-panel gp-economics" id={prefix+'-psa'} aria-label="Grading economics"><h3>Expected grading economics</h3><dl>{['Expected Graded Value','Current Raw Value','PSA Submission Fee','Expected Net'].map((label,i)=><div className={'gp-ledger-row'+(i===3?' gp-ledger-net':'')} key={label}><dt>{label}</dt><dd>Unavailable</dd></div>)}</dl><p className="gp-fine"><em>Automatic estimates withheld pending qualified evidence and costs.</em></p></section>
      <aside className="gp-bottom-strip" aria-label="Best use case"><strong>Best use case:</strong> Evidence review only; not a grading or sale recommendation.</aside>
      <aside className="gp-bottom-strip" aria-label="Recommended action"><strong>→ Recommended action</strong><p>Verify exact printing and qualified sales before a grading decision.</p></aside>
-     <div className="gp-u-actions">{demo?<><button type="button" disabled>Copy Summary</button><button type="button" disabled>Save Report</button><button type="button" disabled>Share</button></>:<><button type="button" onClick={handleCopy}>{copied?'✓ Copied':'Copy Summary'}</button><button type="button" onClick={()=>onSave?.(data)}>{isSaved?'✓ Saved':'Save Report'}</button><button type="button" onClick={handleShare}>{shared?'✓ Copied':'Share'}</button></>}</div>
+     <div className="gp-u-actions">{demo?<><button type="button" disabled>Copy Summary</button><button type="button" disabled>Save Report</button><button type="button" disabled>Share</button></>:<><button type="button" onClick={handleCopy}>{copied?'✓ Copied':'Copy Summary'}</button>{!historical&&<button type="button" onClick={()=>onSave?.(data)}>{isSaved?'✓ Saved':'Save Report'}</button>}<button type="button" onClick={handleShare}>{shared?'✓ Copied':'Share'}</button></>}</div>
      {demo?<p className="gp-source-footer">Synthetic demo — copy, saving and sharing disabled.</p>:<><div className="gp-u-feedback"><p>Was this card identification useful?</p><button type="button" onClick={()=>setFeedback('yes')}>👍 Yes</button><button type="button" onClick={()=>setFeedback('review')}>👎 Needs review</button>{feedback&&<p>{feedback==='yes'?'Thanks. Feedback recorded for this view.':'Review the identification before using it.'}</p>}</div><p className="gp-source-footer">Review the evidence and limitations before any grading, selling or submission decision.</p></>}
     </div>
    </div>
    <section className="gp-photo-analysis" id={prefix+'-condition'} aria-label="Condition evidence"><header className="gp-photo-analysis-header"><h3>Photo Condition Analysis <span className="gp-beta">BETA</span></h3>{demo&&<span className="gp-synthetic" aria-label="Synthetic observations">Synthetic</span>}</header><div className="gp-photo-analysis-body">
     <div className="gp-identity-brief"><h4>{hero.title}</h4><p>{hero.subtitle} · {hero.printing||'Printing unresolved'} — printing not verified</p><span className="gp-badge">{view.identityLabel==='Identification proposal'?'Identity unverified · Identification proposal':view.identityLabel}</span>{view.categoryConflict&&<p>Category needs review. Contradictory category details are excluded.</p>}{data.userIdentityConflicts?.length>0&&<p>Your supplied identity conflicts with catalog evidence. Review required.</p>}
      <details><summary>Identity &amp; provenance details</summary><div className="gp-detail-body"><p>{reportTitle(data)}</p><p>{collectorIdentityMessage(data)}</p><dl className="gp-u-fields">{view.fields.map(f=><div key={f.label}><dt>{f.label}</dt><dd>{f.value}</dd></div>)}</dl><p>{view.printingStatus}</p><VerificationStatus report={data}/><p>{identitySummary(data)}</p>{observation&&<details><summary>Original AI Observation — Unverified</summary><p>{[observation.identifiedYear,observation.identifiedBrandSet,observation.identifiedSubject,observation.identifiedCardNumber,observation.identifiedParallel].filter(Boolean).join(' · ')||'No original identity proposal retained.'}</p></details>}{data.stage==='identity'&&<IdentityResult report={data}/>}</div></details>
-     {data.imageAnalysis&&!demo&&<details><summary>Review or correct identification</summary><div className="gp-legacy-details"><IdentityReviewCard report={data}/></div></details>}
+     {data.imageAnalysis&&!demo&&!historical&&<details><summary>Review or correct identification</summary><div className="gp-legacy-details"><IdentityReviewCard report={data}/></div></details>}
     </div>
     <details open={!!photos}><summary>Submitted front / back photographs</summary><ReportPhotos photos={photos}/></details>
     <ConditionSnapshot data={data.imageAnalysis} demo={demo}/>
@@ -468,6 +469,9 @@ export default function App() {
   const [remaining,       setRemaining]       = useState(null);
   const [history,         setHistory]         = useState([]);
   const [savedReports,    setSavedReports]    = useState([]);
+  const [libraryToken,setLibraryToken]=useState(null);
+  const [libraryRevision,setLibraryRevision]=useState(0);
+  const [libraryMessage,setLibraryMessage]=useState('');
 
   // Image upload state
 const [imageFile,       setImageFile]       = useState(null);   // Front image
@@ -587,7 +591,7 @@ const emailRef    = useRef(null);
     if (loading || processingImages || photoErrors.front || photoErrors.back || (!cardName.trim() && !imageFile)) return;
     if (email && !isValidEmail(email)) { setError("Please enter a valid email address."); return; }
     scanInFlight.current=true;setActiveStage(mode);if(mode==='identity')setIdentityResult(null);
-    setLoading(true); setError(""); setRateLimitMsg(""); setEmailConfirm(false); setImageAnalysis(null);
+    setLoading(true); setLibraryMessage(''); setError(""); setRateLimitMsg(""); setEmailConfirm(false); setImageAnalysis(null);
 
     try {
       if(controlled||ownerValidation&&mode==='full'){
@@ -615,7 +619,9 @@ const emailRef    = useRef(null);
   formData.append("backImage", controlled?prepared.back:backImageFile);
 }
         await assertUploadBudget(formData);
-        result = await requestPrediction({ method: "POST", body: formData });
+        result = libraryToken && mode==='full'
+          ? await requestPrediction({ method: "POST", body: formData, headers:{Authorization:`Bearer ${libraryToken}`} })
+          : await requestPrediction({ method: "POST", body: formData });
       } else {
         // JSON when no image
         result = await requestPrediction({
@@ -633,6 +639,14 @@ const emailRef    = useRef(null);
         const identified=attachReportPhotos(reportFromResponse(data),{front:controlled?prepared.front:imageFile,back:controlled?prepared.back:backImageFile});rememberScanDiagnostic(identified,res,{stage:'identity'});setIdentityResult(identified);
         if(data.remaining!=null)setRemaining(data.remaining);
         return;
+      }
+      if(data.librarySave?.status==='saved'){
+        setLibraryRevision(previous=>previous+1);
+        setLibraryMessage('Saved to My Card Library.');
+      }else if(data.librarySave?.status){
+        setLibraryMessage(data.librarySave.status==='sign_in_required'
+          ? 'The report is complete, but was not saved because your library session expired.'
+          : 'The report is complete, but My Card Library could not save it.');
       }
       setResults(function(prev) {
   const newReport = attachReportPhotos(reportFromResponse(data),{front:controlled?prepared.front:imageFile,back:controlled?prepared.back:backImageFile});
@@ -1116,6 +1130,9 @@ if (data.imageAnalysis) setImageAnalysis(protectFinancialReport(data).imageAnaly
             <button type="button" onClick={()=>handleSubmit('identity')} disabled={loading||processingImages>0||!!photoErrors.front||!!photoErrors.back||!imageFile} style={{padding:'0.85rem 1.75rem',borderRadius:12,border:'1px solid #d2b48c',background:C.ink,color:'#fff',fontWeight:700}}>Identify Card</button>
             <span style={{fontSize:'0.8rem',color:C.inkSoft}}>Front photo required; back optional. Identification only. Analyze My Card remains the separate full scan.</span>
           </div>
+          <MyCardLibrary onSession={setLibraryToken} revision={libraryRevision}
+            renderReport={payload=><ResultCard data={payload} index="library" historical/>}/>
+          {libraryMessage&&<p role="status">{libraryMessage}</p>}
           <p><a href="/grading-economics">Grading Economics — manual scenario calculator</a></p>
           <ControlledValidation cardType={cardType} onCategoryChange={setCardType} front={imageFile} back={backImageFile} busy={loading||processingImages>0||!!photoErrors.front||!!photoErrors.back} getSelectionEpoch={()=>selectionVersions.current.front+':'+selectionVersions.current.back} onSubmit={prepared=>handleSubmit('condition-validation',prepared)}/>
           {identityResult&&!loading&&<ResultCard data={identityResult} photos={reportPhotos(identityResult)} index={0} onSave={saveReport} isSaved={isSavedReport(identityResult)}/>}
@@ -1234,7 +1251,7 @@ if (data.imageAnalysis) setImageAnalysis(protectFinancialReport(data).imageAnaly
         marginBottom: "0.75rem",
       }}
     >
-      Saved Card Reports
+      Card reports saved on this device
     </div>
 
     <div
@@ -1340,7 +1357,7 @@ if (data.imageAnalysis) setImageAnalysis(protectFinancialReport(data).imageAnaly
           {/* Saved Reports */}
           {savedReports.length > 0 && (
             <div style={{ marginTop: "1.75rem" }}>
-              <div style={{ fontSize: "0.72rem", fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.08em", color: C.inkSoft, marginBottom: "0.75rem" }}>Saved Reports</div>
+              <div style={{ fontSize: "0.72rem", fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.08em", color: C.inkSoft, marginBottom: "0.75rem" }}>Saved on this device</div>
               <div style={{ display: "flex", flexDirection: "column", gap: "0.5rem" }}>
                 {savedReports.map(function(r) {
                   const v = VERDICTS[r.verdict];
