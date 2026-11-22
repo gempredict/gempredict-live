@@ -294,3 +294,37 @@ test('authorized route reports missing pricing without provider attempts or sens
  assert.equal(ticket.provider.sdkAttempts,0);
  assert.equal(ticket.visionStatus,'provider_not_configured');
 });
+
+test('real SDK HTTP 400 preserves only fixed Google status, field and schema hint in the encrypted export', async () => {
+  const host='gempredict-live-unit123.vercel.app';
+  const headers={host,origin:'https://'+host};
+  const configuration={...env,...diagnosticsEnv,VERCEL_URL:host,GEMPREDICT_FULL_ANALYSIS_CLAUDE_ROLLBACK:'false'};
+  headers.cookie=authorizeDiagnosticOwner({headers,method:'POST'},configuration.GEMPREDICT_SCAN_DIAGNOSTICS_OWNER_KEY,configuration).split(';')[0];
+  const privateMarker='private-provider-marker';
+  let attempts=0;
+  const result=await runScan({
+    env:configuration,headers,frontBytes:front,backBytes:back,geminiCountFetch:countFetch,
+    geminiClient:options=>new GoogleGenAI({...options,httpOptions:{...options.httpOptions,
+      fetch:async()=>{
+        attempts++;
+        return Response.json({error:{code:400,status:'INVALID_ARGUMENT',
+          message:'The schema is too complex for serving. '+privateMarker,
+          details:[{'@type':'type.googleapis.com/google.rpc.BadRequest',fieldViolations:[
+            {field:'generationConfig.responseJsonSchema.properties.'+privateMarker,description:privateMarker},
+            {field:'contents[0].parts[1].mediaResolution.level',description:privateMarker},
+            {field:privateMarker,description:privateMarker},
+          ]}]}},{status:400});
+      },
+    }}),
+  });
+  assert.equal(attempts,1);
+  assert.equal(result.metrics.vision,0);
+  assert.equal(result.status,502);
+  const ticket=readDiagnosticTicket({headers,method:'POST'},result.responseHeaders[TICKET_HEADER],result.responseHeaders[SCAN_HEADER],configuration);
+  assert.equal(ticket.provider.sdkAttempts,1);
+  assert.equal(ticket.provider.rejection.upstreamHttpStatus,400);
+  assert.deepEqual(ticket.provider.rejection.gemini,{
+    googleStatus:'INVALID_ARGUMENT',fieldCategories:['response_schema','media_resolution'],messageHint:'schema_complexity',
+  });
+  assert.ok(!JSON.stringify({body:result.payload,ticket}).includes(privateMarker));
+});
