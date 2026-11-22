@@ -846,7 +846,7 @@ if (hasTypedCardName && looksLikeJunk(cardName)) {
       ).catch(function(err) {
         if(err.message==='validation_diagnostics_required'){analysisFailure={status:403,payload:{error:'Owner validation blocked: diagnostic authorization expired or capture became unavailable before analysis. Reauthorize diagnostics; no provider request was made.'}};return null;}
         analysisFailure=providerFailure(err);
-        if(!safeVisionValidation(err.visionValidation)&&!['ANALYSIS_RESPONSE_INCOMPLETE','ANALYSIS_EMPTY_RESPONSE','ANALYSIS_RESPONSE_INVALID','ANALYSIS_NORMALIZATION_FAILED'].includes(err.message))scanDiagnostics?.vision(err.message==='NO_API_KEY'?'provider_not_configured':[401,403].includes(err.status)?'provider_authentication_failed':err.status===429?'rate_limited':'request_failed');
+        if(!safeVisionValidation(err.visionValidation)&&!['ANALYSIS_RESPONSE_INCOMPLETE','ANALYSIS_EMPTY_RESPONSE','ANALYSIS_RESPONSE_INVALID','ANALYSIS_NORMALIZATION_FAILED'].includes(err.message))scanDiagnostics?.vision(['NO_API_KEY','GEMINI_MODEL_DISABLED','GEMINI_CREDENTIAL_MISSING','GEMINI_PRICING_UNVERIFIED'].includes(err.message)?'provider_not_configured':[401,403].includes(err.status)?'provider_authentication_failed':err.status===429?'rate_limited':'request_failed');
         console.error('[GemPredict] Image analysis failed',analysisFailure.payload.code,safeVisionValidation(err.visionValidation));
         return null;
       });

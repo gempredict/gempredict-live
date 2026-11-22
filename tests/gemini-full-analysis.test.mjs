@@ -2,7 +2,7 @@ import assert from 'node:assert/strict';
 import test from 'node:test';
 import sharp from 'sharp';
 import { ApiError, GoogleGenAI } from '@google/genai';
-import { GEMINI_MODEL, GEMINI_MAX_OUTPUT, geminiBudget, parseGeminiAnalysis, requestGeminiAnalysis } from '../lib/geminiFullAnalysis.mjs';
+import { GEMINI_MODEL, GEMINI_MAX_OUTPUT, parseGeminiAnalysis, requestGeminiAnalysis } from '../lib/geminiFullAnalysis.mjs';
 import { protectFinancialReport } from '../lib/financialSafety.mjs';
 import { sportsIdentityEvidence } from '../lib/sportsIdentityEvidence.mjs';
 import { providerFailure } from '../lib/scanFailures.mjs';
@@ -11,7 +11,9 @@ import { validateAnalysisImage } from '../lib/uploadValidation.mjs';
 import { authorizeDiagnosticOwner, readDiagnosticTicket, SCAN_HEADER, TICKET_HEADER } from '../lib/scanDiagnosticsAuth.mjs';
 import { runScan } from './helpers/reconciliationPipeline.mjs';
 
+const countFetch = async () => Response.json({totalTokens:2621});
 const env = {
+  GEMPREDICT_GEMINI_PRICING_VERIFIED_THROUGH: new Date(Date.now()+86400000).toISOString().slice(0,10),
   VERCEL: '1', VERCEL_ENV: 'preview', GEMPREDICT_GEMINI_FULL_ANALYSIS: 'true',
   VISION_BENCH_GEMINI_KEY: 'synthetic-test-only',
   GEMPREDICT_GEMINI_INPUT_USD_PER_MILLION: '0.10',
@@ -120,7 +122,7 @@ test('unknown printing and serial remain null, with a warning for mislabeled pho
 test('one call sets the deadline, image resolution, order, unchanged bytes and thinking configuration', async () => {
   let attempts = 0;
   const usage = [];
-  const result = await requestGeminiAnalysis({ images, env, cardType:'pokemon',
+  const result = await requestGeminiAnalysis({ images, env, countFetch, cardType:'pokemon',
     diagnostics:{geminiAttempt(){},geminiUsage(value){usage.push(value);},providerLatency(){}},
     makeClient(options) {
       assert.equal(options.httpOptions.retryOptions.attempts,1);
@@ -147,12 +149,19 @@ test('one call sets the deadline, image resolution, order, unchanged bytes and t
 });
 
 test('budget and credential configuration fail closed before client construction', async () => {
-  assert.ok(geminiBudget(env).maximum <= 0.20);
   const makeClient=()=>assert.fail('must not construct the client');
-  for (const settings of [{VISION_BENCH_GEMINI_KEY:''},{VERCEL_ENV:'production'},
-    {GEMPREDICT_GEMINI_FULL_ANALYSIS:''},{GEMPREDICT_GEMINI_INPUT_USD_PER_MILLION:''},
-    {GEMPREDICT_GEMINI_MAX_SCAN_USD:'0.001'}]) {
-    await assert.rejects(requestGeminiAnalysis({images,env:{...env,...settings},makeClient}),{message:'NO_API_KEY'});
+  const noCount=()=>assert.fail('must not contact Gemini');
+  for (const [settings, message] of [
+    [{VISION_BENCH_GEMINI_KEY:''},'GEMINI_CREDENTIAL_MISSING'],
+    [{VERCEL_ENV:'production'},'GEMINI_MODEL_DISABLED'],
+    [{GEMPREDICT_GEMINI_FULL_ANALYSIS:''},'GEMINI_MODEL_DISABLED'],
+    [{GEMPREDICT_GEMINI_PRICING_VERIFIED_THROUGH:''},'GEMINI_PRICING_UNVERIFIED'],
+    [{GEMPREDICT_GEMINI_PRICING_VERIFIED_THROUGH:'2000-01-01'},'GEMINI_PRICING_UNVERIFIED'],
+    [{GEMPREDICT_GEMINI_INPUT_USD_PER_MILLION:''},'GEMINI_PRICING_UNVERIFIED'],
+    [{GEMPREDICT_GEMINI_MAX_SCAN_USD:'0.001'},'GEMINI_BUDGET_EXCEEDED'],
+  ]) {
+    await assert.rejects(requestGeminiAnalysis({images,env:{...env,...settings},makeClient,countFetch:noCount}),{message});
+    assert.equal(providerFailure(Error(message)).status,503);
   }
 });
 
@@ -160,7 +169,7 @@ test('timeout and SDK rejection are fixed vocabulary with no retries or leaked u
   for (const [cause,code] of [[new DOMException('private','TimeoutError'),'ANALYSIS_PROVIDER_TIMEOUT'],
     [new ApiError({message:'private',status:401}),'ANALYSIS_PROVIDER_AUTH_FAILED']]) {
     let calls=0;
-    await assert.rejects(requestGeminiAnalysis({images,env,makeClient:()=>({models:{async generateContent(){calls++;throw cause;}}})}),
+    await assert.rejects(requestGeminiAnalysis({images,env,countFetch,makeClient:()=>({models:{async generateContent(){calls++;throw cause;}}})}),
       error=>providerFailure(error).payload.code===code && !JSON.stringify(error).includes('private') && !error.message.includes('private'));
     assert.equal(calls,1);
   }
@@ -185,8 +194,15 @@ test('authorized multipart Full Analysis uses the real SDK serialization and pro
   const configuration={...env,...diagnosticsEnv,VERCEL_URL:host,GEMPREDICT_FULL_ANALYSIS_CLAUDE_ROLLBACK:'false'};
   headers.cookie=authorizeDiagnosticOwner({headers,method:'POST'},configuration.GEMPREDICT_SCAN_DIAGNOSTICS_OWNER_KEY,configuration).split(';')[0];
   let calls=0;
+  let countedRequest;
   const result=await runScan({
     env:configuration,headers,frontBytes:front,backBytes:back,fields:{cardType:'sports'},items:[],
+    geminiCountFetch: async(url,init)=>{
+      assert.equal(url,'https://generativelanguage.googleapis.com/v1beta/models/gemini-4-carbon:countTokens');
+      assert.equal(init.redirect,'error');
+      ({generateContentRequest:countedRequest}=JSON.parse(init.body));
+      return Response.json({totalTokens:2621});
+    },
     geminiClient: options=>new GoogleGenAI({...options,httpOptions:{...options.httpOptions,
       fetch:async (url, init)=>{
         calls++;
@@ -196,6 +212,7 @@ test('authorized multipart Full Analysis uses the real SDK serialization and pro
         assert.equal(new Headers(init.headers).get('x-goog-api-key'),env.VISION_BENCH_GEMINI_KEY);
         assert.equal(parsed.search,'');
         const body=JSON.parse(init.body);
+        assert.deepEqual(countedRequest,{model:'models/gemini-4-carbon',...body});
         const parts=body.contents[0].parts.filter(part=>part.inlineData);
         assert.deepEqual(parts.map(part=>Buffer.from(part.inlineData.data,'base64')),[front,back]);
         assert.ok(parts.every(part=>part.mediaResolution.level==='MEDIA_RESOLUTION_HIGH'));
@@ -246,8 +263,34 @@ test('sideways phone JPEG is prepared portrait without upscaling and sent withou
   delete data.photos.back;
   data.identity.readings=data.identity.readings.filter(row=>row.side==='front');
   await requestGeminiAnalysis({images:[{side:'front',buffer:bytes,mimeType:await validateAnalysisImage(bytes)}],
-    env,cardType:'sports',makeClient:()=>({models:{async generateContent(request){
+    env,countFetch,cardType:'sports',makeClient:()=>({models:{async generateContent(request){
       assert.deepEqual(Buffer.from(request.contents[0].parts[1].inlineData.data,'base64'),bytes);
       return response(data);
     }}})});
+});
+
+test('verified request count must fit the ceiling before generation can start',async()=>{
+ const makeClient=()=>assert.fail('generation cannot start');
+ for(const [totalTokens,message] of [[1000000,'GEMINI_BUDGET_EXCEEDED'],[null,'GEMINI_INPUT_COUNT_FAILED']]){
+  await assert.rejects(requestGeminiAnalysis({images,env:{...env,GEMPREDICT_GEMINI_MAX_SCAN_USD:'0.05'},makeClient,
+    countFetch:async()=>Response.json({totalTokens})}),{message});
+ }
+});
+
+test('authorized route reports missing pricing without provider attempts or sensitive values',async()=>{
+ const host='gempredict-live-unit123.vercel.app';
+ const headers={host,origin:'https://'+host};
+ const configuration={...env,...diagnosticsEnv,VERCEL_URL:host,GEMPREDICT_FULL_ANALYSIS_CLAUDE_ROLLBACK:'false',
+  GEMPREDICT_GEMINI_INPUT_USD_PER_MILLION:''};
+ headers.cookie=authorizeDiagnosticOwner({headers,method:'POST'},configuration.GEMPREDICT_SCAN_DIAGNOSTICS_OWNER_KEY,configuration).split(';')[0];
+ const result=await runScan({env:configuration,headers,
+  geminiCountFetch:()=>assert.fail('count cannot start'),
+  geminiClient:()=>assert.fail('generation cannot start')});
+ assert.equal(result.status,503);
+ assert.equal(result.payload.code,'GEMINI_PRICING_UNVERIFIED');
+ assert.match(result.payload.error,/No generation request was sent/);
+ assert.ok(!JSON.stringify(result.payload).includes(env.VISION_BENCH_GEMINI_KEY));
+ const ticket=readDiagnosticTicket({headers,method:'POST'},result.responseHeaders[TICKET_HEADER],result.responseHeaders[SCAN_HEADER],configuration);
+ assert.equal(ticket.provider.sdkAttempts,0);
+ assert.equal(ticket.visionStatus,'provider_not_configured');
 });
