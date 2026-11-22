@@ -21,12 +21,23 @@ function OrdinaryDiagnostics({report,validationRequired=false,onValidationChange
   const key=window.prompt('Enter the Preview owner diagnostic key. It will not be saved.');if(!key)return;
   try{const r=await fetch('/api/scan-diagnostics',{method:'POST',credentials:'same-origin',redirect:'error',headers:{'Content-Type':'application/json'},body:JSON.stringify({action:'authorize',key})});if(!r.ok)throw Error();const data=await r.json();setAccess(previous=>({...previous,enabled:true,authorized:true,expiresAt:data.expiresAt}));setMessage('Authorized for 15 minutes. Diagnostics will be available for the next scan.');}catch{setMessage('Diagnostic authorization unavailable.');}
  }
+ async function checkGeminiPricing(){
+  try{
+   const r=await fetch('/api/scan-diagnostics',{method:'POST',credentials:'same-origin',redirect:'error',
+    headers:{'Content-Type':'application/json'},body:JSON.stringify({action:'gemini-pricing'})});
+   if(!r.ok)throw Error();
+   const data=await r.json();
+   setMessage(data.pricingValid?'Gemini pricing settings passed validation. No provider request was sent.':
+    'Gemini pricing configuration: '+data.issues.map(issue=>issue.variable+' ('+issue.rule.replace(/_/g,' ')+')').join(', '));
+  }catch{setMessage('Gemini pricing diagnostic unavailable. Check owner authorization.');}
+ }
  if(report)return <ControlledCapture key={handle?.scanId||'unavailable'} handle={handle||{controlled:false,unavailableReason:'missing_handle'}} initialAccess={access}/>;
  return <div style={{fontSize:'0.75rem',margin:'0.6rem 0'}}>
   {!report&&onValidationChange&&<label><input type="checkbox" checked={validationRequired} disabled={busy} onChange={e=>onValidationChange(e.target.checked)}/> Owner validation — require diagnostics before Full Analysis</label>}
   {!report&&onValidationChange&&<p role="status">Diagnostic authorization: {access?.enabled&&access?.conditionValidationAvailable===true&&access?.authorized&&access.expiresAt>Date.now()?'active until '+new Date(access.expiresAt).toLocaleTimeString():access?.enabled&&access?.conditionValidationAvailable===true?'missing or expired — authorize before owner validation':'unavailable — owner validation is blocked'}. Ordinary scanning does not require diagnostics.</p>}
   {!report&&onValidationChange&&<button type="button" disabled={busy} onClick={()=>refresh().then(setAccess)}>Refresh diagnostic authorization</button>}
   {access?.enabled&&(access.authorized?<span>Preview diagnostics authorized for new scans.</span>:<button type="button" onClick={authorize}>Authorize Preview Scan Diagnostics</button>)}
+  {access?.authorized&&<button type="button" disabled={busy} onClick={checkGeminiPricing}>Check Gemini pricing configuration</button>}
   {message&&<p role="status">{message}</p>}
  </div>;
 }

@@ -1,3 +1,4 @@
+import {inspectGeminiPricing} from '../lib/geminiPricing.mjs';
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
@@ -13,7 +14,7 @@ const request=(cookie='',patch={})=>({method:'POST',headers:{host:new URL(origin
 const cookie=(at=Date.now())=>authorizeDiagnosticOwner(request(),env.GEMPREDICT_SCAN_DIAGNOSTICS_OWNER_KEY,env,at).split(';')[0];
 function endpoint(req,environment=env){
  const source=fs.readFileSync('pages/api/scan-diagnostics.js','utf8').replace(/^import.*;$/gm,'').replace('export const config','const config').replace('export default function handler','function handler');
- const handler=vm.runInNewContext(source+'\nhandler',{diagnosticDeployment:r=>diagnosticDeployment(r,environment),diagnosticSession:r=>diagnosticSession(r,environment),authorizeDiagnosticOwner:(r,k)=>authorizeDiagnosticOwner(r,k,environment),readDiagnosticTicket:(r,t,s)=>readDiagnosticTicket(r,t,s,environment)});
+ const handler=vm.runInNewContext(source+'\nhandler',{process:{env:environment},inspectGeminiPricing,diagnosticDeployment:r=>diagnosticDeployment(r,environment),diagnosticSession:r=>diagnosticSession(r,environment),authorizeDiagnosticOwner:(r,k)=>authorizeDiagnosticOwner(r,k,environment),readDiagnosticTicket:(r,t,s)=>readDiagnosticTicket(r,t,s,environment)});
  const res={headers:{},code:null,setHeader(k,v){this.headers[k]=v;},status(n){this.code=n;return this;},json(body){this.body=body;return this;}};handler(req,res);return res;
 }
 async function captured(patch={}){
@@ -173,4 +174,41 @@ test('actual App places controlled diagnostic capture above its report without a
 test('failed controlled capture is prominent without a report and exposes only safe failure detail after explicit preparation',async()=>{
  const {controlledDiagnosticInteraction}=await import('./helpers/renderReports.mjs');let downloads=0;const h=syntheticHandle(Date.now()+300000);h.failed=true;const events={};const target={addEventListener(n,f){events[n]=f;},removeEventListener(){}};
  const ui=controlledDiagnosticInteraction(h,{safeVisionValidation:(await import('../lib/visionResponsePolicy.mjs')).safeVisionValidation,window:target,document:target,AbortController,setInterval(fn){const t=setInterval(fn,1000);t.unref();return t;},clearInterval,setTimeout:(fn,ms)=>{const t=setTimeout(fn,ms);t.unref();return t;},clearTimeout,fetch:async()=>({ok:true,json:async()=>({authorized:true,expiresAt:Date.now()+600000})}),prepareDiagnosticExport:async()=>new Blob([JSON.stringify({visionValidation:{phase:'json',rule:'json_syntax',raw:'private'}})]),initiateDiagnosticDownload(){downloads++;}});ui.render();await new Promise(setImmediate);let tree=ui.render();const text=()=>JSON.stringify(tree,(k,v)=>k==='ref'?undefined:v);assert.match(text(),/Controlled Scan Failed/);const button=()=>ui.nodes(tree,n=>n.type==='button'&&n.props.children==='Download Scan Diagnostics')[0];button().props.onClick();await new Promise(setImmediate);tree=ui.render();assert.match(text(),/json_syntax/);assert.doesNotMatch(text(),/private/);button().props.onClick();assert.equal(downloads,1);ui.unmount();
+});
+
+test('Gemini pricing diagnostic requires a current owner session and returns only allowlisted rules',()=>{
+ const configuration={...env,
+  VISION_BENCH_GEMINI_KEY:'synthetic-credential-not-exportable',
+  GEMPREDICT_GEMINI_PRICING_VERIFIED_THROUGH:'2026-02-30',
+  GEMPREDICT_GEMINI_INPUT_USD_PER_MILLION:'synthetic-bad-value',
+  GEMPREDICT_GEMINI_OUTPUT_USD_PER_MILLION:'0',
+ };
+ const action={action:'gemini-pricing'};
+ assert.equal(endpoint({...request(),body:action},configuration).code,403);
+ assert.equal(endpoint({...request(cookie(Date.now()-900001)),body:action},configuration).code,403);
+ assert.equal(endpoint({...request(cookie(),{origin:'https://other.example'}),body:action},configuration).code,404);
+ const result=endpoint({...request(cookie()),body:action},configuration);
+ assert.equal(result.code,200);
+ assert.equal(result.headers['Cache-Control'],'private, no-store');
+ assert.deepEqual(JSON.parse(JSON.stringify(result.body)),{
+  pricingValid:false,revision:env.VERCEL_GIT_COMMIT_SHA,issues:[
+   {variable:'GEMPREDICT_GEMINI_PRICING_VERIFIED_THROUGH',rule:'invalid_calendar_date'},
+   {variable:'GEMPREDICT_GEMINI_INPUT_USD_PER_MILLION',rule:'invalid_decimal_format'},
+   {variable:'GEMPREDICT_GEMINI_OUTPUT_USD_PER_MILLION',rule:'not_positive'},
+   {variable:'GEMPREDICT_GEMINI_MAX_SCAN_USD',rule:'missing'},
+  ],
+ });
+});
+
+test('Gemini pricing diagnostics agree with admission across the UTC expiration boundary',()=>{
+ const configuration={
+  GEMPREDICT_GEMINI_PRICING_VERIFIED_THROUGH:'2026-11-30',
+  GEMPREDICT_GEMINI_INPUT_USD_PER_MILLION:'2',
+  GEMPREDICT_GEMINI_OUTPUT_USD_PER_MILLION:'10',
+  GEMPREDICT_GEMINI_MAX_SCAN_USD:'0.40',
+ };
+ assert.deepEqual(inspectGeminiPricing(configuration,new Date('2026-11-30T23:59:59.999Z')).issues,[]);
+ const result=inspectGeminiPricing(configuration,new Date('2026-12-01T00:00:00Z'));
+ assert.equal(result.pricing,null);
+ assert.deepEqual(result.issues,[{variable:'GEMPREDICT_GEMINI_PRICING_VERIFIED_THROUGH',rule:'expired_utc'}]);
 });

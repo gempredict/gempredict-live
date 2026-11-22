@@ -1,3 +1,4 @@
+import {inspectGeminiPricing} from '../../lib/geminiPricing.mjs';
 import {diagnosticDeployment,diagnosticSession,authorizeDiagnosticOwner,readDiagnosticTicket} from '../../lib/scanDiagnosticsAuth.mjs';
 export const config={api:{bodyParser:{sizeLimit:'10kb'}}};
 export default function handler(req,res){
@@ -9,6 +10,12 @@ export default function handler(req,res){
   const cookie=authorizeDiagnosticOwner(req,req.body.key);
   if(!cookie)return res.status(401).json({error:'unauthorized'});
   res.setHeader('Set-Cookie',cookie);return res.status(200).json({authorized:true,expiresAt:Date.now()+900000});
+ }
+ if(req.body?.action==='gemini-pricing'){
+  const session=diagnosticSession(req);
+  if(!session)return res.status(403).json({error:'unauthorized'});
+  const {issues}=inspectGeminiPricing(process.env);
+  return res.status(200).json({pricingValid:issues.length===0,issues,revision:session.deployment.commit});
  }
  if(req.body?.action!=='download')return res.status(400).json({error:'invalid_request'});
  const diagnostics=readDiagnosticTicket(req,req.body.ticket,req.body.scanId);
