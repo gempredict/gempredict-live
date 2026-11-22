@@ -16,8 +16,8 @@ test('ambiguous candidates, wrong collector denominator and explicit user set co
   const r=await fraxureScan(options);assert.equal(r.payload.coreCatalogIdentity.supported,false);assert.equal(r.payload.canonicalCard.brandSet,'Cosmic Eclipse');assert.equal(r.payload.financialDecision.allowed,false);
  }
 });
-test('missing or partial reverse flags are incomplete; explicit contradictory finish flags stay disputed without undoing core identity',async()=>{
- for(const variants of [undefined,{normal:true},{normal:true,reverse:false}]){const r=await fraxureScan({variants});assert.equal(r.payload.canonicalCard.brandSet,'Unified Minds');assert.equal(r.payload.coreCatalogIdentity.supported,true);assert.equal(r.payload.catalogComparison.printing.status,variants?.reverse===false?'conflict':'unresolved');assert.equal(r.payload.physicalPrintingStatus.verified,false);}
+test('missing or unsupported negative reverse flags leave printing unresolved and retain core identity',async()=>{
+ for(const variants of [undefined,{normal:true},{normal:true,reverse:false}]){const r=await fraxureScan({variants});assert.equal(r.payload.canonicalCard.brandSet,'Unified Minds');assert.equal(r.payload.coreCatalogIdentity.supported,true);assert.equal(r.payload.catalogComparison.printing.status,'unresolved');assert.equal(r.payload.physicalPrintingStatus.verified,false);}
 });
 test('collector primary has three plain-English states; technical details closed and full evidence remains inspectable',async()=>{
  for(const cardType of ['pokemon','sports']){

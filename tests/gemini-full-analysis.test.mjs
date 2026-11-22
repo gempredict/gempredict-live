@@ -1,3 +1,4 @@
+import { renderReports } from './helpers/renderReports.mjs';
 import assert from 'node:assert/strict';
 import test from 'node:test';
 import sharp from 'sharp';
@@ -237,6 +238,14 @@ test('authorized multipart Full Analysis uses the real SDK serialization and pro
   assert.equal(ticket.images.front.width,1152);
   assert.equal(ticket.images.back.height,400);
   assert.equal(ticket.provider.usage.thinking,130);
+  assert.equal(ticket.model.conditionFormat,'compact_photo_observations');
+  assert.equal(ticket.model.compactPhotoObservations.count,18);
+  assert.equal(ticket.model.compactPhotoObservations.received,18);
+  assert.equal(ticket.finalPresentation.compactPhotoObservations.count,18);
+  assert.equal(ticket.finalPresentation.states.corners,'model_observations_available');
+  assert.equal(ticket.finalPresentation.observations,0);
+  assert.ok(!JSON.stringify(ticket).includes('No obvious corner wear visible'));
+
   assert.ok(ticket.provider.estimatedCostUSD>0);
   assert.ok(!JSON.stringify({body:result.payload,ticket}).includes(env.VISION_BENCH_GEMINI_KEY));
 });
@@ -352,4 +361,29 @@ test('compact arrays reject duplicate identity facts and duplicate or misattribu
   const normalized=parse(payload);
   assert.equal(normalized.identityReadings[0].text,'Fraxure');
   assert.equal(normalized.identifiedManufacturer,null);
+});
+
+test('synthetic Fraxure condition preserves eight photo groups and localized notes without boosting trust',()=>{
+ const data=output(cards[0]);
+ for(const side of ['front','back']){
+  mark(data,side,'centering',observed('Borders appear slightly uneven.'));
+  data.observations.push({side,region:'surface',location:'lower edge',status:'possible',evidence:'Fine surface marks.'});
+ }
+ mark(data,'back','corner_bottom_right',observed('Corner whitening along the outline.'));
+ const parsed=parseGeminiAnalysis(response(data),['front','back'],'pokemon');
+ assert.equal(parsed.modelPhotoNotes.length,8);
+ const safe=protectFinancialReport({imageAnalysis:{...parsed,inspectedSides:['front','back']}});
+ const restored=protectFinancialReport(JSON.parse(JSON.stringify(safe)));
+ assert.deepEqual(restored,safe);
+ assert.equal(safe.imageAnalysis.compactPhotoObservations.length,20);
+ assert.equal(safe.imageAnalysis.conditionAssessments.corners.state,'model_observations_available');
+ assert.equal(safe.imageAnalysis.conditionAssessments.corners.wholeAttributeVerified,false);
+ assert.equal(safe.imageAnalysis.centeringGeometryVerified,false);
+ assert.equal(safe.imageAnalysis.visualObservations.length,0);
+ assert.equal(safe.financialDecision.allowed,false);
+ assert.equal(safe.imageAnalysis.estimatedGrade,null);
+ const html=renderReports(restored).upper;
+ assert.match(html,/Back · Reported: bottom right corner: Corner whitening/);
+ assert.match(html,/Back · Possible: surface, lower edge: Fine surface marks/);
+ assert.match(html,/Model photo observations/);
 });

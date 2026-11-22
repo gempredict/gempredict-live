@@ -92,7 +92,9 @@ test('missing finish flag is unresolved while an explicit non-generated contradi
 });
 test('generated legacy normal defaults preserve raw false flags but do not prove Reverse Holo impossible or verified',()=>{
  const x=finishCase({normal:true,holo:false,reverse:false},[{type:'normal',size:'standard',variantId:'generated'}]);assert.equal(x.comparison.core.status,'supported');assert.equal(x.comparison.printing.status,'unresolved');assert.equal(x.comparison.printing.reason,'printing_evidence_incomplete');assert.equal(x.comparison.printing.providerEvidence.kind,'generated_legacy');assert.equal(x.record.variants.reverse,false);assert.deepEqual(catalogIdentityConflicts(x.card,x.record),['finish']);assert.equal(x.comparison.printing.verified,false);
- const withoutProvenance=finishCase({normal:true,holo:false,reverse:false});assert.equal(withoutProvenance.comparison.printing.status,'conflict');assert.equal(withoutProvenance.comparison.printing.providerEvidence.negativeBasis,'provider_flags_without_source_provenance');
+ const withoutProvenance=finishCase({normal:true,holo:false,reverse:false});assert.equal(withoutProvenance.comparison.printing.status,'unresolved');assert.equal(withoutProvenance.comparison.printing.providerEvidence.negativeBasis,'provider_flags_without_source_provenance');
+ const incomplete=finishCase({normal:true,holo:false,reverse:false},[null]);
+ assert.equal(incomplete.comparison.printing.status,'unresolved');
  const unsafe=catalogVariantProvenance({...x.record,hostedEvidence:{...x.record.hostedEvidence,detailedComplete:false,printings:[{finish:'normal',variantId:'generated'}]}});assert.notEqual(unsafe.kind,'generated_legacy');
  assert.notEqual(catalogVariantProvenance({...x.record,hostedEvidence:{...x.record.hostedEvidence,id:'another-card'}}).kind,'generated_legacy');
  assert.notEqual(catalogVariantProvenance({...x.record,provider:'other-provider'}).kind,'generated_legacy');

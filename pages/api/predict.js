@@ -1,3 +1,4 @@
+import { withCompactPhotoObservations } from '../../lib/compactPhotoObservations.mjs';
 import { requestGeminiAnalysis } from '../../lib/geminiFullAnalysis.mjs';
 import {structuredExperimentPreflight,requireStructuredExperiment} from '../../lib/structuredExperiment.mjs';
 import {fullAnalysisStructuredEnabled,fullAnalysisOutputFormat,parseFullAnalysisMessage,fullAnalysisStructuredGuidance} from '../../lib/fullAnalysisSchema.mjs';
@@ -827,9 +828,10 @@ if (hasTypedCardName && looksLikeJunk(cardName)) {
         diagnostics?.model(parsed);
         const normalized=normaliseImageAnalysis(parsed,back?['front','back']:['front'],category);
         if(!normalized)throw Error('ANALYSIS_NORMALIZATION_FAILED');
-        const result={...normalized,photoSideUncertain:parsed.photoSideUncertain,
+        const result=withCompactPhotoObservations({...normalized,photoSideUncertain:parsed.photoSideUncertain,
+          compactPhotoObservations:parsed.compactPhotoObservations,
           ...(parsed.autographType?{observedAutographType:parsed.autographType}:{}),
-          ...(parsed.foilTreatment?{observedFoilTreatment:parsed.foilTreatment}:{})};
+          ...(parsed.foilTreatment?{observedFoilTreatment:parsed.foilTreatment}:{})});
         diagnostics?.normalized(result);
         return result;
       };
