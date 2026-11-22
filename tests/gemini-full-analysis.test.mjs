@@ -1,3 +1,4 @@
+import { retainSportsVisionEvidence } from '../lib/visionResponsePolicy.mjs';
 import { renderReports } from './helpers/renderReports.mjs';
 import assert from 'node:assert/strict';
 import test from 'node:test';
@@ -409,7 +410,15 @@ test('Gemini parser classifies invalid response rules without retaining failed v
   ['photos_schema',data=>{data.photos=null;}],
   ['observations_schema',data=>{data.observations=null;}],
   ['identity_facts',data=>{data.identity.facts.push({...data.identity.facts[0]});}],
-  ['identity_text_length',data=>{data.identity.facts[0].value='x'.repeat(81);}],
+  ['identity_subject_length',data=>{data.identity.facts[0].value='x'.repeat(81);}],
+  ['identity_identifier_length',data=>{data.identity.facts.find(f=>f.field==='identifiedCardNumber').value='1'.repeat(41);}],
+  ['identity_alternative_length',data=>{data.identity.alternatives=['x'.repeat(81)];}],
+  ['identity_note_length',data=>{data.identity.facts.find(f=>f.field==='identityNotes').value='x'.repeat(241);}],
+  ['identity_note_length',data=>{
+   data.identity.facts.find(f=>f.field==='identityNotes').value='x'.repeat(240);
+   data.identity.alternatives=['a'.repeat(80),'b'.repeat(80),'c'.repeat(80)];
+  }],
+  ['identity_reading_length',data=>{data.identity.readings[0].text='x'.repeat(81);}],
   ['reading_side',data=>{data.identity.readings[0].side='private-marker';}],
   ['sports_collector_number',data=>{data.identity.readings.find(row=>row.field==='cardNumber').text='private-marker';}],
   ['identity_reading',data=>{data.identity.readings[0].area='private-marker';}],
@@ -459,4 +468,39 @@ test('sports validation rule is available only in encrypted owner diagnostics',a
  assert.equal(ticket.visionStatus,'gemini_response_rejected');
  assert.equal(ticket.normalization,null);
  assert.ok(!JSON.stringify(ticket).includes('private-marker'));
+});
+
+test('descriptive identity notes survive for a synthetic Harper insert and a Pokémon card',()=>{
+ const notes='The visible insert title and collector number support this identification. The release year is uncertain because the copyright line is partly obscured. The photograph does not establish an official parallel.';
+ assert.ok(notes.length>100&&notes.length<240);
+ for(const item of [
+  {...cards[0],category:'pokemon'},
+  {subjects:['Bryce Harper'],set:'Topps',number:'8B-11',year:'2024',parallel:null,subset:'8-Bit Ballers',category:'sports'},
+ ]) {
+  const data=output(item);
+  data.identity.facts.find(f=>f.field==='identityNotes').value=notes;
+  const alternative='Another release year may apply if the obscured copyright line differs';
+  data.identity.alternatives=[alternative];
+  const parsed=parseGeminiAnalysis(response(data),['front','back'],item.category);
+  assert.equal(parsed.identifiedCardNumber,item.number);
+  assert.equal(parsed.identityReadings.find(row=>row.field==='cardNumber').text,item.number);
+  assert.equal(parsed.identityNotes,notes+' Alternatives: '+alternative+'.');
+  assert.ok(parsed.identityNotes.length>240);
+  if(item.category==='sports'){
+   const retained=retainSportsVisionEvidence(parsed,['front','back'],{extended:true});
+   assert.equal(retained.originalIdentityObservation.identityNotes,parsed.identityNotes);
+  }
+ }
+});
+
+test('identifier limits remain strict even when descriptive notes are longer',()=>{
+ const base=output({subjects:['Bryce Harper'],set:'Topps',number:'8B-11',year:'2024',parallel:'Blue',serial:'123/999',subset:'8-Bit Ballers'});
+ for(const [field,value] of [
+  ['identifiedYear','20242'],['identifiedSerialNumber','1234567/123456'],['identifiedParallel','x'.repeat(81)],
+ ]) {
+  const data=structuredClone(base);
+  data.identity.facts.find(f=>f.field===field).value=value;
+  assert.throws(()=>parseGeminiAnalysis(response(data),['front','back'],'sports'),
+   {message:'ANALYSIS_RESPONSE_INVALID',geminiValidationRule:'identity_identifier_length'});
+ }
 });
