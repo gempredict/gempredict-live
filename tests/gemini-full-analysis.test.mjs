@@ -37,16 +37,18 @@ const images = [{ side: 'front', buffer: front, mimeType: await validateAnalysis
 const observed = evidence => ({status:'apparent',evidence});
 const notAssessed = evidence => ({status:'not_assessable',evidence});
 
-function photo() {
-  return {
-    sideStatus: 'expected',
-    corners: Object.fromEntries(['topLeft','topRight','bottomLeft','bottomRight'].map(key =>
-      [key,observed('No obvious corner wear visible.')])),
-    edges: Object.fromEntries(['top','bottom','left','right'].map(key => [key,observed('No obvious edge wear visible.')])),
-    centering: notAssessed('Camera angle limits border comparison.'),
-    surface: [],
-    limitations: [],
-  };
+function observations(side) {
+  return [
+    ...['top_left','top_right','bottom_left','bottom_right'].map(location =>
+      ({side,region:'corner_'+location,...observed('No obvious corner wear visible.')})),
+    ...['top','bottom','left','right'].map(location =>
+      ({side,region:'edge_'+location,...observed('No obvious edge wear visible.')})),
+    {side,region:'centering',...notAssessed('Camera angle limits border comparison.')},
+  ];
+}
+
+function mark(payload, side, region, finding) {
+  Object.assign(payload.observations.find(row=>row.side===side&&row.region===region),finding);
 }
 
 function output({ subjects, set, number, year, parallel, serial = null, foil = null, autograph = null, subset = null }) {
@@ -55,14 +57,17 @@ function output({ subjects, set, number, year, parallel, serial = null, foil = n
   if (serial) readings.push({field:'serialNumber',text:serial,certainty:'clear',side:'back',area:'body_text'});
   return {
     identity: {
-      identifiedSubject: subjects.join(' / '), identifiedManufacturer:null, identifiedSport:null,
-      identifiedFranchise:null, identifiedBrandSet:set, identifiedYear:year, identifiedCardNumber:number,
-      identifiedLanguage:'English', identifiedRarity:null, identifiedTeam:null,
-      identifiedSerialNumber:serial, identifiedParallel:parallel, subset, printedTitle:null,
-      autographType:autograph, foilTreatment:foil, identityNotes:'Proposed identity awaiting catalog reconciliation.',
-      subjects, alternatives:[], readings,
+      facts: Object.entries({
+        identifiedSubject: subjects.join(' / '), identifiedBrandSet:set, identifiedCardNumber:number,
+        identifiedLanguage:'English', identityNotes:'Proposed identity awaiting catalog reconciliation.',
+        ...(year?{identifiedYear:year}:{}), ...(parallel?{identifiedParallel:parallel}:{}),
+        ...(serial?{identifiedSerialNumber:serial}:{}), ...(subset?{subset}:{}),
+        ...(autograph?{autographType:autograph}:{}), ...(foil?{foilTreatment:foil}:{}),
+      }).map(([field,value])=>({field,value})),
+      subjects, readings,
     },
-    photos: {front:photo(),back:photo()},
+    photos: ['front','back'].map(side=>({side,status:'expected'})),
+    observations: ['front','back'].flatMap(observations),
   };
 }
 function response(payload, finishReason = 'STOP') {
@@ -79,14 +84,14 @@ const cards = [
 for (const card of cards) {
   test(`synthetic ${card.subjects.join(' / ')} result retains identity and qualified condition without granting financial trust`, () => {
     const payload = output(card);
-    payload.photos.back.corners.bottomRight = observed('Corner whitening along the outline.');
+    mark(payload,'back','corner_bottom_right',observed('Corner whitening along the outline.'));
     if(card.number === '155/236') {
-      payload.photos.front.edges.right = observed('Edge chipping near the bottom.');
-      payload.photos.front.surface.push({location:'lower foil',status:'possible',evidence:'Fine surface scratches.'});
+      mark(payload,'front','edge_right',observed('Edge chipping near the bottom.'));
+      payload.observations.push({side:'front',region:'surface',location:'lower foil',status:'possible',evidence:'Fine surface scratches.'});
     }
     if (card.subjects.length > 1) {
-      payload.photos.front.limitations.push('sleeve');
-      payload.photos.front.surface.push({location:'center surface', ...notAssessed('Holder reflection obscures surface.')});
+      payload.photos[0].limitations=['sleeve'];
+      payload.observations.push({side:'front',region:'surface',location:'center surface', ...notAssessed('Holder reflection obscures surface.')});
     }
     const analysis = parseGeminiAnalysis(response(payload), ['front','back'], card.category);
     const safe = protectFinancialReport({imageAnalysis:{...analysis,inspectedSides:['front','back']}});
@@ -111,7 +116,8 @@ for (const card of cards) {
 
 test('unknown printing and serial remain null, with a warning for mislabeled photos', () => {
   const payload = output({...cards[0],parallel:null});
-  payload.photos.back.sideStatus='mismatch';
+  payload.photos[1].status='mismatch';
+  payload.observations=payload.observations.filter(row=>row.side==='front');
   const result = parseGeminiAnalysis(response(payload),['front','back'],'pokemon');
   assert.equal(result.identifiedParallel,null);
   assert.equal(result.identifiedSerialNumber,null);
@@ -138,7 +144,7 @@ test('one call sets the deadline, image resolution, order, unchanged bytes and t
         assert.deepEqual(parts.map(part=>Buffer.from(part.inlineData.data,'base64')),[front,back]);
         assert.ok(parts.every(part=>part.mediaResolution.level==='MEDIA_RESOLUTION_HIGH'));
         const data=output(cards[0]);
-        data.photos.back.limitations.push('glare');
+        data.photos[1].limitations=['glare'];
         return response(data);
       }}};
     },
@@ -177,7 +183,7 @@ test('timeout and SDK rejection are fixed vocabulary with no retries or leaked u
 
 test('malformed and truncated output cannot produce a report', () => {
   const payload = output(cards[0]);
-  delete payload.photos.front.corners.topLeft;
+  payload.observations.shift();
   assert.throws(()=>parseGeminiAnalysis(response(payload),['front','back'],'pokemon'),{message:'ANALYSIS_RESPONSE_INVALID'});
   assert.throws(()=>parseGeminiAnalysis(response(payload,'MAX_TOKENS'),['front','back'],'pokemon'),{message:'ANALYSIS_RESPONSE_INCOMPLETE'});
 });
@@ -260,7 +266,8 @@ test('sideways phone JPEG is prepared portrait without upscaling and sent withou
   const preparedMetadata=await sharp(bytes).metadata();
   assert.deepEqual([preparedMetadata.width,preparedMetadata.height,quality],[1920,2560,0.94]);
   const data=output(cards[3]);
-  delete data.photos.back;
+  data.photos.pop();
+  data.observations=data.observations.filter(row=>row.side==='front');
   data.identity.readings=data.identity.readings.filter(row=>row.side==='front');
   await requestGeminiAnalysis({images:[{side:'front',buffer:bytes,mimeType:await validateAnalysisImage(bytes)}],
     env,countFetch,cardType:'sports',makeClient:()=>({models:{async generateContent(request){
@@ -327,4 +334,22 @@ test('real SDK HTTP 400 preserves only fixed Google status, field and schema hin
     googleStatus:'INVALID_ARGUMENT',fieldCategories:['response_schema','media_resolution'],messageHint:'schema_complexity',
   });
   assert.ok(!JSON.stringify({body:result.payload,ticket}).includes(privateMarker));
+});
+
+test('compact arrays reject duplicate identity facts and duplicate or misattributed observations', () => {
+  const payload = output(cards[0]);
+  const parse = value => parseGeminiAnalysis(response(value), ['front','back'], 'pokemon');
+  for (const change of [
+    data => data.identity.facts.push({...data.identity.facts[0]}),
+    data => { data.observations[1].region=data.observations[0].region; },
+    data => { data.observations[0].side='unknown'; },
+    data => { data.photos[0].status='uncertain'; },
+  ]) {
+    const invalid=structuredClone(payload);
+    change(invalid);
+    assert.throws(()=>parse(invalid),{message:'ANALYSIS_RESPONSE_INVALID'});
+  }
+  const normalized=parse(payload);
+  assert.equal(normalized.identityReadings[0].text,'Fraxure');
+  assert.equal(normalized.identifiedManufacturer,null);
 });
