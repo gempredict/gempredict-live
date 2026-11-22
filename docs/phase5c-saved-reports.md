@@ -14,3 +14,7 @@ Version 1 stores the approved report, normalized photographic findings and uncer
 4. Verify sign-in, list and cross-account isolation with synthetic records before scheduling any generation. Phase 5C's library is disabled in Production. A separate project and activation review are required before any Production library rollout.
 
 An earlier report can still exist in the same browser if the owner manually saved it. Prediction logs and redacted scan exports cannot reconstruct a full report. The migration does not import local saves or fabricate historic rows.
+
+## Password recovery
+
+A Supabase recovery link that returns to the library page opens the new-password form. The callback is removed from the browser URL before the Auth exchange. Supabase must validate the session before the password can be updated. The recovery session stays out of library requests and is signed out after a successful update. The owner then signs in normally. Expired or used links require a fresh link. PKCE callbacks require the original verifier in the browser that initiated the flow.

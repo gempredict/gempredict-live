@@ -1,3 +1,4 @@
+import { openLibraryRecovery, readLibraryRecovery, saveLibraryPassword } from '../../lib/libraryPasswordRecovery.mjs';
 import {checkStructuredPreflight} from '../../lib/structuredExperimentClient.mjs';
 import {safeVisionValidation} from '../../lib/visionResponsePolicy.mjs';
 import {CONTROLLED_CATEGORIES,validControlledCategory,controlledCategorySubmission} from '../../lib/controlledCategories.mjs';
@@ -117,4 +118,27 @@ export function renderLibraryMobile(report) {
   useState:initial=>[state<values.length?values[state++]:initial,()=>{}],
  });
  return renderToStaticMarkup(React.createElement(Library,{onSession(){},renderReport(){return null;}}));
+}
+
+export function mountLibrary({ href, auth, fetch, onSession }) {
+ const state=[],refs=[];
+ let stateIndex,refIndex,effects;
+ const navigations=[];
+ const {default:Library}=components('src/components/MyCardLibrary.jsx',{
+  openLibraryRecovery,readLibraryRecovery,saveLibraryPassword,fetch,AbortController,AbortSignal,URLSearchParams,
+  window:{location:{href},history:{state:{},replaceState(_state,_title,url){navigations.push(url);}}},
+  require:name=>name==='@supabase/supabase-js'?{createClient:()=>({auth})}:require(name),
+  FormData:class{constructor(form){this.form=form;}get(name){return this.form.fields[name];}},
+  useEffect:fn=>effects.push(fn),
+  useState(initial){const index=stateIndex++;if(!Object.hasOwn(state,index))state[index]=initial;
+   return [state[index],next=>{state[index]=typeof next==='function'?next(state[index]):next;}];},
+  useRef(initial){const index=refIndex++;return refs[index]??=( {current:initial} );},
+ });
+ function render(){
+  stateIndex=0;refIndex=0;effects=[];
+  return Library({onSession,renderReport:()=>null});
+ }
+ render();
+ const cleanups=effects.map(effect=>effect()).filter(Boolean);
+ return {render,navigations,close:()=>cleanups.forEach(cleanup=>cleanup())};
 }

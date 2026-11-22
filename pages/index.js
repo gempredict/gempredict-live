@@ -13,6 +13,7 @@ export default function Home() {
           content="GemPredict helps collectors know what to do with their cards—and why. Evaluate card identity, visible condition, market evidence, grading outcomes, and total costs to decide whether to grade, sell, hold, or inspect further."
         />
 
+        <meta name="referrer" content="no-referrer" />
         <meta name="viewport" content="width=device-width, initial-scale=1" />
 
         <meta
