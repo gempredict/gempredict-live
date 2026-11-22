@@ -13,10 +13,10 @@ test('PA-JD reproduces the old digit requirement rejection and is retained only 
  assert.equal(isCollectorReading('PA-JD','sports'),true);assert.equal(readIdentityReadings([row('cardNumber','PA-JD')],'sports')[0].text,'PA-JD');
 });
 test('bounded sports syntax supports numeric, mixed and reviewed autograph-initial identifiers',()=>{
- for(const value of ['PA-JD','PA-AB','US102','BCP-86','MNL-11','BB-11','102','# PA-JD',' pa - jd '])assert.equal(isCollectorReading(value,'sports'),true,value);
+ for(const value of ['PA-JD','PA-AB','US102','BCP-86','MNL-11','8B-11','# 8B - 11','BB-11','102','# PA-JD',' pa - jd '])assert.equal(isCollectorReading(value,'sports'),true,value);
 });
 test('sports syntax rejects arbitrary words, unreviewed letter schemes, serials, malformed or malicious identifiers',()=>{
- for(const value of ['Josh','AUTOGRAPH','FOO-BAR','AB-CD','PA-JOSH','PA-J','PA--JD','PA/JD','PA_JD','-PA-JD','PA-JD-','US 102','96/99','PA-<script>','https://example.com','PA-JD\n<script>', 'PA-JD\n', 'A'.repeat(41), 'PA-'+ 'J'.repeat(90), 'US１２３',null,{},''])assert.equal(isCollectorReading(value,'sports'),false,String(value));
+ for(const value of ['Josh','AUTOGRAPH','FOO-BAR','AB-CD','PA-JOSH','PA-J','PA--JD','PA/JD','PA_JD','-PA-JD','PA-JD-','US 102','96/99','8B-JD','8B--11','1234B-11','PA-<script>','https://example.com','PA-JD\n<script>', 'PA-JD\n', 'A'.repeat(41), 'PA-'+ 'J'.repeat(90), 'US１２３',null,{},''])assert.equal(isCollectorReading(value,'sports'),false,String(value));
 });
 test('Pokemon promo/fraction grammar remains unchanged and rejects alphabetic sports autograph numbers',()=>{
  for(const value of ['004/165','133/128','TG01/TG30','SV49/SV94','SWSH020','001/SV-P'])assert.equal(isCollectorReading(value,'pokemon'),true,value);

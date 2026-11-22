@@ -387,3 +387,76 @@ test('synthetic Fraxure condition preserves eight photo groups and localized not
  assert.match(html,/Back · Possible: surface, lower edge: Fine surface marks/);
  assert.match(html,/Model photo observations/);
 });
+
+test('synthetic Topps numeric-leading insert number preserves sports evidence and optional metadata',()=>{
+ const data=output({subjects:['Bryce Harper'],set:'Topps',number:'8B-11',parallel:null,subset:'8-Bit Ballers'});
+ data.identity.readings.push({field:'subset',text:'8-Bit Ballers',certainty:'clear',side:'back',area:'body_text'});
+ const parsed=parseGeminiAnalysis(response(data),['front','back'],'sports');
+ assert.equal(parsed.identifiedCardNumber,'8B-11');
+ assert.equal(parsed.identityReadings.find(row=>row.field==='cardNumber').text,'8B-11');
+ assert.equal(parsed.sportsIdentity.subset,'8-Bit Ballers');
+ assert.equal(parsed.sportsIdentity.subjects[0].certainty,'clear');
+ assert.equal(parsed.sportsIdentity.serialNumber,null);
+ assert.equal(parsed.identifiedParallel,null);
+});
+
+test('Gemini parser classifies invalid response rules without retaining failed values',()=>{
+ const parse=value=>parseGeminiAnalysis(value,['front','back'],'sports');
+ const base=output(cards[2]);
+ for(const [rule, mutate] of [
+  ['root_schema',data=>{delete data.photos;}],
+  ['identity_schema',data=>{data.identity.unexpected='private-marker';}],
+  ['photos_schema',data=>{data.photos=null;}],
+  ['observations_schema',data=>{data.observations=null;}],
+  ['identity_facts',data=>{data.identity.facts.push({...data.identity.facts[0]});}],
+  ['identity_text_length',data=>{data.identity.facts[0].value='x'.repeat(81);}],
+  ['reading_side',data=>{data.identity.readings[0].side='private-marker';}],
+  ['sports_collector_number',data=>{data.identity.readings.find(row=>row.field==='cardNumber').text='private-marker';}],
+  ['identity_reading',data=>{data.identity.readings[0].area='private-marker';}],
+  ['photo_side_coverage',data=>{data.photos[1].side='front';}],
+  ['observation_side',data=>{data.observations[0].side='private-marker';}],
+  ['observation_status',data=>{data.observations[0].status='private-marker';}],
+  ['observation_region_or_location',data=>{data.observations[0].region='private-marker';}],
+  ['photo_status_or_limitations',data=>{data.photos[0].limitations=['private-marker'];}],
+  ['uncertain_side_has_evidence',data=>{data.photos[0].status='uncertain';}],
+  ['regional_coverage',data=>{data.observations.shift();}],
+  ['duplicate_region',data=>{data.observations[1].region=data.observations[0].region;}],
+  ['surface_row_limit',data=>{
+   data.observations.push(...Array.from({length:5},()=>({side:'front',region:'surface',status:'possible',location:'edge',evidence:'Possible scuff.'})));
+  }],
+ ]) {
+  const data=structuredClone(base);
+  mutate(data);
+  assert.throws(()=>parse(response(data)),error=>error.message==='ANALYSIS_RESPONSE_INVALID'&&
+    error.geminiValidationRule===rule&&!JSON.stringify(error).includes('private-marker'),rule);
+ }
+ for(const [content, rule] of [
+  [{parts:[null]},'content_parts'],
+  [{parts:[{text:'x'.repeat(32769)}]},'response_byte_limit'],
+  [{parts:[{text:'private-marker'}]},'json_syntax'],
+ ]) {
+  assert.throws(()=>parse({candidates:[{finishReason:'STOP',content}]}),
+    {message:'ANALYSIS_RESPONSE_INVALID',geminiValidationRule:rule});
+ }
+});
+
+test('sports validation rule is available only in encrypted owner diagnostics',async()=>{
+ const host='gempredict-live-unit123.vercel.app';
+ const headers={host,origin:'https://'+host};
+ const configuration={...env,...diagnosticsEnv,VERCEL_URL:host,GEMPREDICT_FULL_ANALYSIS_CLAUDE_ROLLBACK:'false'};
+ headers.cookie=authorizeDiagnosticOwner({headers,method:'POST'},configuration.GEMPREDICT_SCAN_DIAGNOSTICS_OWNER_KEY,configuration).split(';')[0];
+ const data=output({subjects:['Synthetic Athlete'],set:'Synthetic Set',number:'private-marker',parallel:null});
+ let attempts=0;
+ const result=await runScan({
+  env:configuration,headers,frontBytes:front,backBytes:back,fields:{cardType:'sports'},
+  geminiCountFetch:countFetch,geminiClient:()=>({models:{async generateContent(){attempts++;return response(data);}}}),
+ });
+ assert.equal(attempts,1);
+ assert.equal(result.payload.code,'ANALYSIS_RESPONSE_INVALID');
+ assert.ok(!JSON.stringify(result.payload).includes('sports_collector_number'));
+ const ticket=readDiagnosticTicket({headers,method:'POST'},result.responseHeaders[TICKET_HEADER],result.responseHeaders[SCAN_HEADER],configuration);
+ assert.deepEqual(ticket.geminiValidation,{rule:'sports_collector_number'});
+ assert.equal(ticket.visionStatus,'gemini_response_rejected');
+ assert.equal(ticket.normalization,null);
+ assert.ok(!JSON.stringify(ticket).includes('private-marker'));
+});
