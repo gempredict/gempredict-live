@@ -197,10 +197,12 @@ export default function MyCardLibrary({ onSession, revision, renderReport, selec
     if (busy || !token || (remove && !window.confirm('Delete this saved report? This cannot be undone.'))) return;
     const owner = activeOwner.current;
     setBusy(true); setError('');
+    const controller = new AbortController();
+    const timeout = setTimeout(() => controller.abort(), 8000);
     try {
       const result = await fetch('/api/saved-reports?id=' + encodeURIComponent(id), {
         method: remove ? 'DELETE' : 'GET', headers: { Authorization: `Bearer ${token}` },
-        redirect: 'error', signal: AbortSignal.timeout(8000),
+        redirect: 'error', signal: controller.signal, cache: 'no-store',
       });
       if (!result.ok) throw Error(result.status === 422 ? 'unsupported_report_version' : 'unavailable');
       const data = await result.json();
@@ -215,7 +217,10 @@ export default function MyCardLibrary({ onSession, revision, renderReport, selec
       if (activeOwner.current === owner) setError(failure.message === 'unsupported_report_version'
         ? 'This saved report uses a version this app cannot display.'
         : remove ? 'This report could not be deleted.' : 'This report could not be opened.');
-    } finally { if (activeOwner.current === owner) setBusy(false); }
+    } finally {
+      clearTimeout(timeout);
+      if (activeOwner.current === owner) setBusy(false);
+    }
   }
 
   async function signOut() {

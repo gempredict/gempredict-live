@@ -1,0 +1,147 @@
+import assert from 'node:assert/strict';
+import test from 'node:test';
+import { createActiveMarketHandler } from '../lib/activeMarketPilot.mjs';
+import { cardApiPilotPage,createCardApiPilotHandler,unifiedMarketBranch } from '../lib/cardApiSalesPilot.mjs';
+import { providerFinalPrice,summarizeRecentSales } from '../lib/marketEvidenceSummary.mjs';
+import { authorizeDiagnosticOwner } from '../lib/scanDiagnosticsAuth.mjs';
+import { renderMarketEvidence } from './helpers/renderReports.mjs';
+
+const now=Date.parse('2026-11-23T12:00:00Z');
+const host='gempredict-live-synthetic-deployment.vercel.app';
+const env={
+ VERCEL:'1',VERCEL_ENV:'preview',VERCEL_URL:host,VERCEL_GIT_COMMIT_REF:unifiedMarketBranch,
+ VERCEL_GIT_REPO_OWNER:'gempredict',VERCEL_GIT_REPO_SLUG:'gempredict-live',VERCEL_GIT_COMMIT_SHA:'a'.repeat(40),
+ VERCEL_PROJECT_ID:'prj_hu0Q2BybH0PskmTxFaEkz1NVtus4',
+ GEMPREDICT_PREVIEW_SCAN_DIAGNOSTICS_ENABLED:'true',GEMPREDICT_SCAN_DIAGNOSTICS_OWNER_KEY:'ab'.repeat(32),
+ GEMPREDICT_SCAN_DIAGNOSTICS_SIGNING_KEY:'cd'.repeat(32),GEMPREDICT_CARD_API_FREE_PILOT_ENABLED:'true',
+ THE_CARD_API_KEY:'synthetic-card-api-secret',EBAY_PROD_CLIENT_ID:'synthetic-client-id',EBAY_PROD_CLIENT_SECRET:'synthetic-client-secret',
+};
+const headers={host,origin:'https://'+host,authorization:'Bearer synthetic.owner.token'};
+headers.cookie=authorizeDiagnosticOwner({method:'POST',headers},env.GEMPREDICT_SCAN_DIAGNOSTICS_OWNER_KEY,env,now).split(';')[0];
+const reportId='cd02a4a5-34f6-4b85-ac52-fbee0b0fbe1a';
+const input={reportId,cohort:'Raw',confirmed:true};
+const salesInput={...input,dateFrom:'2026-11-21',dateTo:'2026-11-23'};
+const title='2018 Topps Series 2 Shohei Ohtani #700';
+const report=Object.freeze({payload:Object.freeze({
+ canonicalCard:Object.freeze({subject:'Shohei Ohtani',year:'2018',manufacturer:'Topps',brandSet:'Topps Series 2',cardNumber:'700',parallel:'Base'}),
+ identityV2:{category:'sports'},
+})});
+const loadSaved=async(req,id)=>req.headers.authorization!==headers.authorization?{status:401,error:'library_sign_in_required'}:
+ id!==reportId?{status:404,error:'report_not_found'}:{report};
+const opts={env,clock:()=>now,loadSaved};
+async function request(handler,body,patch={}) {
+ const res={headers:{},setHeader(k,v){this.headers[k]=v;},status(code){this.code=code;return this;},json(data){this.body=data;return this;}};
+ await handler({method:'POST',headers,body,...patch},res);
+ return res;
+}
+
+// Synthetic records modeled on the three observed outcomes. No provider data retained.
+const saleFixture={platform:'eBay',listing_type:'best_offer',title,sale_date:'2026-11-22',
+ price:null,original_price:995,price_confirmed:false,shipping_price:null,currency:'USD',category:'sports',
+ year:2018,manufacturer:'Topps',card_set:'Topps Series 2',card_number:'700',player:'Shohei Ohtani'};
+const observed=[
+ {...saleFixture,id:'synthetic-offer-1'},
+ {...saleFixture,id:'synthetic-offer-2',price:999},
+ {...saleFixture,id:'synthetic-fixed',listing_type:'fixed_price',price:120,price_confirmed:true},
+];
+const wrongCards=[
+ [title.replace('2018','2019'),'year'],
+ [title.replace('Series 2','Update'),'set'],
+ [title.replace('#700','#701'),'card_number'],
+ [title+' Gold Parallel','parallel'],
+ [title+' Photo Variation','photo_variation'],
+ [title+' PSA 9','grade'],
+];
+const browseItem=(itemTitle,index)=>({title:itemTitle,itemId:`v1|1234567890${index}|0`,
+ price:{value:'175.00',currency:'USD'},buyingOptions:['FIXED_PRICE'],
+ itemWebUrl:`https://www.ebay.com/itm/1234567890${index}?tracking=synthetic`});
+
+async function lookupSales(records) {
+ let calls=0;
+ const handler=createCardApiPilotHandler({...opts,fetchImpl:async(url,options)=>{
+  calls++;
+  assert.equal(url.pathname,'/api/v1/market/sales');
+  assert.equal(url.searchParams.get('q'),'Shohei Ohtani 2018 700');
+  assert.equal(options.cache,'no-store');
+  return Response.json({data:records,pagination:{total:records.length},meta:{}});
+ }});
+ const res=await request(handler,salesInput);
+ assert.equal(calls,1);
+ assert.equal(res.code,200);
+ assert.equal(res.headers['Cache-Control'],'private, no-store, max-age=0');
+ return res.body;
+}
+async function lookupBrowse() {
+ const calls=[];
+ const items=[title,...wrongCards.map(([value])=>value)].map(browseItem);
+ items.push({...browseItem(title,9),itemWebUrl:'https://example.invalid/itm/12345678909',buyingOptions:['AUCTION']});
+ const handler=createActiveMarketHandler({...opts,fetchImpl:async(url,options)=>{
+  calls.push(String(url));
+  assert.equal(options.cache,'no-store');
+  assert.equal(options.redirect,'error');
+  if (String(url).includes('/oauth2/token')) return Response.json({access_token:'synthetic-ebay-access'});
+  const endpoint=new URL(url);
+  assert.equal(endpoint.pathname,'/buy/browse/v1/item_summary/search');
+  assert.equal(endpoint.searchParams.get('limit'),'20');
+  assert.equal(endpoint.searchParams.get('q'),'Shohei Ohtani 2018 700');
+  return Response.json({itemSummaries:items});
+ }});
+ const res=await request(handler,input);
+ assert.equal(res.code,200);
+ assert.equal(calls.length,2);
+ assert.equal(res.headers['Cache-Control'],'private, no-store, max-age=0');
+ return res.body;
+}
+
+test('Ohtani benchmark retains a provider-reported $120 fixed price and two unknown offers',async()=>{
+ const result=await lookupSales(observed);
+ assert.deepEqual(result.candidates.map(providerFinalPrice),[null,null,120]);
+ assert.deepEqual(result.candidates.map(row=>row.price),[null,null,120]);
+ const {qualificationBlockers,...counts}=summarizeRecentSales(result);
+ assert.deepEqual(counts,{recordsRetrieved:3,plausibleMatches:3,identityMismatches:0,knownFinalPrices:1,unknownFinalPrices:2});
+ assert.ok(qualificationBlockers.includes('commercial_use_not_authorized'));
+ assert.equal(result.qualifiedCount,0);
+ assert.doesNotMatch(JSON.stringify(result),/995|999|median|profit|synthetic-card-api-secret/);
+});
+test('both providers reject explicit year, set, collector number, parallel, photo variation and grade conflicts',async()=>{
+ const sales=await lookupSales(wrongCards.map(([title],i)=>({...saleFixture,title,id:'wrong-'+i})));
+ assert.equal(sales.candidates.length,0);
+ assert.equal(summarizeRecentSales(sales).identityMismatches,wrongCards.length);
+ const active=await lookupBrowse();
+ assert.deepEqual(active.rows[0].ask,{amount:'175.00',currency:'USD'});
+ assert.equal(active.rows[0].link,'https://www.ebay.com/itm/12345678900');
+ assert.ok(active.rows[0].identityMatch.matched.includes('card_number'));
+ wrongCards.forEach(([,field],i)=>{
+  assert.ok(sales.rejected[i].identityMatch.mismatches.includes(field));
+  assert.ok(active.rows[i+1].identityMatch.mismatches.includes(field));
+ });
+ assert.equal(active.rows.at(-1).link,null);
+ assert.equal(active.rows.at(-1).ask,null);
+});
+test('both endpoints deny unauthorized, foreign and unreviewed saved-card requests before provider access',async()=>{
+ for(const [create,body] of [[createActiveMarketHandler,input],[createCardApiPilotHandler,salesInput]]) {
+  const fetchImpl=()=>assert.fail('provider called without authorized owned report');
+  const handler=create({...opts,fetchImpl});
+  assert.equal((await request(handler,body,{headers:{...headers,origin:'https://other.invalid'}})).code,404);
+  assert.equal((await request(handler,body,{headers:{...headers,cookie:''}})).code,403);
+  assert.equal((await request(handler,body,{headers:{...headers,authorization:'Bearer synthetic.other.token'}})).code,401);
+  assert.equal((await request(handler,{...body,reportId:'df02a4a5-34f6-4b85-ac52-fbee0b0fbe1a'})).code,404);
+  assert.equal((await request(handler,{...body,confirmed:false})).code,400);
+  assert.equal((await request(create({...opts,env:{...env,VERCEL_ENV:'production'},fetchImpl}),body)).code,404);
+ }
+ assert.equal(cardApiPilotPage({method:'GET',headers},env,now).unified,true);
+ assert.equal(report.payload.canonicalCard.parallel,'Base');
+ assert.deepEqual(Object.keys(report.payload),['canonicalCard','identityV2']);
+});
+test('market renderer separates active asking prices, reported final prices and unknown Best Offers',async()=>{
+ const html=await renderMarketEvidence(await lookupBrowse(),await lookupSales(observed));
+ assert.match(html,/Active Listings — eBay/);
+ assert.match(html,/Recent Sales — The Card API/);
+ assert.match(html,/Asking price: USD 175.00/);
+ assert.match(html,/Provider-reported final price: USD 120. Settlement unverified/);
+ assert.equal((html.match(/Final price unknown/g)||[]).length,2);
+ assert.equal((html.match(/ · Best Offer · /g)||[]).length,2);
+ assert.match(html,/Fixed-price/);
+ assert.match(html,/Identity mismatch/);
+ assert.doesNotMatch(html,/995|999|tracking=|example.invalid/);
+});

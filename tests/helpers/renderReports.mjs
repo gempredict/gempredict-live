@@ -142,3 +142,12 @@ export function mountLibrary({ href, auth, fetch, onSession }) {
  const cleanups=effects.map(effect=>effect()).filter(Boolean);
  return {render,navigations,close:()=>cleanups.forEach(cleanup=>cleanup())};
 }
+
+export async function renderMarketEvidence(active,sales) {
+ const {providerFinalPrice,summarizeRecentSales}=await import('../../lib/marketEvidenceSummary.mjs');
+ const {ActiveListings,RecentSales}=components('pages/card-sales-pilot.jsx',{providerFinalPrice,summarizeRecentSales},
+  'export {ActiveListings,RecentSales};');
+ return renderToStaticMarkup(React.createElement(React.Fragment,null,
+  React.createElement(ActiveListings,{result:active}),
+  React.createElement(RecentSales,{result:sales,unified:true})));
+}
