@@ -8,8 +8,8 @@
 // is handled in src/App.jsx via the `track` function from @vercel/analytics/react.
 //
 // TO ADD MORE ANALYTICS LATER:
-// - Replace or augment {!Component.excludeAnalytics && <Analytics beforeSend={excludeRecoveryAnalytics} />} with a third-party provider (PostHog, Mixpanel, etc.)
-//   by adding their <Script> or provider component here alongside {!Component.excludeAnalytics && <Analytics beforeSend={excludeRecoveryAnalytics} />}.
+// - Replace or augment {!Component.excludeAnalytics && !pageProps.marketDashboard && <Analytics beforeSend={excludeRecoveryAnalytics} />} with a third-party provider (PostHog, Mixpanel, etc.)
+//   by adding their <Script> or provider component here alongside {!Component.excludeAnalytics && !pageProps.marketDashboard && <Analytics beforeSend={excludeRecoveryAnalytics} />}.
 // - For server-side event tracking, use Vercel edge middleware or API route hooks.
 
 import { readLibraryRecovery } from "../lib/libraryPasswordRecovery.mjs";
@@ -29,7 +29,7 @@ export default function MyApp({ Component, pageProps }) {
         It is a safe no-op in local development — no data is sent locally.
         Docs: https://vercel.com/docs/analytics
       */}
-      {!Component.excludeAnalytics && <Analytics beforeSend={excludeRecoveryAnalytics} />}
+      {!Component.excludeAnalytics && !pageProps.marketDashboard && <Analytics beforeSend={excludeRecoveryAnalytics} />}
     </>
   );
 }

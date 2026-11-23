@@ -1,8 +1,16 @@
 /// GemPredict — Homepage with SEO metadata
 import Head from "next/head";
 import App from "../src/App";
+import { cardApiPilotPage, collectorDashboardBranch } from "../lib/cardApiSalesPilot.mjs";
 
-export default function Home() {
+export function getServerSideProps({req,res}) {
+  const pilot=process.env.VERCEL_GIT_COMMIT_REF===collectorDashboardBranch?cardApiPilotPage(req):null;
+  if (pilot) res.setHeader('Cache-Control','private, no-store, max-age=0');
+  return {props:{marketDashboard:pilot?{today:pilot.today,earliest:pilot.earliest}:null}};
+}
+
+
+export default function Home({marketDashboard}) {
   return (
     <>
       <Head>
@@ -44,7 +52,7 @@ export default function Home() {
         <link rel="canonical" href="https://gempredict.com" />
       </Head>
 
-      <App />
+      <App marketDashboard={marketDashboard} />
     </>
   );
 }

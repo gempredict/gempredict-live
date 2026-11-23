@@ -1,3 +1,4 @@
+import MarketDashboard from './components/MarketDashboard';
 import MyCardLibrary from './components/MyCardLibrary';
 import {controlledCategorySubmission} from '../lib/controlledCategories.mjs';
 import ReportStyle from './components/ReportStyle.jsx';
@@ -406,7 +407,7 @@ function EmptyState() {
   );
 }
 
-export function ResultCard({ data, index, onSave, isSaved,photos=null,completedSalesEvidence=null,demo=false,historical=false }) {
+export function ResultCard({ data, index, onSave, isSaved,photos=null,completedSalesEvidence=null,demo=false,historical=false,marketContext=null }) {
   if(!historical) data = protectFinancialReport(data);
   const view=unifiedReportPresentation(data),listings=historical?data.savedListingView:reportListings(data),hero=reportHero(data),observation=data.originalIdentityObservation||data.imageAnalysis,prefix=`gp-report-${index}`;
   const [copied,setCopied]=useState(false),[shared,setShared]=useState(false),[feedback,setFeedback]=useState(null);
@@ -419,10 +420,11 @@ export function ResultCard({ data, index, onSave, isSaved,photos=null,completedS
     <header className="gp-original-header" aria-label="Card identification"><div className="gp-header-copy"><p className="gp-report-kicker">Grading Decision Report <span className="gp-beta">BETA</span></p><h2>{hero.title}</h2><p className="gp-original-subtitle">{hero.subtitle}{hero.printing?' · '+hero.printing:''}</p><p className="gp-original-note">{view.category} · {view.identityLabel} · printing not verified</p></div><div className="gp-header-status"><strong>Pending</strong><small>Evidence required</small></div></header>
     <div className="gp-original-body">
      <section className="gp-reference-panel gp-decision-panel" aria-label="Grading decision"><p className="gp-decision-question">Should you grade this?</p><div className="gp-decision-oval"><span>GemPredict decision</span><strong>Unavailable</strong><small>Evidence not yet verified</small></div><p className="gp-decision-verdict">Not determined</p><dl className="gp-five-metrics" aria-label="Five decision metrics">{['Most Likely Outcome','PSA 10 Odds','Expected Net','Decision Confidence','Potential Upside'].map(label=><div key={label}><dt>{label}</dt><dd>Unavailable</dd></div>)}</dl></section>
-     <section className="gp-reference-panel" id={prefix+'-listings'} aria-label="eBay discovery"><div className="gp-section-head"><h3>Listings used</h3>{demo&&<span className="gp-synthetic" aria-label="Synthetic listings">Synthetic</span>}</div><dl className="gp-market-summary">{[['GemPredict Fair Market Value','Unavailable'],['Typical range','Unavailable'],['Comparable listings',data.marketData?.success===true?listings.candidates.length+' possible':'Unavailable'],['Market confidence','Unavailable']].map(([label,value])=><div key={label}><dt>{label}</dt><dd className={value==='Unavailable'?'gp-unavailable':undefined}>{value}</dd></div>)}</dl><p className="gp-fine"><em>Active asking prices · printing unverified.</em></p>
+     {!demo&&marketContext?<MarketDashboard key={marketContext.reportId||'unsaved'} report={data}
+       name={hero.title} {...marketContext}/>:<section className="gp-reference-panel" id={prefix+'-listings'} aria-label="eBay discovery"><div className="gp-section-head"><h3>Listings used</h3>{demo&&<span className="gp-synthetic" aria-label="Synthetic listings">Synthetic</span>}</div><dl className="gp-market-summary">{[['GemPredict Fair Market Value','Unavailable'],['Typical range','Unavailable'],['Comparable listings',data.marketData?.success===true?listings.candidates.length+' possible':'Unavailable'],['Market confidence','Unavailable']].map(([label,value])=><div key={label}><dt>{label}</dt><dd className={value==='Unavailable'?'gp-unavailable':undefined}>{value}</dd></div>)}</dl><p className="gp-fine"><em>Active asking prices · printing unverified.</em></p>
       {listings.candidates.length>0?<div className="gp-listing-list"><h4 className="gp-panel-title">Possible matches</h4>{listings.candidates.slice(0,6).map(item=><article className="gp-listing" key={item.url}>{!demo&&item.image&&<img src={item.image} loading="lazy" referrerPolicy="no-referrer" alt="eBay listing photograph"/>}<div className="gp-listing-body"><div className="gp-listing-head">{demo?<span className="gp-listing-title">{item.title.replace(/^DEMO — SYNTHETIC DATA — /,'')}</span>:<a className="gp-listing-title" href={item.url} target="_blank" rel="noopener noreferrer">{item.title}</a>}<span className="gp-price"><span className="gp-asking-label">{demo?'Synthetic asking amount: ':'Asking price: '}</span>{item.amount!==null?item.currency+' '+item.amount.toFixed(2):'Unavailable'}</span></div><p className="gp-fine">Condition: {item.condition||'Not supplied'}</p><p className="gp-fine">Unverified candidate · active listing{demo?' · Synthetic listing; no live link.':''}</p></div></article>)}</div>:<p className="gp-fine">No reliable listing matches available.</p>}
 
-     </section>
+     </section>}
      <section className="gp-reference-panel gp-why" aria-label="Decision explanation"><h3>Why this decision?</h3><p>Grading decision unavailable.</p><ul><li><span className="gp-why-marker" aria-hidden="true">– </span>{view.identityLabel==='Core catalog support'?'Core catalog supported; printing unverified.':view.identityLabel==='Identity needs review'?'Conflicting identity evidence needs review.':'Independent identity unverified.'}</li><li><span className="gp-why-marker" aria-hidden="true">– </span>Photo observations do not establish a PSA grade or probability.</li><li><span className="gp-why-marker" aria-hidden="true">– </span>Qualified sales and costs are required.</li></ul></section>
      <section className="gp-three-values" aria-label="Raw and PSA values">{['Raw Value','PSA 9 Value','PSA 10'].map(label=><div className="gp-value-tile" key={label}><span>{label}</span><strong>Unavailable</strong></div>)}</section>
      <section className="gp-reference-panel gp-economics" id={prefix+'-psa'} aria-label="Grading economics"><h3>Expected grading economics</h3><dl>{['Expected Graded Value','Current Raw Value','PSA Submission Fee','Expected Net'].map((label,i)=><div className={'gp-ledger-row'+(i===3?' gp-ledger-net':'')} key={label}><dt>{label}</dt><dd>Unavailable</dd></div>)}</dl><p className="gp-fine"><em>Automatic estimates withheld pending qualified evidence and costs.</em></p></section>
@@ -446,7 +448,9 @@ export function ResultCard({ data, index, onSave, isSaved,photos=null,completedS
 }
 
 // ─── Main App ─────────────────────────────────────────────────────────────────
-export default function App() {
+const liveMarketReports=new WeakMap();
+
+export default function App({marketDashboard=null}={}) {
   const [cardName,        setCardName]        = useState("");
   const [cardType,        setCardType]        = useState("pokemon");
   const cardTypeCurrent=useRef(cardType);cardTypeCurrent.current=cardType;
@@ -469,7 +473,14 @@ export default function App() {
   const [remaining,       setRemaining]       = useState(null);
   const [history,         setHistory]         = useState([]);
   const [savedReports,    setSavedReports]    = useState([]);
-  const [libraryToken,setLibraryToken]=useState(null);
+  const [librarySession,setLibrarySession]=useState(null);
+  const libraryToken=librarySession?.token;
+  const onLibrarySession=useRef((token,owner)=>setLibrarySession(token?{token,owner}:null)).current;
+  function liveMarketContext(report) {
+    if(!marketDashboard||!report.imageAnalysis) return null;
+    const link=liveMarketReports.get(report);
+    return {...marketDashboard,token:libraryToken,reportId:link?.owner===librarySession?.owner?link?.id:null};
+  }
   const [libraryRevision,setLibraryRevision]=useState(0);
   const [libraryMessage,setLibraryMessage]=useState('');
 
@@ -650,6 +661,10 @@ const emailRef    = useRef(null);
       }
       setResults(function(prev) {
   const newReport = attachReportPhotos(reportFromResponse(data),{front:controlled?prepared.front:imageFile,back:controlled?prepared.back:backImageFile});
+  if (librarySession?.owner&&data.librarySave?.reportId) {
+    liveMarketReports.set(newReport,{owner:librarySession.owner,id:data.librarySave.reportId});
+  }
+  delete newReport.librarySave;
   rememberScanDiagnostic(newReport,res,{controlled,manifest:controlled?JSON.parse(prepared.manifest):null});
 
   return [newReport, ...prev].slice(0, 5);
@@ -1130,8 +1145,9 @@ if (data.imageAnalysis) setImageAnalysis(protectFinancialReport(data).imageAnaly
             <button type="button" onClick={()=>handleSubmit('identity')} disabled={loading||processingImages>0||!!photoErrors.front||!!photoErrors.back||!imageFile} style={{padding:'0.85rem 1.75rem',borderRadius:12,border:'1px solid #d2b48c',background:C.ink,color:'#fff',fontWeight:700}}>Identify Card</button>
             <span style={{fontSize:'0.8rem',color:C.inkSoft}}>Front photo required; back optional. Identification only. Analyze My Card remains the separate full scan.</span>
           </div>
-          <MyCardLibrary onSession={setLibraryToken} revision={libraryRevision}
-            renderReport={payload=><ResultCard data={payload} index="library" historical/>}/>
+          <MyCardLibrary onSession={onLibrarySession} revision={libraryRevision}
+            renderReport={(payload,reportId)=><ResultCard key={reportId} data={payload} index="library" historical
+              marketContext={marketDashboard?{...marketDashboard,token:libraryToken,reportId}:null}/>}/>
           {libraryMessage&&<p role="status">{libraryMessage}</p>}
           <p><a href="/grading-economics">Grading Economics — manual scenario calculator</a></p>
           <ControlledValidation cardType={cardType} onCategoryChange={setCardType} front={imageFile} back={backImageFile} busy={loading||processingImages>0||!!photoErrors.front||!!photoErrors.back} getSelectionEpoch={()=>selectionVersions.current.front+':'+selectionVersions.current.back} onSubmit={prepared=>handleSubmit('condition-validation',prepared)}/>
@@ -1179,6 +1195,7 @@ if (data.imageAnalysis) setImageAnalysis(protectFinancialReport(data).imageAnaly
       <ResultCard
         data={r}
         photos={reportPhotos(saved)}
+        marketContext={liveMarketContext(saved)}
         index={i}
         onSave={saveReport}
         isSaved={isSavedReport(r)}

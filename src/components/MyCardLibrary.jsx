@@ -284,7 +284,7 @@ export default function MyCardLibrary({ onSession, revision, renderReport, selec
       {opened&&<div style={{marginTop:16}}>
         <p>Saved report · {opened.model} · Version {opened.schema_version}</p>
         <button style={button} type="button" onClick={()=>setOpened(null)}>Close saved report</button>
-        {renderReport(opened.payload)}
+        {renderReport(opened.payload, opened.id)}
       </div>}
     </>}
   </section>;

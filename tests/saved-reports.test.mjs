@@ -61,7 +61,7 @@ function storage({ failWrite=false, rows=[] }={}) {
           order(){return this;},
           async maybeSingle(){
             assert.equal(filters.owner_id,authenticated);
-            const index=rows.findIndex(row=>row.owner_id===authenticated&&row.id===filters.id);
+            const index=rows.findIndex(row=>row.owner_id===authenticated&&(filters.scan_id?row.scan_id===filters.scan_id:row.id===filters.id));
             if(index<0)return {data:null,error:null};
             return {data:remove?rows.splice(index,1)[0]:rows[index],error:null};
           },
@@ -238,4 +238,14 @@ test('authorized Gemini Full Analysis saves the provider version and front/back 
  assert.equal(row.report_model_version,'gemini-4-carbon-synthetic');
  assert.equal(row.report_scan,result.responseHeaders['X-GemPredict-Diagnostic-Scan']);
  assert.deepEqual([...new Set(row.report_payload.imageAnalysis.compactPhotoObservations.map(row=>row.side))],sides);
+});
+
+test('Phase 5I links a completed report through its authenticated owner and scan ID',async()=>{
+ const db=storage({rows:[{id:other,owner_id:other,scan_id:scan},{id:reportId,owner_id:owner,scan_id:scan}]});
+ const result=await saveCompletedLibraryReport({req:{headers:{authorization:access}},report:complete(),scanId:scan,
+  category:'sports',model:'gemini-4-carbon',env:{...env,VERCEL_GIT_COMMIT_REF:'feature/collector-dashboard-phase5i'},
+  makeClient:db.makeClient});
+ assert.deepEqual(result,{status:'saved',reportId});
+ assert.equal(db.calls.length,1);
+ assert.equal(db.calls[0][2].report_payload.reportId,undefined);
 });

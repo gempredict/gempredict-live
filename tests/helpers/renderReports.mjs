@@ -1,3 +1,5 @@
+import {extractScanSalesIdentity,scanSalesFields} from '../../lib/scanToSalesIdentity.mjs';
+import {providerFinalPrice,summarizeRecentSales} from '../../lib/marketEvidenceSummary.mjs';
 import { openLibraryRecovery, readLibraryRecovery, saveLibraryPassword } from '../../lib/libraryPasswordRecovery.mjs';
 import {checkStructuredPreflight} from '../../lib/structuredExperimentClient.mjs';
 import {safeVisionValidation} from '../../lib/visionResponsePolicy.mjs';
@@ -35,7 +37,12 @@ const {default:ReportPhotos}=components('src/components/ReportPhotos.jsx',{useSt
 const {default:GradingScenarioCalculator}=components('src/components/GradingScenarioCalculator.jsx',{...economics,...feeReference,useState:React.useState});
 const {default:AtlasPanel}=components('src/components/AtlasPanel.jsx');
 const {default:ReportIdentityResult}=components('src/components/IdentityResult.jsx',{...financial,reportTitle,verificationRows,ScanDiagnostics:()=>null});
-const {ResultCard,ImageAnalysisCard}=components('src/App.jsx',{controlledCategorySubmission,IdentityResult:ReportIdentityResult,attachReportPhotos,reportPhotos,reportListings,ReportPhotos,CompletedSalesSection,ConditionSnapshot,ReportStyle,reportHero,unifiedReportPresentation,GradingScenarioCalculator,...collector,safeScanFailure,conditionAssessmentLabels,...financial,identitySummary,reportTitle,verificationRows,buildGemPredictScore,AtlasPanel,useState:React.useState});
+const marketPanels=components('src/components/MarketEvidencePanels.jsx',{providerFinalPrice,summarizeRecentSales,scanSalesFields});
+const marketBindings={...marketPanels,MarketEvidenceStyles:()=>null,extractScanSalesIdentity,SALES_COHORTS,summarizeRecentSales};
+const {default:MarketDashboard}=components('src/components/MarketDashboard.jsx',{
+ ...marketBindings,useState:React.useState,useRef:React.useRef,useEffect:React.useEffect,
+});
+const {ResultCard,ImageAnalysisCard}=components('src/App.jsx',{MarketDashboard,controlledCategorySubmission,IdentityResult:ReportIdentityResult,attachReportPhotos,reportPhotos,reportListings,ReportPhotos,CompletedSalesSection,ConditionSnapshot,ReportStyle,reportHero,unifiedReportPresentation,GradingScenarioCalculator,...collector,safeScanFailure,conditionAssessmentLabels,...financial,identitySummary,reportTitle,verificationRows,buildGemPredictScore,AtlasPanel,useState:React.useState});
 export function renderReports(report,completedSalesEvidence=null,props={}){
  return {upper:renderToStaticMarkup(React.createElement(ResultCard,{data:report,index:0,onSave(){},isSaved:false,completedSalesEvidence,...props})),lower:renderToStaticMarkup(React.createElement(ImageAnalysisCard,{report}))};
 }
@@ -120,12 +127,12 @@ export function renderLibraryMobile(report) {
  return renderToStaticMarkup(React.createElement(Library,{onSession(){},renderReport(){return null;}}));
 }
 
-export function mountLibrary({ href, auth, fetch, onSession }) {
+export function mountLibrary({ href, auth, fetch, onSession, renderReport=()=>null }) {
  const state=[],refs=[];
  let stateIndex,refIndex,effects;
  const navigations=[];
  const {default:Library}=components('src/components/MyCardLibrary.jsx',{
-  openLibraryRecovery,readLibraryRecovery,saveLibraryPassword,fetch,AbortController,AbortSignal,URLSearchParams,
+  openLibraryRecovery,readLibraryRecovery,saveLibraryPassword,fetch,AbortController,AbortSignal,URLSearchParams,setTimeout,clearTimeout,
   window:{location:{href},history:{state:{},replaceState(_state,_title,url){navigations.push(url);}}},
   require:name=>name==='@supabase/supabase-js'?{createClient:()=>({auth})}:require(name),
   FormData:class{constructor(form){this.form=form;}get(name){return this.form.fields[name];}},
@@ -136,18 +143,36 @@ export function mountLibrary({ href, auth, fetch, onSession }) {
  });
  function render(){
   stateIndex=0;refIndex=0;effects=[];
-  return Library({onSession,renderReport:()=>null});
+  return Library({onSession,renderReport});
  }
  render();
  const cleanups=effects.map(effect=>effect()).filter(Boolean);
- return {render,navigations,close:()=>cleanups.forEach(cleanup=>cleanup())};
+ return {render,navigations,loadList(){
+  render();
+  const cleanup=effects[2]();
+  if(cleanup) cleanups.push(cleanup);
+ },close:()=>cleanups.forEach(cleanup=>cleanup())};
 }
 
 export async function renderMarketEvidence(active,sales) {
  const {providerFinalPrice,summarizeRecentSales}=await import('../../lib/marketEvidenceSummary.mjs');
- const {ActiveListings,RecentSales}=components('pages/card-sales-pilot.jsx',{providerFinalPrice,summarizeRecentSales},
-  'export {ActiveListings,RecentSales};');
+ const {ActiveListings,RecentSales}=components('src/components/MarketEvidencePanels.jsx',{providerFinalPrice,summarizeRecentSales});
  return renderToStaticMarkup(React.createElement(React.Fragment,null,
   React.createElement(ActiveListings,{result:active}),
   React.createElement(RecentSales,{result:sales,unified:true})));
+}
+
+export function marketDashboardInteraction(props,fetch) {
+ const slots=[],refs=[];
+ let stateIndex=0,refIndex=0;
+ const {default:View}=components('src/components/MarketDashboard.jsx',{
+  ...marketBindings,fetch,AbortController,setTimeout,clearTimeout,
+  FormData:class{constructor(form){this.form=form;}*[Symbol.iterator](){yield* Object.entries(this.form);}},
+  window:{prompt(){throw Error('Unexpected authorization prompt');}},
+  useState(initial){const index=stateIndex++;if(!Object.hasOwn(slots,index))slots[index]=initial;
+   return [slots[index],next=>{slots[index]=typeof next==='function'?next(slots[index]):next;}];},
+  useRef(initial){return refs[refIndex++]??=({current:initial});},
+  useEffect(){},
+ });
+ return {render(){stateIndex=0;refIndex=0;return View(props);},html:renderToStaticMarkup};
 }
