@@ -82,6 +82,24 @@ test('rejects unsafe, out-of-lookback, invalid calendar and excessive date/price
  ]) assert.equal((await request(make(noFetch),{body:{...query,...invalid}})).code,400);
 });
 
+test('provider display-case marketplace labels normalize only to reviewed marketplace IDs',async()=>{
+ const rows=[
+  {...sale,id:'case-ebay',platform:'eBay',listing_type:'fixed_price',price:120,price_confirmed:true},
+  {...sale,id:'case-goldin',platform:'Goldin',listing_type:'auction',price:40,price_confirmed:true},
+  {...sale,id:'case-tcgplayer',platform:'TCGplayer'},
+  {...sale,id:'case-unknown',platform:'Unknown Market'},
+ ];
+ const r=await request(make(async()=>Response.json(wrapper(rows))));
+ assert.equal(r.code,200);
+ assert.deepEqual(r.body.candidates.map(row=>row.platform),['ebay','goldin','tcgplayer']);
+ assert.equal(r.body.rejected.length,1);
+ assert.ok(r.body.rejected[0].reasons.includes('platform_unsupported'));
+ assert.equal(r.body.qualifiedCount,0);
+ assert.equal(r.body.candidates[0].price,120);
+ assert.ok(r.body.candidates.every(row=>row.qualificationReasons.includes('commercial_use_not_authorized')));
+ assert.doesNotMatch(JSON.stringify(r.body),/Unknown Market/);
+});
+
 test('ephemeral candidates omit asking price and private URLs, and fail Phase 3G rights, identity and settlement checks',async()=>{
  const rows=[
   sale,
