@@ -180,7 +180,7 @@ export default function CardSalesPilot({today,earliest,savedIdentity=false}) {
       {result?.quota&&Object.values(result.quota).some(value=>value!==null)&&
         <p>Sales quota remaining: {result.quota.remaining??'unknown'} of {result.quota.limit??'unknown'}. Reset: {result.quota.reset??'unknown'}.</p>}
       {result?.candidates&&<>
-        {result.query&&<p>Provider title query: {result.query}</p>}
+        {result.query&&<p>Discovery-only title query: {result.query}. The search omits parallel, full set spelling, and additional subjects to find candidates; each result is separately checked against the complete reviewed identity. This is not an exact-sale match.</p>}
         <h2>{result.cohort} provider candidates ({result.candidates.length})</h2>
         <p>One bounded page. Empty results do not establish that no market exists. Grade filters can omit unparsed records.</p>
         <p>Provider amounts do not independently verify payment or settlement. Best Offer amounts may be unknown.
