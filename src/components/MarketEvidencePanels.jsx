@@ -128,6 +128,32 @@ function SalesSummary({result}) {
     </details>}
   </>;
 }
+function ComparableQualification({evidence}) {
+  if (evidence?.version!==1) return null;
+  const captions={qualified:'Independently qualified',plausible:'Plausible, unverified',
+    mismatch:'Identity or transaction mismatch',insufficient:'Insufficient evidence',restricted:'Commercially restricted'};
+  const reasonLabels={target_physical_printing_unverified:'Exact physical printing unverified',
+    independent_final_amount_missing:'Independent final price evidence missing',
+    independent_settlement_missing:'Independent payment evidence missing',
+    buyer_premium_treatment_unknown:'Buyer premium treatment unknown',
+    commercial_use_not_authorized:'Commercial use not authorized',
+    insufficient_compatible_cohort_samples:'Too few compatible qualified sales across grading cohorts',
+    catalog_identity_or_printing_unresolved:'Catalog identity or exact printing unresolved',
+    automatic_economics_not_enabled:'Automatic grading economics disabled'};
+  const describe=reason=>reasonLabels[reason]||reason.replaceAll('_',' ');
+  return <section aria-label="Comparable-sales qualification">
+    <h3>Comparable-sales qualification</h3>
+    <Counters values={Object.entries(captions).map(([key,label])=>[label,evidence.counts[key]])}/>
+    <p>{evidence.rows.filter(row=>row.researchCandidate).length} research candidates · {evidence.rows.filter(row=>row.insufficientTransactionEvidence).length} records with incomplete transaction evidence</p>
+    <details><summary>Qualification reasons and coverage</summary>
+      <p>{evidence.coverage.received} records reviewed · {evidence.coverage.lookbackDays??'Unknown'}-day provider lookback · {evidence.coverage.complete===true?'Complete coverage':'Partial or unconfirmed coverage'}</p>
+      <ul>{evidence.rows.map(row=><li key={row.index}>
+        {row.providerRecordId||'Record '+(row.index+1)} · {captions[row.classification]} · {row.reasons.map(describe).join(' · ')}
+      </li>)}</ul>
+      <p>Grading economics withheld. {evidence.readiness.blockers.map(describe).join(' · ')}.</p>
+    </details>
+  </section>;
+}
 export function RecentSales({result,message,unified,clear,embedded=false}) {
   return <section className="market-section" aria-label="Recent sales evidence">
       {unified&&!embedded&&<h2>Recent Sales — The Card API</h2>}
@@ -139,6 +165,7 @@ export function RecentSales({result,message,unified,clear,embedded=false}) {
       {result?.candidates&&<>
         {result.query&&<details><summary>Search details</summary><p>Title query: {result.query}. Each record is compared with the reviewed identity.</p></details>}
         {unified&&<SalesSummary result={result}/>}
+        <ComparableQualification evidence={result.comparableEvidence}/>
         {unified?<h3>{result.cohort} provider candidates ({result.candidates.length})</h3>:<h2>{result.cohort} provider candidates ({result.candidates.length})</h2>}
         <p>One bounded page. Empty results do not establish that no market exists. Grade filters can omit unparsed records.</p>
         <p>Provider amounts do not independently verify payment or settlement. Best Offer amounts may be unknown.

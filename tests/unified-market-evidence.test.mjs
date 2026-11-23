@@ -9,7 +9,7 @@ import { renderMarketEvidence } from './helpers/renderReports.mjs';
 const now=Date.parse('2026-11-23T12:00:00Z');
 const host='gempredict-live-synthetic-deployment.vercel.app';
 const env={
- VERCEL:'1',VERCEL_ENV:'preview',VERCEL_URL:host,VERCEL_GIT_COMMIT_REF:'feature/catalog-evidence-foundation-phase5j',
+ VERCEL:'1',VERCEL_ENV:'preview',VERCEL_URL:host,VERCEL_GIT_COMMIT_REF:'feature/qualified-market-comparables-phase5k',
  VERCEL_GIT_REPO_OWNER:'gempredict',VERCEL_GIT_REPO_SLUG:'gempredict-live',VERCEL_GIT_COMMIT_SHA:'a'.repeat(40),
  VERCEL_PROJECT_ID:'prj_hu0Q2BybH0PskmTxFaEkz1NVtus4',
  GEMPREDICT_PREVIEW_SCAN_DIAGNOSTICS_ENABLED:'true',GEMPREDICT_SCAN_DIAGNOSTICS_OWNER_KEY:'ab'.repeat(32),
@@ -102,6 +102,10 @@ test('Ohtani benchmark retains a provider-reported $120 fixed price and two unkn
  assert.ok(qualificationBlockers.includes('commercial_use_not_authorized'));
  assert.equal(result.qualifiedCount,0);
  assert.equal(result.identityEvidence.version,1);
+ assert.equal(result.comparableEvidence.version,1);
+ assert.equal(result.comparableEvidence.counts.restricted,3);
+ assert.equal(result.comparableEvidence.counts.qualified,0);
+ assert.deepEqual(result.comparableEvidence.rows.map(row=>row.finalAmountStatus),['unknown','unknown','provider_reported']);
  assert.equal(result.identityEvidence.physicalPrinting.status,'unverified');
  assert.doesNotMatch(JSON.stringify(result),/995|999|median|profit|synthetic-card-api-secret/);
 });
@@ -138,6 +142,8 @@ test('both endpoints deny unauthorized, foreign and unreviewed saved-card reques
 test('market renderer separates active asking prices, reported final prices and unknown Best Offers',async()=>{
  const html=await renderMarketEvidence(await lookupBrowse(),await lookupSales(observed));
  assert.match(html,/Active Listings — eBay/);
+ assert.match(html,/Comparable-sales qualification/);
+ assert.match(html,/Commercially restricted/);
  assert.match(html,/Recent Sales — The Card API/);
  assert.match(html,/Asking price: USD 175.00/);
  assert.match(html,/Provider-reported final price: USD 120. Settlement unverified/);

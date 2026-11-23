@@ -34,7 +34,7 @@ async function dashboardRequest(path,options,controller,timeout=19000) {
   } finally { clearTimeout(timer); }
 }
 
-export default function MarketDashboard({report,reportId,token,today,name}) {
+export default function MarketDashboard({report,reportId,token,today,name,comparableEvidence}) {
   const [opened,setOpened]=useState({});
   const [results,setResults]=useState({});
   const [busy,setBusy]=useState(null);
@@ -156,6 +156,7 @@ export default function MarketDashboard({report,reportId,token,today,name}) {
             </button>}
           {source==='active'?<ActiveListings result={results.active} pending={busy==='active'} embedded/>:
             <RecentSales result={results.sales} message={results.sales?.error?labels[results.sales.error]||labels.provider_unavailable:''} unified embedded/>}
+          {source==='sales'&&comparableEvidence&&!results.sales?.comparableEvidence&&<p>Qualification checks run when recent sales are requested. Active listings are excluded.</p>}
           {results[source]?.identityEvidence?.status==='conflict'&&<p role="status">{results[source].identityEvidence.nextAction}</p>}
           {busy==='sales'&&source==='sales'&&<p role="status">Searching recent sales…</p>}
           {results.sales?.candidates?.length===0&&results.sales?.rejected?.length===0&&source==='sales'&&<p>No recent records returned.</p>}
