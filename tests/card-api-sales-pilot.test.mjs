@@ -169,13 +169,21 @@ test('saved identity preserves uncertainty and requires explicit review for unre
  assert.ok(extracted.conflicts.includes('catalog: parallel'));
  assert.equal(prepareScanSalesQuery(sportReport,undefined,false).error,'owner_identity_review_required');
  const prepared=prepareScanSalesQuery(sportReport,undefined,true);
- assert.equal(prepared.q,'"Synthetic Collector" "2025" "Synthetic Set" "8B-11" "Synthetic Insert" "Blue Refractor" "Synthetic Manufacturer"');
+ assert.equal(prepared.q,'Synthetic Collector 2025 8B-11');
+ assert.equal(prepared.searchMode,'discovery_then_verify');
+ assert.equal(prepared.searchedSubject,'Synthetic Collector');
+ assert.ok(!prepared.q.includes('Blue Refractor'));
+ assert.ok(!prepared.q.includes('Synthetic Set'));
  assert.equal(prepared.ownerReviewed,true);
  assert.ok(!Object.hasOwn(prepared.identity,'verified'));
  const multi={...sportReport,canonicalCard:{...sportReport.canonicalCard,subject:'Synthetic Collector / Second Player'},
   sportsIdentityEvidence:{subjects:[{name:'Synthetic Collector'},{name:'Second Player'}],subjectStatus:'unresolved'}};
  assert.deepEqual(extractScanSalesIdentity(multi).identity.subjects,['Synthetic Collector','Second Player']);
  assert.equal(prepareScanSalesQuery(multi,undefined,false).error,'owner_identity_review_required');
+ const reviewedMulti=prepareScanSalesQuery(multi,undefined,true);
+ assert.equal(reviewedMulti.q,'Synthetic Collector 2025 8B-11');
+ assert.deepEqual(reviewedMulti.identity.subjects,['Synthetic Collector','Second Player']);
+ assert.ok(!reviewedMulti.q.includes('Second Player'));
  assert.equal(compareScanSale({...target,subjects:['Synthetic Collector','Second Player']},exactRow,'PSA 9').status,'plausible_unverified');
  assert.equal(compareScanSale(target,{...exactRow,player:'Synthetic Collector / Second Player'},'PSA 9').status,'mismatch');
 });
@@ -196,7 +204,7 @@ test('per-field candidate audit distinguishes supported listing evidence, unknow
 });
 
 test('saved pilot rechecks ownership and review before one exact title query; provider metadata stays untrusted',async()=>{
- const environment={...env,VERCEL_GIT_COMMIT_REF:'feature/scan-to-sales-phase5e'};
+ const environment={...env,VERCEL_GIT_COMMIT_REF:'feature/sales-search-recall-phase5f'};
  const scoped={host,origin:'https://'+host,authorization:'Bearer synthetic-owner-session'};
  scoped.cookie=authorizeDiagnosticOwner({method:'POST',headers:scoped},environment.GEMPREDICT_SCAN_DIAGNOSTICS_OWNER_KEY,environment,now).split(';')[0];
  const body={reportId:savedId,confirmed:true,cohort:query.cohort,dateFrom:query.dateFrom,dateTo:query.dateTo};
