@@ -1,3 +1,4 @@
+import { compareScanSale, extractScanSalesIdentity, prepareScanSalesQuery } from '../lib/scanToSalesIdentity.mjs';
 import assert from 'node:assert/strict';
 import test from 'node:test';
 import { authorizeDiagnosticOwner } from '../lib/scanDiagnosticsAuth.mjs';
@@ -143,4 +144,91 @@ test('an overlapping owner request cannot create a second upstream request in th
  release();
  assert.equal((await first).code,200);
  assert.equal(calls,1);
+});
+
+const savedId='aaaaaaaa-0000-4000-8000-000000000001';
+const sportReport={
+  identityV2:{category:'sports',identityVerified:false,printingVerified:false},
+  canonicalCard:{subject:'Synthetic Collector',year:'2025',brandSet:'Synthetic Set',cardNumber:'8B-11',
+    manufacturer:'Synthetic Manufacturer',subset:'Synthetic Insert',parallel:'Blue Refractor',printRun:'99',autoOrRelic:'Autograph no relic'},
+  originalIdentityObservation:{identifiedSerialNumber:'7/99'},
+  imageAnalysis:{observedFoilTreatment:'Holo'},
+  sportsIdentityEvidence:{subjects:[{name:'Synthetic Collector'}],subjectStatus:'supported_observations'},
+  catalogComparison:{finalConflicts:['parallel'],printing:{status:'conflict'}},
+};
+const target=extractScanSalesIdentity(sportReport).identity;
+const exactTitle='2025 Synthetic Collector Synthetic Set #8B-11 Synthetic Insert Blue Refractor Holo autograph no relic';
+const exactRow={title:exactTitle,year:'2025',set:'Synthetic Set',manufacturer:'Synthetic Manufacturer',
+ cardNumber:'8B-11',player:'Synthetic Collector',printRun:'99',grader:'PSA',grade:'9'};
+
+test('saved identity preserves uncertainty and requires explicit review for unresolved or multi-player cards',()=>{
+ const extracted=extractScanSalesIdentity(sportReport);
+ assert.equal(extracted.identity.serial,'7/99');
+ assert.equal(extracted.identity.printRun,'99');
+ assert.ok(extracted.requiresReview);
+ assert.ok(extracted.conflicts.includes('catalog: parallel'));
+ assert.equal(prepareScanSalesQuery(sportReport,undefined,false).error,'owner_identity_review_required');
+ const prepared=prepareScanSalesQuery(sportReport,undefined,true);
+ assert.equal(prepared.q,'"Synthetic Collector" "2025" "Synthetic Set" "8B-11" "Synthetic Insert" "Blue Refractor" "Synthetic Manufacturer"');
+ assert.equal(prepared.ownerReviewed,true);
+ assert.ok(!Object.hasOwn(prepared.identity,'verified'));
+ const multi={...sportReport,canonicalCard:{...sportReport.canonicalCard,subject:'Synthetic Collector / Second Player'},
+  sportsIdentityEvidence:{subjects:[{name:'Synthetic Collector'},{name:'Second Player'}],subjectStatus:'unresolved'}};
+ assert.deepEqual(extractScanSalesIdentity(multi).identity.subjects,['Synthetic Collector','Second Player']);
+ assert.equal(prepareScanSalesQuery(multi,undefined,false).error,'owner_identity_review_required');
+ assert.equal(compareScanSale({...target,subjects:['Synthetic Collector','Second Player']},exactRow,'PSA 9').status,'plausible_unverified');
+ assert.equal(compareScanSale(target,{...exactRow,player:'Synthetic Collector / Second Player'},'PSA 9').status,'mismatch');
+});
+
+test('per-field candidate audit distinguishes supported listing evidence, unknowns and contradictions',()=>{
+ assert.equal(compareScanSale(target,exactRow,'PSA 9').status,'exact_listing_evidence');
+ for(const [patch,field] of [
+  [{year:'2024'},'year'],[{set:'Different Set'},'set'],[{cardNumber:'8B-12'},'card_number'],
+  [{title:exactTitle.replace('Blue','Red')},'parallel'],[{grade:'10'},'grade'],
+ ]) {
+  const result=compareScanSale(target,{...exactRow,...patch},'PSA 9');
+  assert.equal(result.status,'mismatch');
+  assert.ok(result.mismatches.includes(field));
+ }
+ const sparse=compareScanSale(target,{...exactRow,year:null,cardNumber:null},'PSA 9');
+ assert.equal(sparse.status,'plausible_unverified');
+ assert.deepEqual(sparse.unknown,['year','card_number']);
+});
+
+test('saved pilot rechecks ownership and review before one exact title query; provider metadata stays untrusted',async()=>{
+ const environment={...env,VERCEL_GIT_COMMIT_REF:'feature/scan-to-sales-phase5e'};
+ const scoped={host,origin:'https://'+host,authorization:'Bearer synthetic-owner-session'};
+ scoped.cookie=authorizeDiagnosticOwner({method:'POST',headers:scoped},environment.GEMPREDICT_SCAN_DIAGNOSTICS_OWNER_KEY,environment,now).split(';')[0];
+ const body={reportId:savedId,confirmed:true,cohort:query.cohort,dateFrom:query.dateFrom,dateTo:query.dateTo};
+ let calls=0;
+ const overrides={env:environment,clock:()=>now,
+  loadSaved:async(req,id)=>{
+   assert.equal(id,savedId);
+   return req.headers.authorization===scoped.authorization?{status:200,report:{payload:sportReport}}:{status:404,error:'report_not_found'};
+  },
+  fetchImpl:async url=>{
+   calls++;
+   assert.equal(url.searchParams.get('q'),prepareScanSalesQuery(sportReport,undefined,true).q);
+   assert.equal(url.searchParams.get('grade'),'9');
+   assert.equal(url.searchParams.has('card_id'),false);
+   const row={...sale,title:exactTitle,year:2025,card_set:'Synthetic Set',manufacturer:'Synthetic Manufacturer',
+    player:'Synthetic Collector',print_run:99};
+   return Response.json(wrapper([row,{...row,id:'other:synthetic',platform:'unknown_platform',currency:null,listing_type:'unknown_kind'}]));
+  }};
+ const handler=createCardApiPilotHandler(overrides);
+ assert.equal((await request(handler,{headers:{...scoped,authorization:'Bearer another-account'},body})).code,404);
+ assert.equal((await request(handler,{headers:scoped,body:{...body,confirmed:false}})).body.error,'owner_identity_review_required');
+ assert.equal((await request(handler,{headers:scoped,body:{...body,q:'manually injected'}})).code,400);
+ assert.equal(calls,0);
+ const result=await request(handler,{headers:scoped,body});
+ assert.equal(result.code,200);
+ assert.equal(calls,1);
+ assert.equal(result.body.candidates[0].identityMatch.status,'exact_listing_evidence');
+ assert.equal(result.body.candidates[0].price,null);
+ assert.ok(result.body.candidates[0].qualificationReasons.includes('settlement_evidence_missing'));
+ assert.equal(result.body.qualifiedCount,0);
+ assert.ok(result.body.rejected[0].reasons.includes('platform_unsupported'));
+ assert.ok(result.body.rejected[0].reasons.includes('currency_missing'));
+ assert.ok(result.body.rejected[0].reasons.includes('listing_type_unsupported'));
+ assert.doesNotMatch(JSON.stringify(result.body),/unknown_platform|unknown_kind|original_price|synthetic-owner-session/);
 });

@@ -16,7 +16,7 @@ const passwordMessages = {
   update_failed: 'The password could not be updated. Try again.',
 };
 
-export default function MyCardLibrary({ onSession, revision, renderReport }) {
+export default function MyCardLibrary({ onSession, revision, renderReport, selectReport }) {
   const [client, setClient] = useState(null);
   const [available, setAvailable] = useState(null);
   const [session, setSession] = useState(null);
@@ -99,7 +99,7 @@ export default function MyCardLibrary({ onSession, revision, renderReport }) {
             setReports([]); setOpened(null); setHasMore(false); setPage(0); setError(''); setBusy(false);
           }
           setSession(next);
-          onSession(next?.access_token || null);
+          onSession(next?.access_token || null, nextOwner);
         }).data.subscription;
         setClient(auth);
         setAvailable(true);
@@ -209,7 +209,8 @@ export default function MyCardLibrary({ onSession, revision, renderReport }) {
         setOpened(previous => previous?.id === id ? null : previous);
         if (reports.length === 1 && page > 0) setPage(page - 1);
         setReload(previous => previous + 1);
-      } else setOpened(data.report);
+      } else if (selectReport) selectReport(data.report);
+      else setOpened(data.report);
     } catch (failure) {
       if (activeOwner.current === owner) setError(failure.message === 'unsupported_report_version'
         ? 'This saved report uses a version this app cannot display.'
@@ -266,8 +267,8 @@ export default function MyCardLibrary({ onSession, revision, renderReport }) {
           <strong>{report.card_name}</strong>
           <span>{report.card_number?'#'+report.card_number+' · ':''}<time dateTime={report.created_at}>{new Date(report.created_at).toLocaleDateString()}</time></span>
           <div style={controls}>
-            <button style={button} type="button" disabled={busy} onClick={()=>readOrDelete(report.id)}>Open saved report</button>
-            <button style={button} type="button" disabled={busy} onClick={()=>readOrDelete(report.id,true)}>Delete saved report</button>
+            <button style={button} type="button" disabled={busy} onClick={()=>readOrDelete(report.id)}>{selectReport?'Select saved card':'Open saved report'}</button>
+            {!selectReport&&<button style={button} type="button" disabled={busy} onClick={()=>readOrDelete(report.id,true)}>Delete saved report</button>}
           </div>
         </li>)}
       </ul>}
