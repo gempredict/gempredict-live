@@ -44,51 +44,83 @@ const controls = {display:'flex',flexWrap:'wrap',alignItems:'end',gap:12};
 function displayAmount(value,currency) {
   return value === null ? 'Unknown' : (currency ? currency+' ' : '') + String(value);
 }
-function IdentityEvidence({evidence}) {
+const evidenceLabels={
+  year:'Release year',set:'Set',manufacturer:'Manufacturer',card_number:'Card number',subjects:'Player or subject',
+  subset:'Subset',parallel:'Parallel',finish:'Finish',print_run:'Numbered printing',copy_serial:'Copy serial',
+  factory_set:'Factory complete-set printing',photo_variation:'Photo variation',photo_pose:'Photo pose',
+  exact_printing:'Exact printing',short_print:'Short print',grade:'Grade',unofficial_printing:'Unofficial printing',
+  possible_lot:'Possible lot',autograph:'Autograph',relic:'Relic',ambiguous_variant_terms:'Ambiguous variation wording',
+};
+const conflictLabels={
+  factory_set:'Different factory complete-set printing',
+  photo_variation:'Different photo variation',
+  short_print:'Different short-print version',
+  parallel:'Different parallel',
+  print_run:'Different numbered printing',
+  card_number:'Different card number',
+  year:'Different release year',
+  set:'Different set',
+};
+const statusLabels={exact_listing_evidence:'Listing evidence aligns',plausible_unverified:'Possible match',mismatch:'Identity mismatch'};
+function IdentityEvidence({evidence,cohort}) {
   if (!evidence) return null;
-  return <details open={evidence.status==='mismatch'}><summary>{{
-    exact_listing_evidence:'Exact identity supported by listing evidence',
-    plausible_unverified:'Plausible, identity unverified',
-    mismatch:'Identity mismatch',
-  }[evidence.status]}</summary>
-    {['matched','unknown','mismatches'].map(kind=>evidence[kind].length>0&&
-      <p key={kind}>{kind}: {evidence[kind].map(field=>field.replace(/_/g,' ')).join(', ')}</p>)}
-  </details>;
+  const conflicts=evidence.mismatches.map(field=>{
+    if(field!=='grade') return conflictLabels[field]||evidenceLabels[field]||field.replace(/_/g,' ');
+    const label=evidence.gradeEvidence?.label;
+    if (!label||label==='Conflicting grading evidence') return label||'Grade differs';
+    if (/^[A-Z]+ \d/.test(label)) return `Graded ${label}, not ${cohort}`;
+    return label==='Listed as Raw'?`Listed as Raw, not ${cohort}`:`Graded, not ${cohort}`;
+  });
+  return <>
+    <p className="market-status"><strong>{statusLabels[evidence.status]}</strong>
+      {evidence.gradeEvidence&&<span>{evidence.gradeEvidence.label}</span>}</p>
+    {conflicts.length>0&&<p className="market-conflicts">{conflicts.join(' · ')}</p>}
+    {evidence.unknown.includes('exact_printing')&&<p className="market-muted">Exact printing unconfirmed</p>}
+    <details><summary>Identity evidence</summary>
+      {Object.entries({matched:'Supports',unknown:'Unconfirmed',mismatches:'Conflicts'}).map(([key,label])=>evidence[key].length>0&&
+        <p key={key}>{label}: {evidence[key].map(field=>evidenceLabels[field]||field.replace(/_/g,' ')).join(', ')}</p>)}
+    </details>
+  </>;
+}
+function Counters({values}) {
+  return <dl className="market-counts">{values.map(([label,value])=><div key={label}><dt>{label}</dt><dd>{value}</dd></div>)}</dl>;
 }
 const rowStyle={padding:'12px 0',borderBottom:'1px solid #dfd8ca',overflowWrap:'anywhere'};
 const transactionLabels={best_offer:'Best Offer',fixed_price:'Fixed-price',auction:'Auction'};
-function Row({row,rejected,unified}) {
+function Row({row,rejected,unified,cohort}) {
   const finalPrice=providerFinalPrice(row);
   return <li style={rowStyle}>
     <strong>{row.title || 'Listing title unavailable'}</strong>
-    <p>{[row.platform,row.channel,transactionLabels[row.listingType],row.id].filter(Boolean).join(' · ') || 'Provenance incomplete'}</p>
-    <p>{row.sold || 'Sale date unknown'} · {row.grade ? [row.grader,row.grade].filter(Boolean).join(' ') : 'Condition grade not reported'}
-      {row.condition ? ' · '+row.condition : ''}{row.cardNumber ? ' · #'+row.cardNumber : ''}</p>
+    <p className="market-muted">{[row.platform,transactionLabels[row.listingType],row.sold].filter(Boolean).join(' · ') || 'Provenance incomplete'}</p>
     {unified?<p>{finalPrice===null?'Final price unknown.':[
       row.platform==='goldin'&&row.listingType==='auction'?'Provider-reported hammer price: ':'Provider-reported final price: ',
       displayAmount(finalPrice,row.currency),'. Settlement unverified.',
     ].join('')}</p>:<p>{row.platform==='goldin'?'Reported hammer price':'Reported price'}: {displayAmount(row.price,row.currency)}.
       Shipping: {displayAmount(row.shipping,row.currency)}. {row.amountReportedConfirmed?'Provider reports final amount known.':'Final amount unconfirmed.'}</p>}
-    <IdentityEvidence evidence={row.identityMatch}/>
-    <details><summary>{rejected?'Rejection reasons':'Why this is not a qualified comparable'}</summary>
+    <IdentityEvidence evidence={row.identityMatch} cohort={cohort}/>
+    <details><summary>{rejected?'Rejection and source details':'Qualification and source details'}</summary>
+      <p>{[row.id,row.channel,row.condition].filter(Boolean).join(' · ')}</p>
       <ul>{[...new Set([...(row.reasons||[]),...(row.qualificationReasons||[])])].map(reason=><li key={reason}>{reason.replace(/_/g,' ')}</li>)}</ul>
     </details>
   </li>;
 }
 function ActiveListings({result,pending}) {
-  return <section aria-labelledby="active-market-title">
+  return <section className="market-section" aria-labelledby="active-market-title">
     <h2 id="active-market-title">Active Listings — eBay</h2>
     <p>Current asking prices. Listing titles and seller claims are discovery evidence only.</p>
     {pending&&<p role="status">Searching eBay…</p>}
     {result?.error&&<p role="alert">{labels[result.error]||labels.ebay_unavailable}</p>}
     {result?.rows&&<>
-      <p>{result.rows.length?result.rows.length+' active records returned.':'No active records returned.'}
-        {!!(result.duplicateCount||result.conflictingDuplicateCount)&&
-          ` Duplicate rows removed: ${result.duplicateCount}; conflicting duplicate rows withheld: ${result.conflictingDuplicateCount}.`}</p>
+      <Counters values={[[`Active · ${result.cohort}`,result.rows.length],
+        ['Possible matches',result.rows.filter(row=>row.identityMatch.status!=='mismatch').length],
+        ['Mismatches',result.rows.filter(row=>row.identityMatch.status==='mismatch').length]]}/>
+      {result.rows.length===0&&<p>No active records returned.</p>}
+      {!!(result.duplicateCount||result.conflictingDuplicateCount)&&<p>Duplicate rows removed: {result.duplicateCount}.
+        Conflicting duplicate rows withheld: {result.conflictingDuplicateCount}.</p>}
       <ul>{result.rows.map((row,index)=><li key={index} style={rowStyle}>
         <strong>{row.title}</strong>
         <p>{row.ask?`Asking price: ${row.ask.currency} ${row.ask.amount}`:'Fixed asking price unavailable'}</p>
-        <IdentityEvidence evidence={row.identityMatch}/>
+        <IdentityEvidence evidence={row.identityMatch} cohort={result.cohort}/>
         {row.exclusions.length>0&&<p>{row.exclusions.join(', ')}</p>}
         {row.link&&<p><a href={row.link} target="_blank" rel="noopener noreferrer">Open eBay listing</a></p>}
       </li>)}</ul>
@@ -98,20 +130,16 @@ function ActiveListings({result,pending}) {
 function SalesSummary({result}) {
   const summary=summarizeRecentSales(result);
   return <>
-    <dl>
-      <dt>Records retrieved</dt><dd>{summary.recordsRetrieved}</dd>
-      <dt>Plausible identity matches</dt><dd>{summary.plausibleMatches}</dd>
-      <dt>Identity mismatches</dt><dd>{summary.identityMismatches}</dd>
-      <dt>Records with a provider-reported final price</dt><dd>{summary.knownFinalPrices}</dd>
-      <dt>Records with unknown final price</dt><dd>{summary.unknownFinalPrices}</dd>
-    </dl>
+    <Counters values={[[`Recent · ${result.cohort}`,summary.recordsRetrieved],['Possible matches',summary.plausibleMatches],
+      ['Mismatches',summary.identityMismatches],['Reported final price',summary.knownFinalPrices],
+      ['Price unknown',summary.unknownFinalPrices]]}/>
     {summary.qualificationBlockers.length>0&&<details><summary>Why records cannot qualify</summary>
       <ul>{summary.qualificationBlockers.map(reason=><li key={reason}>{reason.replace(/_/g,' ')}</li>)}</ul>
     </details>}
   </>;
 }
 function RecentSales({result,message,unified,clear}) {
-  return <section aria-label="Recent sales evidence">
+  return <section className="market-section" aria-label="Recent sales evidence">
       {unified&&<h2>Recent Sales — The Card API</h2>}
       {message&&<p role="alert">{message}</p>}
       {result?.differences&&<ul aria-label="Nonsecret schema differences">{result.differences.map(row=>
@@ -119,15 +147,15 @@ function RecentSales({result,message,unified,clear}) {
       {result?.quota&&Object.values(result.quota).some(value=>value!==null)&&
         <p>Sales quota remaining: {result.quota.remaining??'unknown'} of {result.quota.limit??'unknown'}. Reset: {result.quota.reset??'unknown'}.</p>}
       {result?.candidates&&<>
-        {result.query&&<p>Discovery-only title query: {result.query}. The search omits parallel, full set spelling, and additional subjects to find candidates; each result is separately checked against the complete reviewed identity. This is not an exact-sale match.</p>}
+        {result.query&&<details><summary>Search details</summary><p>Title query: {result.query}. Each record is compared with the reviewed identity.</p></details>}
         {unified&&<SalesSummary result={result}/>}
         {unified?<h3>{result.cohort} provider candidates ({result.candidates.length})</h3>:<h2>{result.cohort} provider candidates ({result.candidates.length})</h2>}
         <p>One bounded page. Empty results do not establish that no market exists. Grade filters can omit unparsed records.</p>
         <p>Provider amounts do not independently verify payment or settlement. Best Offer amounts may be unknown.
           Shipping, tax and buyer-premium inclusion vary. Exact parallels, lots and distinct transactions are unverified.</p>
-        <ul>{result.candidates.map(row=><Row key={row.index} row={row} unified={unified}/>)}</ul>
+        <ul>{result.candidates.map(row=><Row key={row.index} row={row} unified={unified} cohort={result.cohort}/>)}</ul>
         <h3>Rejected matches ({result.rejected.length})</h3>
-        <ul>{result.rejected.map(row=><Row key={row.index} row={row} unified={unified} rejected/>)}</ul>
+        <ul>{result.rejected.map(row=><Row key={row.index} row={row} unified={unified} cohort={result.cohort} rejected/>)}</ul>
         <h3>Independently qualified comparables ({result.qualifiedCount})</h3>
         <p>Free evaluation lacks the rights and independent evidence required for comparable sales and grading profitability.</p>
         <button type="button" onClick={clear}>Clear results</button>
@@ -255,10 +283,13 @@ export default function CardSalesPilot({today,earliest,savedIdentity=false,unifi
           {selected.review.missing.length>0&&<p style={{flexBasis:'100%'}}>Missing fields: {selected.review.missing.map(key=>scanSalesFields[key]||'Subjects').join(', ')}</p>}
           <label style={fields}>Subjects, one per line<textarea name="subjects" rows={3} maxLength={324}
             defaultValue={selected.review.identity.subjects.join('\n')} required/></label>
-          {Object.entries(scanSalesFields).map(([key,label])=>
+          {Object.entries(scanSalesFields).filter(([key])=>key!=='photoPose').map(([key,label])=>
             <label key={key} style={fields}>{label}<input
               name={key} defaultValue={selected.review.identity[key]||''} maxLength={key==='number'?40:80}
               required={['year','set','number'].includes(key)}/></label>)}
+          <label style={fields}>Photo pose<select name="photoPose" defaultValue={selected.review.identity.photoPose||''}>
+            <option value="">Unknown</option><option value="pitching">Pitching</option><option value="batting">Batting</option>
+          </select></label>
           <p style={{flexBasis:'100%'}}>Use holo, non-holo, or reverse-holo for finish, and yes or no for autograph and relic. Leave unknown fields empty.</p>
           <label style={{flexBasis:'100%'}}><input type="checkbox" name="confirmed"/>
             I reviewed this identity for comparison. My confirmation does not verify the catalog identity or physical printing.</label>
@@ -279,6 +310,19 @@ export default function CardSalesPilot({today,earliest,savedIdentity=false,unifi
         clear={()=>{request.current?.abort();setResult(null);setActive(null);setMessage('');}}/>}
       {unified&&!expiresAt&&message&&<p role="alert">{message}</p>}
     </main>
+    <style jsx global>{`
+      .market-section { margin-block:1.5rem; border-top:1px solid #dfd8ca; }
+      .market-section > ul { list-style:none; padding:0; }
+      .market-section p { margin:.35rem 0; }
+      .market-section summary,.market-section a { display:list-item; min-height:44px; padding-block:10px; box-sizing:border-box; }
+      .market-section a { display:inline-block; }
+      .market-counts { display:grid; grid-template-columns:repeat(auto-fit,minmax(min(100%,100px),1fr)); gap:.5rem; }
+      .market-counts div { display:flex; flex-direction:column-reverse; padding:.45rem .6rem; border-radius:.45rem; background:#f3eee5; }
+      .market-counts dt,.market-muted { font-size:.875rem; color:#534a3e; }
+      .market-counts dd { margin:0; font-size:1.25rem; font-weight:700; }
+      .market-status { display:flex; flex-wrap:wrap; gap:.25rem .6rem; }
+      .market-conflicts { color:#842820; }
+    `}</style>
   </>;
 }
 CardSalesPilot.excludeAnalytics = true;

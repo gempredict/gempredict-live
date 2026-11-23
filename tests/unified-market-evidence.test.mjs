@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
 import { createActiveMarketHandler } from '../lib/activeMarketPilot.mjs';
-import { cardApiPilotPage,createCardApiPilotHandler,unifiedMarketBranch } from '../lib/cardApiSalesPilot.mjs';
+import { cardApiPilotPage,createCardApiPilotHandler } from '../lib/cardApiSalesPilot.mjs';
 import { providerFinalPrice,summarizeRecentSales } from '../lib/marketEvidenceSummary.mjs';
 import { authorizeDiagnosticOwner } from '../lib/scanDiagnosticsAuth.mjs';
 import { renderMarketEvidence } from './helpers/renderReports.mjs';
@@ -9,7 +9,7 @@ import { renderMarketEvidence } from './helpers/renderReports.mjs';
 const now=Date.parse('2026-11-23T12:00:00Z');
 const host='gempredict-live-synthetic-deployment.vercel.app';
 const env={
- VERCEL:'1',VERCEL_ENV:'preview',VERCEL_URL:host,VERCEL_GIT_COMMIT_REF:unifiedMarketBranch,
+ VERCEL:'1',VERCEL_ENV:'preview',VERCEL_URL:host,VERCEL_GIT_COMMIT_REF:'feature/variation-match-accuracy-phase5h',
  VERCEL_GIT_REPO_OWNER:'gempredict',VERCEL_GIT_REPO_SLUG:'gempredict-live',VERCEL_GIT_COMMIT_SHA:'a'.repeat(40),
  VERCEL_PROJECT_ID:'prj_hu0Q2BybH0PskmTxFaEkz1NVtus4',
  GEMPREDICT_PREVIEW_SCAN_DIAGNOSTICS_ENABLED:'true',GEMPREDICT_SCAN_DIAGNOSTICS_OWNER_KEY:'ab'.repeat(32),
@@ -56,7 +56,7 @@ const browseItem=(itemTitle,index)=>({title:itemTitle,itemId:`v1|1234567890${ind
  price:{value:'175.00',currency:'USD'},buyingOptions:['FIXED_PRICE'],
  itemWebUrl:`https://www.ebay.com/itm/1234567890${index}?tracking=synthetic`});
 
-async function lookupSales(records) {
+async function lookupSales(records, overrides={}) {
  let calls=0;
  const handler=createCardApiPilotHandler({...opts,fetchImpl:async(url,options)=>{
   calls++;
@@ -65,13 +65,13 @@ async function lookupSales(records) {
   assert.equal(options.cache,'no-store');
   return Response.json({data:records,pagination:{total:records.length},meta:{}});
  }});
- const res=await request(handler,salesInput);
+ const res=await request(handler,{...salesInput,...overrides});
  assert.equal(calls,1);
  assert.equal(res.code,200);
  assert.equal(res.headers['Cache-Control'],'private, no-store, max-age=0');
  return res.body;
 }
-async function lookupBrowse() {
+async function lookupBrowse(fixtures,overrides={}) {
  const calls=[];
  const items=[title,...wrongCards.map(([value])=>value)].map(browseItem);
  items.push({...browseItem(title,9),itemWebUrl:'https://example.invalid/itm/12345678909',buyingOptions:['AUCTION']});
@@ -84,9 +84,9 @@ async function lookupBrowse() {
   assert.equal(endpoint.pathname,'/buy/browse/v1/item_summary/search');
   assert.equal(endpoint.searchParams.get('limit'),'20');
   assert.equal(endpoint.searchParams.get('q'),'Shohei Ohtani 2018 700');
-  return Response.json({itemSummaries:items});
+  return Response.json({itemSummaries:fixtures||items});
  }});
- const res=await request(handler,input);
+ const res=await request(handler,{...input,...overrides});
  assert.equal(res.code,200);
  assert.equal(calls.length,2);
  assert.equal(res.headers['Cache-Control'],'private, no-store, max-age=0');
@@ -144,4 +144,65 @@ test('market renderer separates active asking prices, reported final prices and 
  assert.match(html,/Fixed-price/);
  assert.match(html,/Identity mismatch/);
  assert.doesNotMatch(html,/995|999|tracking=|example.invalid/);
+});
+
+test('Ohtani printing comparison uses explicit factory, photo, numbered and short-print evidence',async()=>{
+ const cases=[
+  ['Regular Base Pitching Photo', 'matched','exact_printing'],
+  ['Factory Complete Set Variation', 'mismatches','factory_set'],
+  ['Batting Photo', 'mismatches','photo_variation'],
+  ['Photo Variation', 'mismatches','photo_variation'],
+  ['Short Print', 'mismatches','short_print'],
+  ['Numbered 12/99', 'mismatches','print_run'],
+  ['Refractor', 'mismatches','parallel'],
+  ['Complete Your Set', 'unknown','exact_printing'],
+  ['Variation?', 'unknown','exact_printing'],
+  ['Not a Factory Set Variation', 'unknown','exact_printing'],
+  ['Regular Base', 'unknown','exact_printing'],
+  ['', 'unknown','exact_printing'],
+ ];
+ const overrides={reviewedIdentity:{photoPose:'pitching'}};
+ const browse=await lookupBrowse(cases.map(([suffix],i)=>browseItem(title+' '+suffix,i)),overrides);
+ const sales=await lookupSales(cases.map(([suffix],i)=>({...saleFixture,id:'printing-'+i,title:title+' '+suffix})),overrides);
+ const rows=[...sales.candidates,...sales.rejected].sort((a,b)=>a.index-b.index);
+ cases.forEach(([suffix,bucket,field],i)=>{
+  for(const row of [browse.rows[i],rows[i]]) {
+   assert.ok(row.identityMatch[bucket].includes(field),suffix+' '+JSON.stringify(row.identityMatch));
+   assert.equal(row.identityMatch.status==='mismatch',bucket==='mismatches',suffix);
+  }
+ });
+ const html=await renderMarketEvidence(browse,sales);
+ assert.match(html,/Different factory complete-set printing/);
+ assert.match(html,/Different photo variation/);
+ assert.match(html,/Exact printing unconfirmed/);
+ assert.match(html,/<summary>Identity evidence<\/summary>/);
+});
+
+test('both sources separate explicit Raw, unknown grade and grading company or score conflicts',async()=>{
+ const cases=[
+  ['Ungraded','Listed as Raw','matched'],
+  ['Raw','Listed as Raw','matched'],
+  ['PSA Graded','Graded · exact grade unknown','mismatch'],
+  ['', 'Grade status unknown','unknown'],
+  ['PSA 9','PSA 9','mismatch'],
+  ['BGS 9.5','BGS 9.5','mismatch'],
+ ];
+ const browse=await lookupBrowse(cases.map(([suffix],i)=>browseItem(title+' '+suffix,i)));
+ const sales=await lookupSales(cases.map(([suffix],i)=>({...saleFixture,id:'grade-'+i,title:title+' '+suffix})));
+ const rows=[...sales.candidates,...sales.rejected].sort((a,b)=>a.index-b.index);
+ cases.forEach(([,label,status],i)=>{
+  for(const row of [browse.rows[i],rows[i]]) assert.deepEqual(row.identityMatch.gradeEvidence,{label,status});
+ });
+ assert.match(await renderMarketEvidence(browse,sales),/Graded PSA 9, not Raw/);
+
+ const psaTitles=['PSA 8','PSA 9','PSA 10','SGC 10',''];
+ const psaBrowse=await lookupBrowse(psaTitles.map((suffix,i)=>browseItem(title+' '+suffix,i)),{cohort:'PSA 10'});
+ const psaSales=await lookupSales(psaTitles.map((suffix,i)=>({...saleFixture,id:'psa-'+i,title:title+' '+suffix,
+  ...(suffix.startsWith('PSA')?{grader:'PSA',grade:suffix.slice(4)}:{})})),{cohort:'PSA 10'});
+ const psaRows=[...psaSales.candidates,...psaSales.rejected].sort((a,b)=>a.index-b.index);
+ const expected=['mismatch','mismatch','matched','mismatch','unknown'];
+ assert.deepEqual(psaBrowse.rows.map(row=>row.identityMatch.gradeEvidence.status),expected);
+ assert.deepEqual(psaRows.map(row=>row.identityMatch.gradeEvidence.status),expected);
+ assert.equal(psaSales.qualifiedCount,0);
+ assert.equal(psaBrowse.rows[4].identityMatch.status,'plausible_unverified');
 });
