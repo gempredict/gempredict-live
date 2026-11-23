@@ -9,7 +9,7 @@ import { renderMarketEvidence } from './helpers/renderReports.mjs';
 const now=Date.parse('2026-11-23T12:00:00Z');
 const host='gempredict-live-synthetic-deployment.vercel.app';
 const env={
- VERCEL:'1',VERCEL_ENV:'preview',VERCEL_URL:host,VERCEL_GIT_COMMIT_REF:'feature/collector-dashboard-phase5i',
+ VERCEL:'1',VERCEL_ENV:'preview',VERCEL_URL:host,VERCEL_GIT_COMMIT_REF:'feature/catalog-evidence-foundation-phase5j',
  VERCEL_GIT_REPO_OWNER:'gempredict',VERCEL_GIT_REPO_SLUG:'gempredict-live',VERCEL_GIT_COMMIT_SHA:'a'.repeat(40),
  VERCEL_PROJECT_ID:'prj_hu0Q2BybH0PskmTxFaEkz1NVtus4',
  GEMPREDICT_PREVIEW_SCAN_DIAGNOSTICS_ENABLED:'true',GEMPREDICT_SCAN_DIAGNOSTICS_OWNER_KEY:'ab'.repeat(32),
@@ -101,6 +101,8 @@ test('Ohtani benchmark retains a provider-reported $120 fixed price and two unkn
  assert.deepEqual(counts,{recordsRetrieved:3,plausibleMatches:3,identityMismatches:0,knownFinalPrices:1,unknownFinalPrices:2});
  assert.ok(qualificationBlockers.includes('commercial_use_not_authorized'));
  assert.equal(result.qualifiedCount,0);
+ assert.equal(result.identityEvidence.version,1);
+ assert.equal(result.identityEvidence.physicalPrinting.status,'unverified');
  assert.doesNotMatch(JSON.stringify(result),/995|999|median|profit|synthetic-card-api-secret/);
 });
 test('both providers reject explicit year, set, collector number, parallel, photo variation and grade conflicts',async()=>{

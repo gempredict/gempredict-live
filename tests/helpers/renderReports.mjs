@@ -1,3 +1,4 @@
+import {identityClaimLabels,reportCatalogIdentityEvidence} from '../../lib/catalogIdentityEvidence.mjs';
 import {extractScanSalesIdentity,scanSalesFields} from '../../lib/scanToSalesIdentity.mjs';
 import {providerFinalPrice,summarizeRecentSales} from '../../lib/marketEvidenceSummary.mjs';
 import { openLibraryRecovery, readLibraryRecovery, saveLibraryPassword } from '../../lib/libraryPasswordRecovery.mjs';
@@ -42,7 +43,8 @@ const marketBindings={...marketPanels,MarketEvidenceStyles:()=>null,extractScanS
 const {default:MarketDashboard}=components('src/components/MarketDashboard.jsx',{
  ...marketBindings,useState:React.useState,useRef:React.useRef,useEffect:React.useEffect,
 });
-const {ResultCard,ImageAnalysisCard}=components('src/App.jsx',{MarketDashboard,controlledCategorySubmission,IdentityResult:ReportIdentityResult,attachReportPhotos,reportPhotos,reportListings,ReportPhotos,CompletedSalesSection,ConditionSnapshot,ReportStyle,reportHero,unifiedReportPresentation,GradingScenarioCalculator,...collector,safeScanFailure,conditionAssessmentLabels,...financial,identitySummary,reportTitle,verificationRows,buildGemPredictScore,AtlasPanel,useState:React.useState});
+const {default:CatalogIdentityEvidence}=components('src/components/CatalogIdentityEvidence.jsx',{identityClaimLabels,reportCatalogIdentityEvidence});
+const {ResultCard,ImageAnalysisCard}=components('src/App.jsx',{MarketDashboard,CatalogIdentityEvidence,controlledCategorySubmission,IdentityResult:ReportIdentityResult,attachReportPhotos,reportPhotos,reportListings,ReportPhotos,CompletedSalesSection,ConditionSnapshot,ReportStyle,reportHero,unifiedReportPresentation,GradingScenarioCalculator,...collector,safeScanFailure,conditionAssessmentLabels,...financial,identitySummary,reportTitle,verificationRows,buildGemPredictScore,AtlasPanel,useState:React.useState});
 export function renderReports(report,completedSalesEvidence=null,props={}){
  return {upper:renderToStaticMarkup(React.createElement(ResultCard,{data:report,index:0,onSave(){},isSaved:false,completedSalesEvidence,...props})),lower:renderToStaticMarkup(React.createElement(ImageAnalysisCard,{report}))};
 }

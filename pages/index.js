@@ -1,12 +1,12 @@
 /// GemPredict — Homepage with SEO metadata
 import Head from "next/head";
 import App from "../src/App";
-import { cardApiPilotPage, collectorDashboardBranch } from "../lib/cardApiSalesPilot.mjs";
+import { cardApiPilotPage, collectorDashboardBranch, catalogFoundationBranch } from "../lib/cardApiSalesPilot.mjs";
 
 export function getServerSideProps({req,res}) {
-  const pilot=process.env.VERCEL_GIT_COMMIT_REF===collectorDashboardBranch?cardApiPilotPage(req):null;
+  const pilot=[collectorDashboardBranch,catalogFoundationBranch].includes(process.env.VERCEL_GIT_COMMIT_REF)?cardApiPilotPage(req):null;
   if (pilot) res.setHeader('Cache-Control','private, no-store, max-age=0');
-  return {props:{marketDashboard:pilot?{today:pilot.today,earliest:pilot.earliest}:null}};
+  return {props:{marketDashboard:pilot?{today:pilot.today,earliest:pilot.earliest,catalogEvidence:process.env.VERCEL_GIT_COMMIT_REF===catalogFoundationBranch}:null}};
 }
 
 
