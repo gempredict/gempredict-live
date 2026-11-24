@@ -103,3 +103,34 @@ test('expanding and collapsing stays local; owner-authorized requests are indepe
  assert.doesNotMatch(JSON.stringify(createSavedSnapshot(report)),/No active records|provider_quota|synthetic-library-token|b99139ef/);
  assert.doesNotMatch(protectedCopySummary(report),/No active records|provider_quota|synthetic-library-token|b99139ef/);
 });
+
+test('lookback dashboard loads older windows only on an explicit action and clears them on review changes',async()=>{
+ const calls=[];
+ const windows=[{dateFrom:'2026-11-21',dateTo:'2026-11-23',status:'empty'}];
+ const dash=marketDashboardInteraction({...props,lookback:true},async(path,options)=>{
+  calls.push([path,options]);
+  if(path==='/api/scan-diagnostics')return Response.json({authorized:true,expiresAt:Date.now()+60000});
+  const request=JSON.parse(options.body);
+  return Response.json({cohort:'Raw',candidates:[],rejected:[],qualifiedCount:0,
+   comparableEvidence:{version:1,rows:[],counts:{qualified:0},coverage:{lookbackDays:30},readiness:{blockers:[]}},
+   lookback:{earliestChecked:'2026-11-21',latestChecked:'2026-11-23',recordsRetrieved:0,requestsAttempted:1,windows,
+    stopped:request.continuation?'provider_quota':null,complete:false,expiresAt:Date.now()+60000},
+   continuation:request.continuation?null:'synthetic-cursor',
+  });
+ });
+ expand(dash,1);
+ assert.deepEqual(calls,[]);
+ await find(dash.render(),'button').find(node=>node.props.children==='Authorize Preview owner').props.onClick();
+ const currentTarget={subjects:'Shohei Ohtani',year:'2018',set:'Topps Series 2',number:'700',cohort:'Raw',confirmed:'on'};
+ const submit=value=>find(dash.render(),'form')[0].props.onSubmit({currentTarget,nativeEvent:{submitter:{value}},preventDefault(){}});
+ await submit('sales');
+ assert.match(dash.html(dash.render()),/Load older sales/);
+ assert.match(dash.html(dash.render()),/Checked 2026-11-21 through 2026-11-23/);
+ assert.equal(calls.length,2);
+ await submit('older');
+ assert.equal(JSON.parse(calls[2][1].body).continuation,'synthetic-cursor');
+ assert.match(dash.html(dash.render()),/Partial requested coverage/);
+ assert.doesNotMatch(dash.html(dash.render()),/Load older sales/);
+ find(dash.render(),'form')[0].props.onChange();
+ assert.doesNotMatch(dash.html(dash.render()),/Partial requested coverage|synthetic-cursor/);
+});

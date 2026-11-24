@@ -1,3 +1,4 @@
+import {mergeLookbackBatch} from '../../lib/salesLookback.mjs';
 import {identityClaimLabels,reportCatalogIdentityEvidence} from '../../lib/catalogIdentityEvidence.mjs';
 import {extractScanSalesIdentity,scanSalesFields} from '../../lib/scanToSalesIdentity.mjs';
 import {providerFinalPrice,summarizeRecentSales} from '../../lib/marketEvidenceSummary.mjs';
@@ -39,7 +40,7 @@ const {default:GradingScenarioCalculator}=components('src/components/GradingScen
 const {default:AtlasPanel}=components('src/components/AtlasPanel.jsx');
 const {default:ReportIdentityResult}=components('src/components/IdentityResult.jsx',{...financial,reportTitle,verificationRows,ScanDiagnostics:()=>null});
 const marketPanels=components('src/components/MarketEvidencePanels.jsx',{providerFinalPrice,summarizeRecentSales,scanSalesFields});
-const marketBindings={...marketPanels,MarketEvidenceStyles:()=>null,extractScanSalesIdentity,SALES_COHORTS,summarizeRecentSales};
+const marketBindings={...marketPanels,MarketEvidenceStyles:()=>null,extractScanSalesIdentity,SALES_COHORTS,summarizeRecentSales,mergeLookbackBatch};
 const {default:MarketDashboard}=components('src/components/MarketDashboard.jsx',{
  ...marketBindings,useState:React.useState,useRef:React.useRef,useEffect:React.useEffect,
 });

@@ -1,0 +1,7 @@
+# Phase 5K.1 controlled sales lookback
+
+Use My Card Library on the immutable owner-protected Phase 5K.1 Preview. Scope the existing Preview bindings to `feature/sales-lookback-phase5k1`. Select a cohort and request recent sales. Use **Load older sales** to continue after each batch. Dates are anchored to the first request's UTC day. Each action checks up to two consecutive three-date windows, with up to 20 provider rows per window and no provider pagination.
+
+Coverage lists attempted, empty, failed and unsearched windows. A window with more provider pages remains partial. A failed provider window ends that search and is never retried automatically. Older windows or results can remain unavailable due to provider quotas, authorization expiry or the shared deadline. The audit retains repeated provider record IDs as suspected duplicates and never infers transaction identity.
+
+The server limits a search to ten windows. The handler enforces a two-second batch cooldown and ten provider attempts in a rolling five-minute period per warm instance. Provider account quotas apply across instances. The continuation is authenticated and bound to the deployment, session, report and reviewed query, expires within five minutes, and carries window metadata only. Replay protection is per warm instance. Sales and their audits remain in the page's temporary state and retain Phase 5K qualification and financial safeguards.

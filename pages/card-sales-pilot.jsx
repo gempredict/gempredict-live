@@ -9,6 +9,7 @@ import { cardApiPilotPage } from '../lib/cardApiSalesPilot.mjs';
 export function getServerSideProps({req,res}) {
   res.setHeader('Cache-Control','private, no-store, max-age=0');
   const props = cardApiPilotPage(req);
+  if(props?.lookback)return {redirect:{destination:'/',permanent:false}};
   return props ? {props} : {notFound:true};
 }
 export default function CardSalesPilot({today,earliest,savedIdentity=false,unified=false}) {

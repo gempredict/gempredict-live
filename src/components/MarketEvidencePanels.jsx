@@ -2,6 +2,9 @@ import { scanSalesFields } from '../../lib/scanToSalesIdentity.mjs';
 import { providerFinalPrice, summarizeRecentSales } from '../../lib/marketEvidenceSummary.mjs';
 
 export const labels = {
+  lookback_rate_limit:'Lookback request limit reached. Wait before submitting another request.',
+  invalid_sales_continuation:'This lookback continuation is invalid or expired. Start a new search.',
+
   ebay_not_configured:'This Preview needs its server-side eBay Browse credentials.',
   ebay_busy:'An eBay search is already running.',
   ebay_quota:'eBay rate limit reached. No retry was attempted.',
@@ -81,6 +84,7 @@ function Row({row,rejected,unified,cohort}) {
   const finalPrice=providerFinalPrice(row);
   return <li style={rowStyle}>
     <strong>{row.title || 'Listing title unavailable'}</strong>
+    {row.suspectedDuplicate&&<p>Repeated provider record ID. Transaction identity is unverified.</p>}
     <p className="market-muted">{[row.platform,transactionLabels[row.listingType],row.sold].filter(Boolean).join(' · ') || 'Provenance incomplete'}</p>
     {unified?<p>{finalPrice===null?'Final price unknown.':[
       row.platform==='goldin'&&row.listingType==='auction'?'Provider-reported hammer price: ':'Provider-reported final price: ',
@@ -154,6 +158,22 @@ function ComparableQualification({evidence}) {
     </details>
   </section>;
 }
+function LookbackCoverage({coverage,quotaDelta}) {
+  if(!coverage)return null;
+  return <section aria-label="Historical sales coverage">
+    <h3>{coverage.complete?'Complete requested coverage':'Partial requested coverage'}</h3>
+    <p>{coverage.earliestChecked?`Checked ${coverage.earliestChecked} through ${coverage.latestChecked} (UTC)`:'No dates checked successfully.'}
+      {' · '}{coverage.recordsRetrieved} records · {coverage.requestsAttempted} provider requests attempted</p>
+    {coverage.stopped&&<p role="status">Search stopped. {labels[coverage.stopped]||'Remaining windows were not requested.'}</p>}
+    {quotaDelta!==null&&quotaDelta!==undefined&&<p>Observed quota decrease during this batch: {quotaDelta}.</p>}
+    <details><summary>Date windows</summary>
+      <p>Requested {coverage.requestedFrom} through {coverage.requestedTo} (UTC).</p>
+      <ul>{coverage.windows.map(window=><li key={window.dateFrom}>
+        {window.dateFrom} to {window.dateTo}: {window.status}{window.truncated?' · results may be truncated':''}
+      </li>)}</ul>
+    </details>
+  </section>;
+}
 export function RecentSales({result,message,unified,clear,embedded=false}) {
   return <section className="market-section" aria-label="Recent sales evidence">
       {unified&&!embedded&&<h2>Recent Sales — The Card API</h2>}
@@ -163,6 +183,7 @@ export function RecentSales({result,message,unified,clear,embedded=false}) {
       {result?.quota&&Object.values(result.quota).some(value=>value!==null)&&
         <p>Sales quota remaining: {result.quota.remaining??'unknown'} of {result.quota.limit??'unknown'}. Reset: {result.quota.reset??'unknown'}.</p>}
       {result?.candidates&&<>
+        <LookbackCoverage coverage={result.lookback} quotaDelta={result.quotaDelta}/>
         {result.query&&<details><summary>Search details</summary><p>Title query: {result.query}. Each record is compared with the reviewed identity.</p></details>}
         {unified&&<SalesSummary result={result}/>}
         <ComparableQualification evidence={result.comparableEvidence}/>

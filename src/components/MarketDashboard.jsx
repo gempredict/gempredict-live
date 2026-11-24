@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from 'react';
 import { extractScanSalesIdentity } from '../../lib/scanToSalesIdentity.mjs';
 import { SALES_COHORTS } from '../../lib/completedSales.mjs';
+import { mergeLookbackBatch } from '../../lib/salesLookback.mjs';
 import { summarizeRecentSales } from '../../lib/marketEvidenceSummary.mjs';
 import { ActiveListings, RecentSales, MarketEvidenceStyles, MarketIdentityFields, controls, fields, labels } from './MarketEvidencePanels';
 
@@ -15,7 +16,7 @@ const names={
 
 function countLine(source,result) {
   if (!result) return 'Ready to request';
-  if (result.error) return 'Request unavailable';
+  if (result.error&&!result.lookback) return 'Request unavailable';
   if (source==='active') {
     const mismatches=result.rows.filter(row=>row.identityMatch.status==='mismatch').length;
     return `${result.rows.length} listings · ${result.rows.length-mismatches} possible · ${mismatches} mismatches`;
@@ -34,7 +35,7 @@ async function dashboardRequest(path,options,controller,timeout=19000) {
   } finally { clearTimeout(timer); }
 }
 
-export default function MarketDashboard({report,reportId,token,today,name,comparableEvidence}) {
+export default function MarketDashboard({report,reportId,token,today,name,comparableEvidence,lookback=false}) {
   const [opened,setOpened]=useState({});
   const [results,setResults]=useState({});
   const [busy,setBusy]=useState(null);
@@ -73,7 +74,8 @@ export default function MarketDashboard({report,reportId,token,today,name,compar
   },[expiresAt]);
   useEffect(()=>{
     if (!results.active&&!results.sales) return;
-    const timer=setTimeout(()=>setResults({}),5*60000);
+    const expiry=results.sales?.lookback?.expiresAt;
+    const timer=setTimeout(clear,Number.isFinite(expiry)?Math.max(0,expiry-Date.now()):5*60000);
     return ()=>clearTimeout(timer);
   },[results]);
 
@@ -106,16 +108,22 @@ export default function MarketDashboard({report,reportId,token,today,name,compar
 
   async function search(event) {
     event.preventDefault();
-    const source=event.nativeEvent.submitter?.value;
+    const action=event.nativeEvent.submitter?.value;
+    const older=lookback&&action==='older';
+    const source=older?'sales':action;
+    if(older&&!results.sales?.continuation)return;
     if (!Object.hasOwn(routes,source)||!token||!reportId||request.current||expiresAt<=Date.now()) return;
     const {cohort,confirmed,subjects,...reviewedIdentity}=Object.fromEntries(new FormData(event.currentTarget));
     const body={reportId,cohort,confirmed:confirmed==='on',
       reviewedIdentity:{...reviewedIdentity,subjects:subjects.split('\n').map(line=>line.trim()).filter(Boolean)}};
-    if (source==='sales') Object.assign(body,{dateFrom:from,dateTo:today});
+    if(source==='sales'){
+      if(older) body.continuation=results.sales.continuation;
+      else if(!lookback) Object.assign(body,{dateFrom:from,dateTo:today});
+    }
     const controller=new AbortController();
     request.current=controller;
     setBusy(source);
-    setResults(current=>({...current,[source]:null}));
+    if(!older)setResults(current=>({...current,[source]:null}));
     try {
       const data=await dashboardRequest(routes[source],{method:'POST',headers:{'Content-Type':'application/json',
         Authorization:`Bearer ${token}`},body:JSON.stringify(body)},controller);
@@ -126,12 +134,14 @@ export default function MarketDashboard({report,reportId,token,today,name,compar
         setAuthorizationError('Owner authorization expired. Authorize again to request evidence.');
         return;
       }
-      setResults(current=>({...current,[source]:data}));
+      setResults(current=>({...current,[source]:data.lookback?
+        mergeLookbackBatch(older?current.sales:null,data):
+        older?{...current.sales,error:data.error,continuation:data.error==='lookback_rate_limit'?current.sales.continuation:null}:data}));
     } catch {
       if (request.current===controller && expiresAt>Date.now()) {
         const error=controller.signal.aborted?(source==='sales'?'provider_timeout':'ebay_timeout'):
           source==='sales'?'provider_unavailable':'ebay_unavailable';
-        setResults(current=>({...current,[source]:{error}}));
+        setResults(current=>({...current,[source]:older?{...current.sales,error,continuation:null}:{error}}));
       }
     } finally {
       if (request.current===controller) {request.current=null;setBusy(null);}
@@ -148,18 +158,18 @@ export default function MarketDashboard({report,reportId,token,today,name,compar
         onToggle={event=>{const open=event.currentTarget.open;setOpened(current=>({...current,[source]:open}));}}>
         <summary><strong>{title}</strong><small>{busy===source?'Requesting evidence…':countLine(source,results[source])}</small></summary>
         {opened[source]&&<div className="market-dashboard-body">
-          <p>{source==='active'?'Current asking prices.':'Provider-reported sales from the latest three UTC dates.'}</p>
+          <p>{source==='active'?'Current asking prices.':lookback?'Provider-reported sales in batches across up to 30 UTC dates.':'Provider-reported sales from the latest three UTC dates.'}</p>
           {!canRequest?<p>Open a saved report while signed in to request market evidence.</p>:
             !expiresAt?<button type="button" disabled={!!busy} onClick={authorize}>Authorize Preview owner</button>:
-            <button type="submit" name="marketSource" value={source} disabled={!!busy}>
-              {source==='active'?'Request eBay listings':'Request recent sales'}
+            <button type="submit" name="marketSource" value={source==='sales'&&lookback&&results.sales?.continuation?'older':source} disabled={!!busy}>
+              {source==='active'?'Request eBay listings':lookback&&results.sales?.continuation?'Load older sales':'Request recent sales'}
             </button>}
           {source==='active'?<ActiveListings result={results.active} pending={busy==='active'} embedded/>:
             <RecentSales result={results.sales} message={results.sales?.error?labels[results.sales.error]||labels.provider_unavailable:''} unified embedded/>}
           {source==='sales'&&comparableEvidence&&!results.sales?.comparableEvidence&&<p>Qualification checks run when recent sales are requested. Active listings are excluded.</p>}
           {results[source]?.identityEvidence?.status==='conflict'&&<p role="status">{results[source].identityEvidence.nextAction}</p>}
           {busy==='sales'&&source==='sales'&&<p role="status">Searching recent sales…</p>}
-          {results.sales?.candidates?.length===0&&results.sales?.rejected?.length===0&&source==='sales'&&<p>No recent records returned.</p>}
+          {results.sales?.candidates?.length===0&&results.sales?.rejected?.length===0&&(!results.sales.lookback||results.sales.lookback.earliestChecked)&&source==='sales'&&<p>No recent records returned.</p>}
         </div>}
       </details>)}
       {canRequest&&<details className="market-dashboard-panel">

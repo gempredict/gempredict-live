@@ -1,3 +1,4 @@
+import {planSalesWindows,mergeLookbackBatch} from '../lib/salesLookback.mjs';
 import assert from 'node:assert/strict';
 import test from 'node:test';
 import { createActiveMarketHandler } from '../lib/activeMarketPilot.mjs';
@@ -213,4 +214,113 @@ test('both sources separate explicit Raw, unknown grade and grading company or s
  assert.deepEqual(psaRows.map(row=>row.identityMatch.gradeEvidence.status),expected);
  assert.equal(psaSales.qualifiedCount,0);
  assert.equal(psaBrowse.rows[4].identityMatch.status,'plausible_unverified');
+});
+
+const lookbackEnv={...env,VERCEL_GIT_COMMIT_REF:'feature/sales-lookback-phase5k1'};
+const pack=(data,has_more=false,remaining='50')=>Response.json({
+ data,pagination:{total:data.length,has_more},meta:{},
+},{headers:{'X-RateLimit-Remaining':remaining}});
+function lookbackClient(fetchImpl,settings={}) {
+ let time=now;
+ const calls=[];
+ const handler=createCardApiPilotHandler({...opts,env:lookbackEnv,clock:()=>time,...settings,
+  fetchImpl:(url,options)=>{
+   assert.equal(url.searchParams.get('limit'),'20');
+   assert.equal(options.redirect,'error');
+   assert.equal(options.cache,'no-store');
+   calls.push(url);
+   return fetchImpl(url,options,calls.length);
+  }});
+ return {calls,advance(ms=2100){time+=ms;},request:(patch={},requestPatch={})=>request(handler,{...input,...patch},requestPatch)};
+}
+
+test('planning spans year and leap-month boundaries with at most three dates and no overlap',()=>{
+ const windows=planSalesWindows(Date.parse('2028-01-01T00:00:00Z'));
+ assert.equal(windows.length,10);
+ assert.deepEqual(windows[0],{dateFrom:'2027-12-30',dateTo:'2028-01-01'});
+ assert.equal(windows.at(-1).dateFrom,'2027-12-03');
+ for(let i=1;i<windows.length;i++)assert.equal(Date.parse(windows[i-1].dateFrom)-Date.parse(windows[i].dateTo),86400000);
+ assert.deepEqual(planSalesWindows(Date.parse('2028-03-01T23:59:59Z'),4),[
+  {dateFrom:'2028-02-28',dateTo:'2028-03-01'},{dateFrom:'2028-02-27',dateTo:'2028-02-27'},
+ ]);
+ assert.throws(()=>planSalesWindows(now,31));
+});
+
+test('owner advances explicit two-window batches with honest coverage and a ten-call cap',async()=>{
+ const service=lookbackClient((url,_options,index)=>{
+  const date=url.searchParams.get('date_to');
+  if(index===1)return pack(observed.map(row=>({...row,sale_date:'2026-11-21'})));
+  if(index===3)return pack([{...observed[2],sale_date:date},{...saleFixture,id:'wrong-parallel',sale_date:date,title:title+' Gold Refractor'}]);
+  return pack([]);
+ });
+ let result=await service.request();
+ assert.equal(result.code,200);
+ assert.equal(result.headers['Cache-Control'],'private, no-store, max-age=0');
+ assert.equal(service.calls.length,2);
+ assert.equal(result.body.lookback.earliestChecked,'2026-11-18');
+ assert.equal(result.body.lookback.latestChecked,'2026-11-23');
+ assert.deepEqual(result.body.lookback.windows.slice(0,3).map(w=>w.status),['successful','empty','unsearched']);
+ assert.equal(result.body.lookback.complete,false);
+ assert.deepEqual(result.body.comparableEvidence.rows.map(row=>row.finalAmountStatus),['unknown','unknown','provider_reported']);
+ assert.ok(result.body.comparableEvidence.rows.every(row=>row.settlementStatus==='unverified'));
+ let cumulative=mergeLookbackBatch(null,result.body);
+ const firstCursor=result.body.continuation;
+ assert.equal((await service.request({continuation:firstCursor})).code,429);
+ service.advance();
+ assert.equal((await service.request({continuation:firstCursor,cohort:'PSA 9'})).code,400);
+ assert.equal((await service.request({continuation:firstCursor+'x'})).code,400);
+ for(let batch=1;batch<5;batch++){
+  result=await service.request({continuation:result.body.continuation});
+  assert.equal(result.code,200);
+  cumulative=mergeLookbackBatch(cumulative,result.body);
+  service.advance();
+ }
+ assert.equal(service.calls.length,10);
+ assert.equal(cumulative.lookback.earliestChecked,'2026-10-25');
+ assert.equal(cumulative.lookback.complete,true);
+ assert.equal(cumulative.lookback.recordsRetrieved,5);
+ assert.equal(cumulative.continuation,null);
+ assert.equal(cumulative.candidates.filter(row=>row.suspectedDuplicate).length,2);
+ assert.ok(cumulative.rejected.some(row=>row.identityMatch.mismatches.includes('parallel')));
+ assert.equal(cumulative.comparableEvidence.counts.qualified,0);
+ assert.equal(cumulative.comparableEvidence.readiness.automaticEconomicsAllowed,false);
+ assert.equal((await service.request()).code,429);
+ assert.equal((await service.request({continuation:firstCursor})).code,409);
+ assert.doesNotMatch(JSON.stringify(cumulative),/synthetic-card-api-secret|original_price|995|999/);
+});
+
+test('provider stop conditions preserve prior success and leave older windows unsearched',async()=>{
+ for(const [code,reason] of [[401,'provider_authentication'],[403,'provider_entitlement'],[429,'provider_quota'],[200,'schema_difference']]){
+  const service=lookbackClient((_url,_options,i)=>i===1?pack([]):Response.json({}, {status:code}));
+  const response=await service.request();
+  assert.equal(service.calls.length,2);
+  assert.equal(response.body.lookback.stopped,reason);
+  assert.deepEqual(response.body.lookback.windows.slice(0,3).map(x=>x.status),['empty','failed','unsearched']);
+  assert.equal(response.body.continuation,null);
+ }
+ const exhausted=lookbackClient(()=>pack([],false,'0'));
+ const result=await exhausted.request();
+ assert.equal(exhausted.calls.length,1);
+ assert.equal(result.body.lookback.stopped,'provider_quota');
+ assert.equal(result.body.lookback.windows[1].status,'unsearched');
+ assert.equal(result.body.continuation,null);
+});
+
+test('provider timeout and expired owner cannot yield stale or automatic retries',async()=>{
+ const service=lookbackClient((_url,{signal})=>new Promise((_,reject)=>{
+  signal.addEventListener('abort',()=>reject(signal.reason),{once:true});
+ }),{clock:()=>now+899999});
+ // The real request signal expires in one millisecond. Keep the test loop alive.
+ const keepAlive=setTimeout(()=>{},100);
+ try {
+  const result=await service.request();
+  assert.equal(result.body.lookback.windows[0].status,'failed');
+  assert.equal(result.body.lookback.stopped,'provider_timeout');
+  assert.equal(service.calls.length,1);
+ } finally {clearTimeout(keepAlive);}
+ const expired=lookbackClient(()=>assert.fail('expired owner contacted provider'));
+ expired.advance(900001);
+ const response=await expired.request();
+ assert.equal(response.code,403);
+ assert.equal(expired.calls.length,0);
 });
