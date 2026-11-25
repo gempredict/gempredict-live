@@ -216,7 +216,7 @@ test('both sources separate explicit Raw, unknown grade and grading company or s
  assert.equal(psaBrowse.rows[4].identityMatch.status,'plausible_unverified');
 });
 
-const lookbackEnv={...env,VERCEL_GIT_COMMIT_REF:'feature/grading-economics-foundation-phase5l'};
+const lookbackEnv={...env,VERCEL_GIT_COMMIT_REF:'fix/cardapi-price-confirmed-schema-phase5l2'};
 const pack=(data,has_more=false,remaining='50')=>Response.json({
  data,pagination:{total:data.length,has_more},meta:{},
 },{headers:{'X-RateLimit-Remaining':remaining}});
@@ -326,4 +326,76 @@ test('provider timeout and expired owner cannot yield stale or automatic retries
  const response=await expired.request();
  assert.equal(response.code,403);
  assert.equal(expired.calls.length,0);
+});
+
+test('only an absent confirmation field is compatible, preserving safe Ohtani evidence and unknown price',async()=>{
+ const {price_confirmed:discarded,...absent}=observed[2];
+ const service=lookbackClient((_url,_options,i)=>i===1?pack([
+  {...absent,id:'synthetic-missing',price:98765},
+  {...observed[2]},
+  {...saleFixture,id:'synthetic-explicit-false',price:98765},
+  {...absent,id:'synthetic-wrong-parallel',title:title+' Gold Refractor'},
+  {...absent,id:'synthetic-wrong-source',platform:'Unknown market'},
+  {...absent,id:'synthetic-invalid-date',sale_date:'2026-11-31'},
+  {...absent,id:'synthetic-unsafe-title',title:'https://example.invalid/private'},
+  {...absent,id:'synthetic-invalid-currency',currency:['USD']},
+ ]):pack([]));
+ const result=await service.request();
+ assert.equal(result.code,200);
+ const {lookback,comparableEvidence,candidates,rejected}=result.body;
+ assert.equal(lookback.recordsRetrieved,8);
+ assert.equal(lookback.missingPriceConfirmation,6);
+ assert.deepEqual(lookback.windows.slice(0,3).map(window=>window.status),['successful','empty','unsearched']);
+ assert.equal(lookback.complete,false);
+ assert.ok(result.body.continuation);
+ assert.deepEqual(candidates.map(row=>row.priceConfirmationStatus),['unknown','reported_confirmed','reported_unconfirmed']);
+ assert.deepEqual(candidates.map(row=>row.amountReportedConfirmed),[null,true,false]);
+ assert.deepEqual(candidates.map(providerFinalPrice),[null,120,null]);
+ assert.equal(candidates[0].title,title);
+ assert.equal(candidates[0].platform,'ebay');
+ assert.equal(candidates[0].sold,'2026-11-22');
+ assert.ok(rejected.some(row=>row.identityMatch.mismatches.includes('parallel')));
+ for(const reason of ['platform_unsupported','sale_date_invalid','title_unsupported','currency_invalid_type'])
+  assert.ok(rejected.some(row=>row.reasons.includes(reason)),reason);
+ assert.ok(comparableEvidence.rows[0].reasons.includes('provider_price_confirmation_missing'));
+ assert.equal(comparableEvidence.rows[0].finalAmountStatus,'unknown');
+ assert.equal(comparableEvidence.rows[0].reportedAmount,null);
+ assert.equal(comparableEvidence.rows[1].settlementStatus,'unverified');
+ assert.equal(comparableEvidence.counts.qualified,0);
+ assert.equal(result.body.economicsReadiness.status,'withheld');
+ assert.doesNotMatch(JSON.stringify(result.body),/98765|example.invalid/);
+ const html=await renderMarketEvidence({rows:[],cohort:'Raw'},result.body);
+ assert.match(html,/6 records arrived without the documented price confirmation field/);
+ assert.match(html,/Final price unknown. Provider confirmation field missing/);
+ service.advance();
+ const next=await service.request({continuation:result.body.continuation});
+ assert.equal(next.body.lookback.windows[3].status,'empty');
+ assert.equal(next.body.lookback.windows[4].status,'unsearched');
+ assert.equal(next.body.lookback.missingPriceConfirmation,6);
+});
+
+test('explicit null and wrong confirmation types fail their window and preserve checked windows only',async()=>{
+ for(const value of [null,'true',0,[]]){
+  const {price_confirmed:discarded,...absent}=observed[2];
+  const service=lookbackClient((url,_options,i)=>{
+   const sale_date=url.searchParams.get('date_to');
+   if(i===1)return pack([{...absent,sale_date}],true);
+   if(i===2)return pack([]);
+   return pack([{...observed[2],sale_date,price_confirmed:value}]);
+  });
+  const first=await service.request();
+  assert.equal(first.body.lookback.windows[0].truncated,true);
+  service.advance();
+  const result=await service.request({continuation:first.body.continuation});
+  assert.equal(service.calls.length,3);
+  const cumulative=mergeLookbackBatch(first.body,result.body);
+  assert.equal(cumulative.candidates.length,1);
+  assert.deepEqual(cumulative.lookback.windows.slice(0,4).map(window=>window.status),['successful','empty','failed','unsearched']);
+  assert.equal(cumulative.lookback.earliestChecked,'2026-11-18');
+  assert.equal(cumulative.lookback.complete,false);
+  assert.equal(cumulative.lookback.stopped,'schema_difference');
+  assert.equal(cumulative.continuation,null);
+  assert.deepEqual(cumulative.differences,[{field:'data[0].price_confirmed',expected:'boolean',
+   received:value===null?'null':Array.isArray(value)?'array':typeof value}]);
+ }
 });

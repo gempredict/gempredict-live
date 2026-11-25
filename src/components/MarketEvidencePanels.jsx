@@ -30,7 +30,7 @@ export const labels = {
   provider_unavailable:'The Card API could not return a result.',
   response_too_large:'The Card API response exceeded the byte limit.',
   row_budget_exceeded:'The Card API returned more rows than this pilot allows.',
-  schema_difference:'The provider response differs from the reviewed REST contract. The batch was withheld.',
+  schema_difference:'A provider date window failed response-contract validation. Its records were withheld.',
 };
 export const fields = {display:'grid',gap:4,flex:'1 1 150px',minWidth:0, maxWidth:'100%'};
 export const controls = {display:'flex',flexWrap:'wrap',alignItems:'end',gap:12};
@@ -86,7 +86,7 @@ function Row({row,rejected,unified,cohort}) {
     <strong>{row.title || 'Listing title unavailable'}</strong>
     {row.suspectedDuplicate&&<p>Repeated provider record ID. Transaction identity is unverified.</p>}
     <p className="market-muted">{[row.platform,transactionLabels[row.listingType],row.sold].filter(Boolean).join(' · ') || 'Provenance incomplete'}</p>
-    {unified?<p>{finalPrice===null?'Final price unknown.':[
+    {unified?<p>{finalPrice===null?(row.priceConfirmationStatus==='unknown'?'Final price unknown. Provider confirmation field missing.':'Final price unknown.'):[
       row.platform==='goldin'&&row.listingType==='auction'?'Provider-reported hammer price: ':'Provider-reported final price: ',
       displayAmount(finalPrice,row.currency),'. Settlement unverified.',
     ].join('')}</p>:<p>{row.platform==='goldin'?'Reported hammer price':'Reported price'}: {displayAmount(row.price,row.currency)}.
@@ -140,6 +140,7 @@ function ComparableQualification({evidence}) {
     independent_final_amount_missing:'Independent final price evidence missing',
     independent_settlement_missing:'Independent payment evidence missing',
     buyer_premium_treatment_unknown:'Buyer premium treatment unknown',
+    provider_price_confirmation_missing:'Provider price confirmation field missing',
     commercial_use_not_authorized:'Commercial use not authorized',
     insufficient_compatible_cohort_samples:'Too few compatible qualified sales across grading cohorts',
     catalog_identity_or_printing_unresolved:'Catalog identity or exact printing unresolved',
@@ -164,12 +165,13 @@ function LookbackCoverage({coverage,quotaDelta}) {
     <h3>{coverage.complete?'Complete requested coverage':'Partial requested coverage'}</h3>
     <p>{coverage.earliestChecked?`Checked ${coverage.earliestChecked} through ${coverage.latestChecked} (UTC)`:'No dates checked successfully.'}
       {' · '}{coverage.recordsRetrieved} records · {coverage.requestsAttempted} provider requests attempted</p>
+    {!!coverage.missingPriceConfirmation&&<p>{coverage.missingPriceConfirmation} records arrived without the documented price confirmation field. Amounts were withheld.</p>}
     {coverage.stopped&&<p role="status">Search stopped. {labels[coverage.stopped]||'Remaining windows were not requested.'}</p>}
     {quotaDelta!==null&&quotaDelta!==undefined&&<p>Observed quota decrease during this batch: {quotaDelta}.</p>}
     <details><summary>Date windows</summary>
       <p>Requested {coverage.requestedFrom} through {coverage.requestedTo} (UTC).</p>
       <ul>{coverage.windows.map(window=><li key={window.dateFrom}>
-        {window.dateFrom} to {window.dateTo}: {window.status}{window.truncated?' · results may be truncated':''}
+        {window.dateFrom} to {window.dateTo}: {window.status}{window.reason?' · '+(labels[window.reason]||window.reason):''}{window.truncated?' · results may be truncated':''}
       </li>)}</ul>
     </details>
   </section>;
