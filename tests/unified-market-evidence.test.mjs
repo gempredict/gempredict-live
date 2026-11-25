@@ -216,7 +216,7 @@ test('both sources separate explicit Raw, unknown grade and grading company or s
  assert.equal(psaBrowse.rows[4].identityMatch.status,'plausible_unverified');
 });
 
-const lookbackEnv={...env,VERCEL_GIT_COMMIT_REF:'feature/sales-lookback-phase5k1'};
+const lookbackEnv={...env,VERCEL_GIT_COMMIT_REF:'feature/grading-economics-foundation-phase5l'};
 const pack=(data,has_more=false,remaining='50')=>Response.json({
  data,pagination:{total:data.length,has_more},meta:{},
 },{headers:{'X-RateLimit-Remaining':remaining}});
@@ -283,6 +283,9 @@ test('owner advances explicit two-window batches with honest coverage and a ten-
  assert.equal(cumulative.candidates.filter(row=>row.suspectedDuplicate).length,2);
  assert.ok(cumulative.rejected.some(row=>row.identityMatch.mismatches.includes('parallel')));
  assert.equal(cumulative.comparableEvidence.counts.qualified,0);
+ assert.equal(cumulative.economicsReadiness.status,'withheld');
+ assert.ok(cumulative.economicsReadiness.blockers.includes('independent_physical_printing_unverified'));
+ assert.ok(cumulative.economicsReadiness.blockers.includes('commercial_rights_unverified'));
  assert.equal(cumulative.comparableEvidence.readiness.automaticEconomicsAllowed,false);
  assert.equal((await service.request()).code,429);
  assert.equal((await service.request({continuation:firstCursor})).code,409);

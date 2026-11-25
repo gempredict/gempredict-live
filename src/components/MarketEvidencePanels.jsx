@@ -174,6 +174,15 @@ function LookbackCoverage({coverage,quotaDelta}) {
     </details>
   </section>;
 }
+const economicsReasons={
+  exact_catalog_identity_unresolved:'Exact catalog identity or printing is unresolved.',
+  independent_physical_printing_unverified:'Independent physical-printing evidence is missing.',
+  insufficient_independently_qualified_sales:'There are too few independently qualified raw and graded sales.',
+  commercial_rights_unverified:'Commercial rights for the required sales are unverified.',
+  verified_applicable_fee_schedule_required:'An applicable, verified grading fee schedule is required.',
+  validated_grade_probability_source_required:'Grade probabilities need a validated source.',
+  live_economics_disabled:'Live recommendations are disabled.',
+};
 export function RecentSales({result,message,unified,clear,embedded=false}) {
   return <section className="market-section" aria-label="Recent sales evidence">
       {unified&&!embedded&&<h2>Recent Sales — The Card API</h2>}
@@ -187,6 +196,9 @@ export function RecentSales({result,message,unified,clear,embedded=false}) {
         {result.query&&<details><summary>Search details</summary><p>Title query: {result.query}. Each record is compared with the reviewed identity.</p></details>}
         {unified&&<SalesSummary result={result}/>}
         <ComparableQualification evidence={result.comparableEvidence}/>
+        {result.economicsReadiness?.status==='withheld'&&<details><summary>Grading economics unavailable</summary>
+          <ul>{result.economicsReadiness.blockers.map(reason=><li key={reason}>{economicsReasons[reason]||reason}</li>)}</ul>
+        </details>}
         {unified?<h3>{result.cohort} provider candidates ({result.candidates.length})</h3>:<h2>{result.cohort} provider candidates ({result.candidates.length})</h2>}
         <p>One bounded page. Empty results do not establish that no market exists. Grade filters can omit unparsed records.</p>
         <p>Provider amounts do not independently verify payment or settlement. Best Offer amounts may be unknown.
