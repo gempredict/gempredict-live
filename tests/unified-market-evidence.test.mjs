@@ -216,7 +216,7 @@ test('both sources separate explicit Raw, unknown grade and grading company or s
  assert.equal(psaBrowse.rows[4].identityMatch.status,'plausible_unverified');
 });
 
-const lookbackEnv={...env,VERCEL_GIT_COMMIT_REF:'fix/cardapi-price-confirmed-schema-phase5l2'};
+const lookbackEnv={...env,VERCEL_GIT_COMMIT_REF:'feature/catalog-sales-crosswalk-phase5m'};
 const pack=(data,has_more=false,remaining='50')=>Response.json({
  data,pagination:{total:data.length,has_more},meta:{},
 },{headers:{'X-RateLimit-Remaining':remaining}});
@@ -398,4 +398,32 @@ test('explicit null and wrong confirmation types fail their window and preserve 
   assert.deepEqual(cumulative.differences,[{field:'data[0].price_confirmed',expected:'boolean',
    received:value===null?'null':Array.isArray(value)?'array':typeof value}]);
  }
+});
+
+test('Phase 5M preserves missing prices and separates explicit sale outcomes in a lookback batch',async()=>{
+ const {price_confirmed:omitted,...missing}=observed[2];
+ const service=lookbackClient((_url,_options,i)=>i===1?pack([
+  {...missing,id:'synthetic-missing-offer',sale_type:'accepted_offer'},
+  {...observed[2],sale_type:'fixed_price'},
+  {...observed[2],id:'synthetic-unknown-outcome',sale_type:'other',price:555},
+ ]):pack([]));
+ const result=await service.request();
+ assert.equal(result.code,200);
+ assert.equal(result.body.crosswalk.status,'catalog_provider_not_configured');
+ assert.equal(result.body.crosswalk.physicalPrintingVerified,false);
+ assert.ok(result.body.continuation);
+ assert.deepEqual(result.body.comparableEvidence.rows.map(row=>row.finalAmountStatus),['unknown','provider_reported','unknown']);
+ assert.ok(result.body.comparableEvidence.rows.every(row=>row.reasons.includes('reviewed_exact_sale_catalog_link_missing')));
+ assert.equal(result.body.candidates[0].listingType,'fixed_price');
+ assert.equal(result.body.candidates[0].transactionType,'accepted_offer');
+ assert.equal(result.body.candidates[0].price,null);
+ assert.ok(result.body.rejected[0].reasons.includes('unsupported_sale_type'));
+ assert.equal(result.body.candidates[1].price,120);
+ assert.equal(result.body.comparableEvidence.rows[1].settlementStatus,'unverified');
+ assert.equal(result.body.comparableEvidence.counts.qualified,0);
+ assert.equal(result.body.economicsReadiness.automaticEconomicsAllowed,false);
+ assert.doesNotMatch(JSON.stringify(result.body),/555/);
+ const html=await renderMarketEvidence({rows:[],cohort:'Raw'},result.body);
+ assert.match(html,/Catalog provider not configured/);
+ assert.match(html,/Accepted offer/);
 });

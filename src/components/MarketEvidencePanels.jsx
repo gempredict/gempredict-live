@@ -85,7 +85,7 @@ function Row({row,rejected,unified,cohort}) {
   return <li style={rowStyle}>
     <strong>{row.title || 'Listing title unavailable'}</strong>
     {row.suspectedDuplicate&&<p>Repeated provider record ID. Transaction identity is unverified.</p>}
-    <p className="market-muted">{[row.platform,transactionLabels[row.listingType],row.sold].filter(Boolean).join(' · ') || 'Provenance incomplete'}</p>
+    <p className="market-muted">{[row.platform,row.saleTypeBasis==='provider_sale_type'&&row.transactionType==='accepted_offer'?'Accepted offer':transactionLabels[row.listingType],row.sold].filter(Boolean).join(' · ') || 'Provenance incomplete'}</p>
     {unified?<p>{finalPrice===null?(row.priceConfirmationStatus==='unknown'?'Final price unknown. Provider confirmation field missing.':'Final price unknown.'):[
       row.platform==='goldin'&&row.listingType==='auction'?'Provider-reported hammer price: ':'Provider-reported final price: ',
       displayAmount(finalPrice,row.currency),'. Settlement unverified.',
@@ -198,6 +198,7 @@ export function RecentSales({result,message,unified,clear,embedded=false}) {
         {result.query&&<details><summary>Search details</summary><p>Title query: {result.query}. Each record is compared with the reviewed identity.</p></details>}
         {unified&&<SalesSummary result={result}/>}
         <ComparableQualification evidence={result.comparableEvidence}/>
+        {result.crosswalk&&<p role="status">{result.crosswalk.nextEvidence} Exact physical printing remains unverified.</p>}
         {result.economicsReadiness?.status==='withheld'&&<details><summary>Grading economics unavailable</summary>
           <ul>{result.economicsReadiness.blockers.map(reason=><li key={reason}>{economicsReasons[reason]||reason}</li>)}</ul>
         </details>}
