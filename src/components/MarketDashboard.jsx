@@ -35,8 +35,11 @@ function CatalogResults({data}) {
   <p role="status">{evidence.nextEvidence} Exact physical printing remains unverified.</p>
   {!!evidence.contradictions.length&&<p>Conflicts: {evidence.contradictions.join(', ')}.</p>}
   {!!evidence.unresolvedFields.length&&<p>Unresolved: {evidence.unresolvedFields.join(', ')}.</p>}
+  {data.pagination?.incomplete&&<p>Showing the first page of catalog results ({data.pagination.total} reported). More variants may exist.</p>}
+  {data.quota?.remaining!=null&&<p>Catalog quota remaining: {data.quota.remaining}{data.quota.limit!=null?' of '+data.quota.limit:''}.</p>}
   <ul>{evidence.candidates.map((row,index)=><li key={index}>
-   {row.recordId} · {row.source} · {row.compatible?'Possible variant':'Conflicting variant'}
+   <strong>{[row.claims.subjects?.join(' / '),row.claims.set,row.claims.number&&'#'+row.claims.number].filter(Boolean).join(' · ')||row.recordId}</strong>
+   <p>{row.provenance} · {row.compatible?'Possible variant':'Conflicting variant'}</p>
    {!!row.contradictions.length&&<p>Conflicts: {row.contradictions.join(', ')}.</p>}
    {!!row.identifiers.length&&<p>{row.identifiers.map(id=>id.type+' '+id.value).join(' · ')}</p>}
    {!!row.missing.length&&<p>Missing: {row.missing.join(', ')}.</p>}
