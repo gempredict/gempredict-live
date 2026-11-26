@@ -8,11 +8,41 @@ import { ActiveListings, RecentSales, MarketEvidenceStyles, MarketIdentityFields
 const routes={
   active:'/api/active-market-pilot',
   sales:'/api/card-sales-pilot',
+  catalog:'/api/catalog-preview',
 };
 const names={
   active:'Active Listings — eBay',
   sales:'Recent Sales — The Card API',
 };
+
+const catalogLabels={
+ catalog_provider_not_configured:'Catalog provider not configured.',
+ catalog_credentials_missing_or_not_separate:'Catalog provider not configured. A separate catalog credential is required.',
+ catalog_entitlement_unverified:'Catalog provider not configured. Catalog entitlement has not been verified.',
+ catalog_contract_unverified:'Catalog provider not configured. The catalog HTTP contract has not been verified.',
+ catalog_provider_access_denied:'The catalog provider denied access.',
+ catalog_quota:'Catalog quota reached.',
+ catalog_rate_limit:'Wait before requesting the catalog again.',
+ catalog_timeout:'The catalog request timed out.',
+ catalog_schema_invalid:'The catalog response failed validation.',
+ catalog_unavailable:'The catalog request failed.',
+};
+function CatalogResults({data}) {
+ if(data?.error)return <p role="alert">{catalogLabels[data.error]||labels[data.error]||catalogLabels.catalog_unavailable}</p>;
+ if(!data?.result)return null;
+ const evidence=data.result;
+ return <>
+  <p role="status">{evidence.nextEvidence} Exact physical printing remains unverified.</p>
+  {!!evidence.contradictions.length&&<p>Conflicts: {evidence.contradictions.join(', ')}.</p>}
+  {!!evidence.unresolvedFields.length&&<p>Unresolved: {evidence.unresolvedFields.join(', ')}.</p>}
+  <ul>{evidence.candidates.map((row,index)=><li key={index}>
+   {row.recordId} · {row.source} · {row.compatible?'Possible variant':'Conflicting variant'}
+   {!!row.contradictions.length&&<p>Conflicts: {row.contradictions.join(', ')}.</p>}
+   {!!row.identifiers.length&&<p>{row.identifiers.map(id=>id.type+' '+id.value).join(' · ')}</p>}
+   {!!row.missing.length&&<p>Missing: {row.missing.join(', ')}.</p>}
+  </li>)}</ul>
+ </>;
+}
 
 function countLine(source,result) {
   if (!result) return 'Ready to request';
@@ -35,7 +65,7 @@ async function dashboardRequest(path,options,controller,timeout=19000) {
   } finally { clearTimeout(timer); }
 }
 
-export default function MarketDashboard({report,reportId,token,today,name,comparableEvidence,lookback=false}) {
+export default function MarketDashboard({report,reportId,token,today,name,comparableEvidence,lookback=false,catalogStatus=null}) {
   const [opened,setOpened]=useState({});
   const [results,setResults]=useState({});
   const [busy,setBusy]=useState(null);
@@ -73,7 +103,7 @@ export default function MarketDashboard({report,reportId,token,today,name,compar
     return ()=>clearTimeout(timer);
   },[expiresAt]);
   useEffect(()=>{
-    if (!results.active&&!results.sales) return;
+    if (!results.active&&!results.sales&&!results.catalog) return;
     const expiry=results.sales?.lookback?.expiresAt;
     const timer=setTimeout(clear,Number.isFinite(expiry)?Math.max(0,expiry-Date.now()):5*60000);
     return ()=>clearTimeout(timer);
@@ -111,11 +141,12 @@ export default function MarketDashboard({report,reportId,token,today,name,compar
     const action=event.nativeEvent.submitter?.value;
     const older=lookback&&action==='older';
     const source=older?'sales':action;
-    if(older&&!results.sales?.continuation)return;
+    if(older&&!results.sales?.continuation||source==='catalog'&&catalogStatus!=='ready')return;
     if (!Object.hasOwn(routes,source)||!token||!reportId||request.current||expiresAt<=Date.now()) return;
     const {cohort,confirmed,subjects,...reviewedIdentity}=Object.fromEntries(new FormData(event.currentTarget));
     const body={reportId,cohort,confirmed:confirmed==='on',
       reviewedIdentity:{...reviewedIdentity,subjects:subjects.split('\n').map(line=>line.trim()).filter(Boolean)}};
+    if(source==='catalog')delete body.cohort;
     if(source==='sales'){
       if(older) body.continuation=results.sales.continuation;
       else if(!lookback) Object.assign(body,{dateFrom:from,dateTo:today});
@@ -139,7 +170,8 @@ export default function MarketDashboard({report,reportId,token,today,name,compar
         older?{...current.sales,error:data.error,continuation:data.error==='lookback_rate_limit'?current.sales.continuation:null}:data}));
     } catch {
       if (request.current===controller && expiresAt>Date.now()) {
-        const error=controller.signal.aborted?(source==='sales'?'provider_timeout':'ebay_timeout'):
+        const error=source==='catalog'?(controller.signal.aborted?'catalog_timeout':'catalog_unavailable'):
+          controller.signal.aborted?(source==='sales'?'provider_timeout':'ebay_timeout'):
           source==='sales'?'provider_unavailable':'ebay_unavailable';
         setResults(current=>({...current,[source]:older?{...current.sales,error,continuation:null}:{error}}));
       }
@@ -172,6 +204,17 @@ export default function MarketDashboard({report,reportId,token,today,name,compar
           {results.sales?.candidates?.length===0&&results.sales?.rejected?.length===0&&(!results.sales.lookback||results.sales.lookback.earliestChecked)&&source==='sales'&&<p>No recent records returned.</p>}
         </div>}
       </details>)}
+      {catalogStatus&&<details className="market-dashboard-panel">
+        <summary><strong>Catalog lookup</strong><small>{catalogStatus==='ready'?'Owner request required':'Catalog provider not configured'}</small></summary>
+        <div className="market-dashboard-body">
+          {catalogStatus!=='ready'?<p>{catalogLabels[catalogStatus]}</p>:
+           !canRequest?<p>Open a saved report while signed in to request catalog evidence.</p>:
+           !expiresAt?<button type="button" disabled={!!busy} onClick={authorize}>Authorize Preview owner</button>:
+           <button type="submit" value="catalog" disabled={!!busy}>Request catalog candidates</button>}
+          {busy==='catalog'&&<p role="status">Checking catalog…</p>}
+          <CatalogResults data={results.catalog}/>
+        </div>
+      </details>}
       {canRequest&&<details className="market-dashboard-panel">
         <summary>Review identity and cohort</summary>
         <div className="market-dashboard-body" style={controls}>

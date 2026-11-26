@@ -134,3 +134,14 @@ test('lookback dashboard loads older windows only on an explicit action and clea
  find(dash.render(),'form')[0].props.onChange();
  assert.doesNotMatch(dash.html(dash.render()),/Partial requested coverage|synthetic-cursor/);
 });
+
+test('unconfigured Phase 5N catalog shows its status without requesting anything',()=>{
+ const dash=marketDashboardInteraction({...props,catalogStatus:'catalog_provider_not_configured'},()=>{
+  throw Error('unexpected request');
+ });
+ const html=dash.html(dash.render());
+ assert.match(html,/Catalog provider not configured/);
+ assert.match(html,/Active Listings — eBay/);
+ assert.match(html,/Recent Sales — The Card API/);
+ assert.doesNotMatch(html,/Request catalog candidates/);
+});
