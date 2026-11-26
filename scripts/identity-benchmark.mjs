@@ -1,3 +1,4 @@
+import {blindBenchmarkInput,evaluateBenchmarkCalibration} from '../lib/benchmarkCalibration.mjs';
 import {evaluateReferenceScorecard,referenceScorecardMarkdown} from '../lib/referenceValidation.mjs';
 import {readControlledValidationAttempt} from '../lib/referenceValidationFiles.mjs';
 import {readFileSync,writeFileSync,mkdirSync,lstatSync} from 'node:fs';
@@ -40,6 +41,48 @@ export function main(args){
   let current=path.resolve('.');for(const part of path.relative(current,output).split(path.sep)){current=path.join(current,part);try{if(lstatSync(current).isSymbolicLink())throw Error('validation_symlink_output_rejected');}catch(e){if(e.code!=='ENOENT')throw e;}}
   return output;
  }
+ if(command==='accuracy'){
+  const manifest=read(options.manifest||'benchmarks/identity/manifest.json');
+  const input=read(options.observations||'benchmarks/identity/historical-observations.json');
+  const labels=options.labels?read(options.labels):{};
+  const result=evaluateBenchmarkCalibration(manifest,input.observations||input,labels);
+  const privateEvidence=!!(options.manifest||options.observations||options.labels);
+  const output=privateEvidence?privateOutput(options.output):options.output||'benchmarks/identity/phase5q';
+  if(privateEvidence){mkdirSync(path.dirname(output),{recursive:true,mode:0o700});mkdirSync(output,{mode:0o700});}
+  else mkdirSync(output,{recursive:true});
+  const lines=['# GemPredict identification and grading calibration scorecard','',
+   `Manifest baseline: ${result.baselineCommit}`,'','## Coverage'];
+  for(const [key,value] of Object.entries(result.coverage))lines.push(`- ${key}: ${value}`);
+  lines.push('','## Measurements');
+  if(!result.runs.length)lines.push('No evidence-linked blind trials. Identity and condition accuracy, PSA grade error and PSA 10 calibration are unmeasurable.');
+  for(const run of result.runs){
+   const m=run.metrics;
+   lines.push(`- ${run.arm} ${run.model} ${run.modelVersion} (${run.primaryTrials} distinct primary trials): core ${m.coreAccuracy.count}/${m.coreAccuracy.n}; exact variant ${m.exactVariantAccuracy.count}/${m.exactVariantAccuracy.n}; PSA grade error ${m.grading.point.status}; PSA 10 calibration ${m.grading.psa10.status}.`);
+   for(const [attribute,score] of Object.entries(m.condition))lines.push(`  - ${attribute}: ${score.count}/${score.n}; ${score.abstained} abstained; ${score.limitedOrUncertain} reference-limited.`);
+  }
+  lines.push('','Historical observations and synthetic fixtures are excluded. A result with no denominator is unavailable.','');
+  writeFileSync(path.join(output,'accuracy.json'),JSON.stringify(result,null,2)+'\n',{mode:0o600});
+  writeFileSync(path.join(output,'ACCURACY.md'),lines.join('\n'),{mode:0o600});
+  console.log(`Calibration scorecard: ${result.coverage.acceptedTrials} accepted trials. No scans executed.`);return;
+ }
+ if(command==='blind-input'){
+  const output=privateOutput(options.output);
+  const manifest=read(options.manifest||'benchmarks/identity/manifest.json');
+  const card=manifest.cards.find(row=>row.id===options.card);
+  if(!card||!options.labels||!options['front-file'])throw Error('benchmark_blind_arguments_required');
+  const labels=read(options.labels);
+  const bytes=Object.fromEntries(['front','back'].filter(side=>options[side+'-file']).map(side=>{
+   const buffer=readFileSync(options[side+'-file']);
+   if(!buffer.length||buffer.length>8*1024*1024)throw Error('benchmark_photo_size_invalid');
+   return [side,buffer];
+  }));
+  const packet=blindBenchmarkInput(card,labels[card.id]?.blindReview,Object.fromEntries(Object.entries(bytes).map(([side,buffer])=>
+   [side,createHash('sha256').update(buffer).digest('hex')])));
+  mkdirSync(path.dirname(output),{recursive:true,mode:0o700});mkdirSync(output,{mode:0o700});
+  for(const [side,buffer] of Object.entries(bytes))writeFileSync(path.join(output,side+'.image'),buffer,{flag:'wx',mode:0o600});
+  writeFileSync(path.join(output,'input.json'),JSON.stringify(packet,null,2)+'\n',{flag:'wx',mode:0o600});
+  console.log('Prepared a private image-only packet. No scans executed.');return;
+ }
  if(command==='scorecard'){
   const manifest=read(options.manifest||'benchmarks/identity/phase3l/manifest.json'),input=options.observations?read(options.observations):[];
   if(!Array.isArray(input))throw Error('validation_attempt_array_required');const result=evaluateReferenceScorecard(manifest,input);
@@ -62,7 +105,7 @@ export function main(args){
   if(!result.id||!result.cardId||!result.cohortId||!result.attemptIndex)throw Error('benchmark_import_identifiers_invalid');
   writeFileSync(options.output,JSON.stringify(result,null,2)+'\n',{flag:'wx',mode:0o600});return;
  }
- if(command!=='report')throw Error('benchmark_command_must_be_report_or_import');
+ if(command!=='report')throw Error('benchmark_command_invalid');
  const manifest=read(options.manifest||'benchmarks/identity/manifest.json'),input=read(options.observations||'benchmarks/identity/historical-observations.json');
  const result=evaluateBenchmark(manifest,input.observations||input);
  const output=options.output||'benchmarks/identity/results';mkdirSync(output,{recursive:true});

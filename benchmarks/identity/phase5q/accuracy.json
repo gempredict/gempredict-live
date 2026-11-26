@@ -1,0 +1,88 @@
+{
+  "version": 1,
+  "baselineCommit": "ff3b3a5cf2b4326049ec666af11c44fdfc621cbb",
+  "coverage": {
+    "cards": 12,
+    "reviewedCore": 1,
+    "boundPhotos": 0,
+    "reviewedPrinting": 0,
+    "reviewedCondition": 0,
+    "reviewedPSA": 0,
+    "acceptedTrials": 0,
+    "excludedObservations": 6
+  },
+  "baseline": {
+    "coreAccuracy": {
+      "count": 0,
+      "n": 0,
+      "rate": null
+    },
+    "exactVariantAccuracy": {
+      "count": 0,
+      "n": 0,
+      "rate": null
+    },
+    "falseVerification": 0,
+    "unsupportedVerification": 0,
+    "unsupportedConfidence": 0,
+    "appropriateAbstentions": 0,
+    "condition": {
+      "centering": {
+        "count": 0,
+        "n": 0,
+        "rate": null,
+        "abstained": 0,
+        "falseDefects": 0,
+        "missedDefects": 0,
+        "limitedOrUncertain": 0
+      },
+      "corners": {
+        "count": 0,
+        "n": 0,
+        "rate": null,
+        "abstained": 0,
+        "falseDefects": 0,
+        "missedDefects": 0,
+        "limitedOrUncertain": 0
+      },
+      "edges": {
+        "count": 0,
+        "n": 0,
+        "rate": null,
+        "abstained": 0,
+        "falseDefects": 0,
+        "missedDefects": 0,
+        "limitedOrUncertain": 0
+      },
+      "surface": {
+        "count": 0,
+        "n": 0,
+        "rate": null,
+        "abstained": 0,
+        "falseDefects": 0,
+        "missedDefects": 0,
+        "limitedOrUncertain": 0
+      }
+    },
+    "grading": {
+      "point": {
+        "status": "insufficient_samples",
+        "n": 0,
+        "minimumCards": 30,
+        "meanAbsoluteError": null
+      },
+      "psa10": {
+        "status": "insufficient_samples",
+        "n": 0,
+        "positive": 0,
+        "negative": 0,
+        "minimumCards": 30,
+        "minimumPerOutcome": 5,
+        "brierScore": null,
+        "bins": []
+      }
+    }
+  },
+  "runs": [],
+  "comparisons": []
+}
