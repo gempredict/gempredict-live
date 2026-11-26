@@ -1,6 +1,7 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
-import {evaluateComparableSales,freeResearchSale} from '../lib/comparableSalesEvidence.mjs';
+import {evaluateComparableSales} from '../lib/comparableSalesEvidence.mjs';
+import {freeResearchSale} from '../lib/cardApiSalesAdapter.mjs';
 import {createCatalogEvidenceAdapter,reconcileCatalogIdentity} from '../lib/catalogIdentityEvidence.mjs';
 import {salesContext,sportsTarget,syntheticSale} from './helpers/completedSalesFixture.mjs';
 

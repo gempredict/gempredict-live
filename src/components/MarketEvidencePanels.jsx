@@ -198,6 +198,14 @@ export function RecentSales({result,message,unified,clear,embedded=false}) {
         {result.query&&<details><summary>Search details</summary><p>Title query: {result.query}. Each record is compared with the reviewed identity.</p></details>}
         {unified&&<SalesSummary result={result}/>}
         <ComparableQualification evidence={result.comparableEvidence}/>
+        {result.salesIntelligence&&<details><summary>Sales intelligence</summary>
+          <p>Incomplete market evidence · {result.salesIntelligence.identityCompatible} identity-compatible records · {result.salesIntelligence.reportedPrices} reported prices · {result.salesIntelligence.priceUnknown} prices unknown.</p>
+          <p>{Object.entries(result.salesIntelligence.cohortCounts).map(([name,count])=>`${name}: ${count}`).join(' · ')}</p>
+          {!!(result.salesIntelligence.suspectedOverlapGroups||result.salesIntelligence.repeatedProviderRecordCount)&&
+            <p>Possible duplicate evidence retained for review.</p>}
+          {!!result.salesIntelligence.conflictingReferenceGroups&&<p>{result.salesIntelligence.conflictingReferenceGroups} transaction reference conflicts.</p>}
+          <p>{result.salesIntelligence.nextResearch}</p>
+        </details>}
         {result.crosswalk&&<p role="status">{result.crosswalk.nextEvidence} Exact physical printing remains unverified.</p>}
         {result.economicsReadiness?.status==='withheld'&&<details><summary>Grading economics unavailable</summary>
           <ul>{result.economicsReadiness.blockers.map(reason=><li key={reason}>{economicsReasons[reason]||reason}</li>)}</ul>

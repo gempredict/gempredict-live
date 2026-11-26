@@ -1,7 +1,8 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
 import {calculateGradingEconomics,datedGradingService,gradingEconomicsReadiness,gradingGradeKey} from '../lib/gradingEconomics.mjs';
-import {evaluateComparableSales,freeResearchSale} from '../lib/comparableSalesEvidence.mjs';
+import {evaluateComparableSales} from '../lib/comparableSalesEvidence.mjs';
+import {freeResearchSale} from '../lib/cardApiSalesAdapter.mjs';
 import {FEE_REFERENCE} from '../lib/gradingFeeReference.mjs';
 
 // All amounts, outcomes, probabilities and tier labels in this scenario are synthetic.
