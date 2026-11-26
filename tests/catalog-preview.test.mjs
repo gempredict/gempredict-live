@@ -1,14 +1,14 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
 import { createCatalogPreviewHandler } from '../lib/catalogPreviewHandler.mjs';
-import { catalogConfiguration,liveCatalogBranch } from '../lib/catalogPreviewConfiguration.mjs';
+import { catalogConfiguration,catalogRestBranch } from '../lib/catalogPreviewConfiguration.mjs';
 import { createReviewedCrosswalkAdapter,CARD_API_CATALOG_ID_TYPES } from '../lib/catalogSalesCrosswalk.mjs';
 import { authorizeDiagnosticOwner } from '../lib/scanDiagnosticsAuth.mjs';
 
 const now=Date.parse('2026-11-26T12:00:00Z');
 const host='gempredict-live-synthetic-preview.vercel.app';
 const env={
- VERCEL:'1',VERCEL_ENV:'preview',VERCEL_URL:host,VERCEL_GIT_COMMIT_REF:liveCatalogBranch,
+ VERCEL:'1',VERCEL_ENV:'preview',VERCEL_URL:host,VERCEL_GIT_COMMIT_REF:catalogRestBranch,
  VERCEL_GIT_REPO_OWNER:'gempredict',VERCEL_GIT_REPO_SLUG:'gempredict-live',VERCEL_GIT_COMMIT_SHA:'a'.repeat(40),
  VERCEL_PROJECT_ID:'prj_hu0Q2BybH0PskmTxFaEkz1NVtus4',GEMPREDICT_PREVIEW_SCAN_DIAGNOSTICS_ENABLED:'true',
  GEMPREDICT_SCAN_DIAGNOSTICS_OWNER_KEY:'ab'.repeat(32),GEMPREDICT_SCAN_DIAGNOSTICS_SIGNING_KEY:'cd'.repeat(32),

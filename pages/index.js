@@ -1,13 +1,13 @@
 /// GemPredict — Homepage with SEO metadata
 import Head from "next/head";
 import App from "../src/App";
-import { catalogConfiguration,liveCatalogBranch } from "../lib/catalogPreviewConfiguration.mjs";
+import { catalogConfiguration,catalogPreviewBranches } from "../lib/catalogPreviewConfiguration.mjs";
 import { cardApiPilotPage, collectorDashboardBranch, catalogFoundationBranch, comparablesBranch, salesLookbackBranch, gradingEconomicsBranch, priceConfirmationRepairBranch, crosswalkBranch } from "../lib/cardApiSalesPilot.mjs";
 
 export function getServerSideProps({req,res}) {
-  const pilot=[collectorDashboardBranch,catalogFoundationBranch,comparablesBranch,salesLookbackBranch,gradingEconomicsBranch,priceConfirmationRepairBranch,crosswalkBranch,liveCatalogBranch].includes(process.env.VERCEL_GIT_COMMIT_REF)?cardApiPilotPage(req):null;
+  const pilot=[collectorDashboardBranch,catalogFoundationBranch,comparablesBranch,salesLookbackBranch,gradingEconomicsBranch,priceConfirmationRepairBranch,crosswalkBranch,...catalogPreviewBranches].includes(process.env.VERCEL_GIT_COMMIT_REF)?cardApiPilotPage(req):null;
   if (pilot) res.setHeader('Cache-Control','private, no-store, max-age=0');
-  return {props:{marketDashboard:pilot?{today:pilot.today,earliest:pilot.earliest,catalogEvidence:[catalogFoundationBranch,comparablesBranch,salesLookbackBranch,gradingEconomicsBranch,priceConfirmationRepairBranch,crosswalkBranch,liveCatalogBranch].includes(process.env.VERCEL_GIT_COMMIT_REF),comparableEvidence:[comparablesBranch,salesLookbackBranch,gradingEconomicsBranch,priceConfirmationRepairBranch,crosswalkBranch,liveCatalogBranch].includes(process.env.VERCEL_GIT_COMMIT_REF),lookback:pilot.lookback===true,catalogStatus:process.env.VERCEL_GIT_COMMIT_REF===liveCatalogBranch?catalogConfiguration().status:null}:null}};
+  return {props:{marketDashboard:pilot?{today:pilot.today,earliest:pilot.earliest,catalogEvidence:[catalogFoundationBranch,comparablesBranch,salesLookbackBranch,gradingEconomicsBranch,priceConfirmationRepairBranch,crosswalkBranch,...catalogPreviewBranches].includes(process.env.VERCEL_GIT_COMMIT_REF),comparableEvidence:[comparablesBranch,salesLookbackBranch,gradingEconomicsBranch,priceConfirmationRepairBranch,crosswalkBranch,...catalogPreviewBranches].includes(process.env.VERCEL_GIT_COMMIT_REF),lookback:pilot.lookback===true,catalogStatus:catalogPreviewBranches.includes(process.env.VERCEL_GIT_COMMIT_REF)?catalogConfiguration().status:null}:null}};
 }
 
 
