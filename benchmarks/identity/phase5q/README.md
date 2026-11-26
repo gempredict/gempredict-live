@@ -10,3 +10,65 @@ Run `npm run benchmark:accuracy` to reproduce the checked-in scorecard. The orig
 6. Run `npm run benchmark:accuracy -- --manifest ... --labels ... --observations ... --output benchmarks/identity/private/results`. The JSON contains trial-level outcomes and matched-arm results. Calibration uses distinct primary cards with retained first attempts. Grade error requires at least 30 pairs; PSA 10 reliability additionally requires at least five observed 10s and five other grades, with small buckets suppressed. These are reporting floors rather than a validation claim.
 
 A catalog-supported identity does not establish exact physical printing or a PSA outcome. Preserve original errors and publish only redacted aggregates with owner authorization.
+
+## Private owner review in Accuracy Lab
+
+Open `/accuracy-lab` on the protected Phase 5Q.1 Preview and authorize with
+the existing owner diagnostics key. The branch must have Preview Scan
+Diagnostics enabled and its existing owner and signing keys configured.
+The lab opens the twelve frozen slots and can add up to ten new slots in
+one private packet. Leave the tab open while reviewing several cards.
+
+1. Select a slot and enter core identity and printing evidence. For
+   independently reviewed claims, use a manufacturer checklist or an
+   independent catalog record that actually supports the entered fields,
+   plus a reviewer code, private evidence reference, and review date.
+   Owner-reported and draft assertions are excluded from scoring.
+2. Select a front and back image. Crop slab labels, grade markings or
+   other answers out before selecting the photos. Review the prepared
+   previews and attest to the card-only pixels and metadata removal.
+   A JPEG is re-encoded locally and hashed after preparation. Only the
+   hashes and review fields reach the application endpoint.
+3. Annotate visible condition by side, attribute and region. Mark a
+   finding uncertain where the photo cannot resolve it. Use the same
+   region codes in trial predictions. Record an observed PSA outcome
+   separately, using its own private evidence reference.
+4. Download the private review packet and each reviewed JPEG. Keep a
+   private folder per slot so identically named `front.jpg` and `back.jpg`
+   files cannot be mixed. Keep private evidence references with the review
+   packet, away from blind trial inputs. The lab does not retain drafts
+   after navigation or owner-session expiry, and exports are not imported
+   back into the browser.
+5. Download the redacted scorecard separately if sharing coverage. It
+   contains aggregate counts only. Review coverage does not measure
+   model accuracy.
+
+The server validates completeness and linkage, while the reviewer is
+responsible for checking that the cited evidence is independent and the
+photo pair is the same physical copy. An owner assertion or attestation
+alone cannot fill an independent source requirement. No provider call
+is made during review or export.
+
+From the repository root, keep the downloads under the gitignored
+`benchmarks/identity/private/` directory with restricted permissions.
+The Phase 5Q CLI accepts the downloaded packet directly:
+
+```bash
+node scripts/identity-benchmark.mjs blind-input \
+  --review-packet benchmarks/identity/private/gempredict-private-review.json \
+  --card GP-ID-001 \
+  --front-file benchmarks/identity/private/GP-ID-001/front.jpg \
+  --back-file benchmarks/identity/private/GP-ID-001/back.jpg \
+  --output benchmarks/identity/private/trial-input
+
+npm run benchmark:accuracy -- \
+  --review-packet benchmarks/identity/private/gempredict-private-review.json \
+  --output benchmarks/identity/private/review-scorecard
+```
+
+The blind-input command rehashes the actual downloaded bytes. Submit only
+those exact prepared bytes to a separately authorized blind trial. Keep
+the private packet and observed grade out of the prediction inputs.
+Without separately linked blind observations, the scorecard reports
+coverage with zero measurable trials. When such observations are
+available, pass them privately with `--observations`.

@@ -41,12 +41,20 @@ export function main(args){
   let current=path.resolve('.');for(const part of path.relative(current,output).split(path.sep)){current=path.join(current,part);try{if(lstatSync(current).isSymbolicLink())throw Error('validation_symlink_output_rejected');}catch(e){if(e.code!=='ENOENT')throw e;}}
   return output;
  }
+ function reviewInput(){
+  if(options['review-packet']){
+   if(options.manifest||options.labels)throw Error('benchmark_review_packet_conflict');
+   const packet=read(options['review-packet']);
+   if(packet?.version!==1||!packet.manifest||!packet.labels)throw Error('benchmark_review_packet_invalid');
+   return packet;
+  }
+  return {manifest:read(options.manifest||'benchmarks/identity/manifest.json'),labels:options.labels?read(options.labels):{}};
+ }
  if(command==='accuracy'){
-  const manifest=read(options.manifest||'benchmarks/identity/manifest.json');
+  const {manifest,labels}=reviewInput();
   const input=read(options.observations||'benchmarks/identity/historical-observations.json');
-  const labels=options.labels?read(options.labels):{};
   const result=evaluateBenchmarkCalibration(manifest,input.observations||input,labels);
-  const privateEvidence=!!(options.manifest||options.observations||options.labels);
+  const privateEvidence=!!(options.manifest||options.observations||options.labels||options['review-packet']);
   const output=privateEvidence?privateOutput(options.output):options.output||'benchmarks/identity/phase5q';
   if(privateEvidence){mkdirSync(path.dirname(output),{recursive:true,mode:0o700});mkdirSync(output,{mode:0o700});}
   else mkdirSync(output,{recursive:true});
@@ -67,10 +75,9 @@ export function main(args){
  }
  if(command==='blind-input'){
   const output=privateOutput(options.output);
-  const manifest=read(options.manifest||'benchmarks/identity/manifest.json');
+  const {manifest,labels}=reviewInput();
   const card=manifest.cards.find(row=>row.id===options.card);
-  if(!card||!options.labels||!options['front-file'])throw Error('benchmark_blind_arguments_required');
-  const labels=read(options.labels);
+  if(!card||!options['front-file'])throw Error('benchmark_blind_arguments_required');
   const bytes=Object.fromEntries(['front','back'].filter(side=>options[side+'-file']).map(side=>{
    const buffer=readFileSync(options[side+'-file']);
    if(!buffer.length||buffer.length>8*1024*1024)throw Error('benchmark_photo_size_invalid');
