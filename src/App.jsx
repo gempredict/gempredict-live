@@ -10,7 +10,7 @@ import ReportPhotos from './components/ReportPhotos';
 import {attachReportPhotos,reportPhotos} from '../lib/reportPhotos.mjs';
 import {reportListings} from '../lib/reportListings.mjs';
 import GradingScenarioCalculator from './components/GradingScenarioCalculator';
-import {reportHero,unifiedReportPresentation} from '../lib/unifiedReportPresentation.mjs';
+import {collectorGradingAssessment,reportHero,unifiedReportPresentation} from '../lib/unifiedReportPresentation.mjs';
 import {collectorIdentityMessage,collectorConditions,collectorLimitations} from '../lib/collectorPresentation.mjs';
 import ControlledValidation from './components/ControlledValidation';
 import IdentityResult from "./components/IdentityResult";
@@ -395,15 +395,6 @@ function EmptyState() {
       <div style={{ fontSize: "0.85rem", color: C.inkSoft, fontWeight: 300, marginBottom: "1rem" }}>
         Identify a card and review qualified photo observations. Market comparisons and grading recommendations remain unavailable without verified evidence.
       </div>
-      <div style={{ display: "flex", gap: "0.5rem", justifyContent: "center", flexWrap: "wrap" }}>
-        {["Compare raw vs graded value", "Estimate PSA 10 upside", "Avoid wasted grading fees"].map(function(b) {
-          return (
-            <span key={b} style={{ fontSize: "0.75rem", fontWeight: 500, background: C.white, border: "1px solid " + C.border, color: C.inkSoft, padding: "0.25rem 0.7rem", borderRadius: 100 }}>
-              {b}
-            </span>
-          );
-        })}
-      </div>
     </div>
   );
 }
@@ -411,6 +402,7 @@ function EmptyState() {
 export function ResultCard({ data, index, onSave, isSaved,photos=null,completedSalesEvidence=null,demo=false,historical=false,marketContext=null }) {
   if(!historical) data = protectFinancialReport(data);
   const view=unifiedReportPresentation(data),listings=historical?data.savedListingView:reportListings(data),hero=reportHero(data),observation=data.originalIdentityObservation||data.imageAnalysis,prefix=`gp-report-${index}`;
+  const assessment=collectorGradingAssessment(data.imageAnalysis);
   const [copied,setCopied]=useState(false),[shared,setShared]=useState(false),[feedback,setFeedback]=useState(null);
   function handleCopy(){try{navigator.clipboard.writeText(buildCopySummary(data,historical));}catch{}setCopied(true);setTimeout(()=>setCopied(false),2000);}
   function handleShare(){const summary=buildCopySummary(data,historical);if(navigator.share)navigator.share({title:'GemPredict Report',text:summary}).catch(()=>{});else{try{navigator.clipboard.writeText(summary);}catch{}}setShared(true);setTimeout(()=>setShared(false),2000);}
@@ -418,20 +410,17 @@ export function ResultCard({ data, index, onSave, isSaved,photos=null,completedS
    <ReportStyle/>
    {demo&&<p className="gp-report-demo" role="note">DEMO — SYNTHETIC DATA · Mock observations and listings. No real valuation.</p>}
    <div className="gp-decision-report">
-    <header className="gp-original-header" aria-label="Card identification"><div className="gp-header-copy"><p className="gp-report-kicker">Grading Decision Report <span className="gp-beta">BETA</span></p><h2>{hero.title}</h2><p className="gp-original-subtitle">{hero.subtitle}{hero.printing?' · '+hero.printing:''}</p><p className="gp-original-note">{view.category} · {view.identityLabel} · printing not verified</p></div><div className="gp-header-status"><strong>Pending</strong><small>Evidence required</small></div></header>
+    <header className="gp-original-header" aria-label="Card identification"><div className="gp-header-copy"><p className="gp-report-kicker">Grading Decision Report <span className="gp-beta">BETA</span></p><h2>{hero.title}</h2><p className="gp-original-subtitle">{hero.subtitle}{hero.printing?' · '+hero.printing:''}</p><p className="gp-original-note">{view.category} · {view.identityLabel} · printing not verified</p></div></header>
     <div className="gp-original-body">
-     <section className="gp-reference-panel gp-decision-panel" aria-label="Grading decision"><p className="gp-decision-question">Should you grade this?</p><div className="gp-decision-oval"><span>GemPredict decision</span><strong>Unavailable</strong><small>Evidence not yet verified</small></div><p className="gp-decision-verdict">Not determined</p><dl className="gp-five-metrics" aria-label="Five decision metrics">{['Most Likely Outcome','PSA 10 Odds','Expected Net','Decision Confidence','Potential Upside'].map(label=><div key={label}><dt>{label}</dt><dd>Unavailable</dd></div>)}</dl></section>
-     {!demo&&marketContext?<MarketDashboard key={marketContext.reportId||'unsaved'} report={data}
-       name={hero.title} {...marketContext}/>:<section className="gp-reference-panel" id={prefix+'-listings'} aria-label="eBay discovery"><div className="gp-section-head"><h3>Listings used</h3>{demo&&<span className="gp-synthetic" aria-label="Synthetic listings">Synthetic</span>}</div><dl className="gp-market-summary">{[['GemPredict Fair Market Value','Unavailable'],['Typical range','Unavailable'],['Comparable listings',data.marketData?.success===true?listings.candidates.length+' possible':'Unavailable'],['Market confidence','Unavailable']].map(([label,value])=><div key={label}><dt>{label}</dt><dd className={value==='Unavailable'?'gp-unavailable':undefined}>{value}</dd></div>)}</dl><p className="gp-fine"><em>Active asking prices · printing unverified.</em></p>
-      {listings.candidates.length>0?<div className="gp-listing-list"><h4 className="gp-panel-title">Possible matches</h4>{listings.candidates.slice(0,6).map(item=><article className="gp-listing" key={item.url}>{!demo&&item.image&&<img src={item.image} loading="lazy" referrerPolicy="no-referrer" alt="eBay listing photograph"/>}<div className="gp-listing-body"><div className="gp-listing-head">{demo?<span className="gp-listing-title">{item.title.replace(/^DEMO — SYNTHETIC DATA — /,'')}</span>:<a className="gp-listing-title" href={item.url} target="_blank" rel="noopener noreferrer">{item.title}</a>}<span className="gp-price"><span className="gp-asking-label">{demo?'Synthetic asking amount: ':'Asking price: '}</span>{item.amount!==null?item.currency+' '+item.amount.toFixed(2):'Unavailable'}</span></div><p className="gp-fine">Condition: {item.condition||'Not supplied'}</p><p className="gp-fine">Unverified candidate · active listing{demo?' · Synthetic listing; no live link.':''}</p></div></article>)}</div>:<p className="gp-fine">No reliable listing matches available.</p>}
-
-     </section>}
-     {!demo&&marketContext?.catalogEvidence&&<CatalogIdentityEvidence report={data}/>}
-     <section className="gp-reference-panel gp-why" aria-label="Decision explanation"><h3>Why this decision?</h3><p>Grading decision unavailable.</p><ul><li><span className="gp-why-marker" aria-hidden="true">– </span>{view.identityLabel==='Core catalog support'?'Core catalog supported; printing unverified.':view.identityLabel==='Identity needs review'?'Conflicting identity evidence needs review.':'Independent identity unverified.'}</li><li><span className="gp-why-marker" aria-hidden="true">– </span>Photo observations do not establish a PSA grade or probability.</li><li><span className="gp-why-marker" aria-hidden="true">– </span>Qualified sales and costs are required.</li></ul></section>
-     <section className="gp-three-values" aria-label="Raw and PSA values">{['Raw Value','PSA 9 Value','PSA 10'].map(label=><div className="gp-value-tile" key={label}><span>{label}</span><strong>Unavailable</strong></div>)}</section>
-     <section className="gp-reference-panel gp-economics" id={prefix+'-psa'} aria-label="Grading economics"><h3>Expected grading economics</h3><dl>{['Expected Graded Value','Current Raw Value','PSA Submission Fee','Expected Net'].map((label,i)=><div className={'gp-ledger-row'+(i===3?' gp-ledger-net':'')} key={label}><dt>{label}</dt><dd>Unavailable</dd></div>)}</dl><p className="gp-fine"><em>Automatic estimates withheld pending qualified evidence and costs.</em></p></section>
-     <aside className="gp-bottom-strip" aria-label="Best use case"><strong>Best use case:</strong> Evidence review only; not a grading or sale recommendation.</aside>
-     <aside className="gp-bottom-strip" aria-label="Recommended action"><strong>→ Recommended action</strong><p>Verify exact printing and qualified sales before a grading decision.</p></aside>
+     <section className="gp-reference-panel gp-decision-panel" aria-label="Grading decision">
+      <h3>{assessment.heading}</h3>
+      {!!assessment.strengths?.length&&<p>No obvious defects reported in some inspected areas: {assessment.strengths.join(', ')}.</p>}
+      {!!assessment.concerns?.length&&<p>Reported concerns or uncertainty: {assessment.concerns.join(', ')}. See the regional findings below.</p>}
+      <p>{assessment.next}</p>
+      {data.catalogComparison?.printing?.status==='conflict'&&<p>Catalog printing information conflicts with the proposed variation. Check the finish and other distinguishing marks in hand.</p>}
+      {data.imageAnalysis&&<><p>Grading is worth considering only if the supported resale premium covers submission, shipping and selling costs. Photo observations do not establish a PSA grade. The recommendation is withheld until exact printing, qualified sales, applicable costs and grade probabilities can be verified.</p>
+       <p><a href={'#'+prefix+'-condition'}>See regional condition findings</a> · <a href={'#'+prefix+'-psa'}>Explore break-even</a></p></>}
+     </section>
      <div className="gp-u-actions">{demo?<><button type="button" disabled>Copy Summary</button><button type="button" disabled>Save Report</button><button type="button" disabled>Share</button></>:<><button type="button" onClick={handleCopy}>{copied?'✓ Copied':'Copy Summary'}</button>{!historical&&<button type="button" onClick={()=>onSave?.(data)}>{isSaved?'✓ Saved':'Save Report'}</button>}<button type="button" onClick={handleShare}>{shared?'✓ Copied':'Share'}</button></>}</div>
      {demo?<p className="gp-source-footer">Synthetic demo — copy, saving and sharing disabled.</p>:<><div className="gp-u-feedback"><p>Was this card identification useful?</p><button type="button" onClick={()=>setFeedback('yes')}>👍 Yes</button><button type="button" onClick={()=>setFeedback('review')}>👎 Needs review</button>{feedback&&<p>{feedback==='yes'?'Thanks. Feedback recorded for this view.':'Review the identification before using it.'}</p>}</div><p className="gp-source-footer">Review the evidence and limitations before any grading, selling or submission decision.</p></>}
     </div>
@@ -443,8 +432,19 @@ export function ResultCard({ data, index, onSave, isSaved,photos=null,completedS
     </div>
     <details open={!!photos}><summary>Submitted front / back photographs</summary><ReportPhotos photos={photos}/></details>
     <ConditionSnapshot data={data.imageAnalysis} demo={demo}/>
+     {!demo&&marketContext?<MarketDashboard key={marketContext.reportId||'unsaved'} report={data}
+       name={hero.title} {...marketContext}/>:null}
+     {(!marketContext||listings.candidates.length>0)&&<section className="gp-reference-panel" id={prefix+'-listings'} aria-label="eBay discovery"><div className="gp-section-head"><h3>{marketContext?'Asking prices from the original report':'Listings used'}</h3>{demo&&<span className="gp-synthetic" aria-label="Synthetic listings">Synthetic</span>}</div><p className="gp-fine"><em>Active asking prices · printing unverified.</em></p>
+      {listings.candidates.length>0?<div className="gp-listing-list"><h4 className="gp-panel-title">Possible matches</h4>{listings.candidates.slice(0,6).map(item=><article className="gp-listing" key={item.url}>{!demo&&item.image&&<img src={item.image} loading="lazy" referrerPolicy="no-referrer" alt="eBay listing photograph"/>}<div className="gp-listing-body"><div className="gp-listing-head">{demo?<span className="gp-listing-title">{item.title.replace(/^DEMO — SYNTHETIC DATA — /,'')}</span>:<a className="gp-listing-title" href={item.url} target="_blank" rel="noopener noreferrer">{item.title}</a>}<span className="gp-price"><span className="gp-asking-label">{demo?'Synthetic asking amount: ':'Asking price: '}</span>{item.amount!==null?item.currency+' '+item.amount.toFixed(2):'Unavailable'}</span></div><p className="gp-fine">Condition: {item.condition||'Not supplied'}</p><p className="gp-fine">Unverified candidate · active listing{demo?' · Synthetic listing; no live link.':''}</p></div></article>)}</div>:<p className="gp-fine">No reliable listing matches available.</p>}
+
+     </section>}
+     {!demo&&marketContext?.catalogEvidence&&<CatalogIdentityEvidence report={data}/>}
+
     <div className="gp-report-evidence"><h3>Report evidence &amp; manual scenarios</h3>      <details><summary>Listing evidence and limitations</summary><div className="gp-detail-body"><p>{view.discovery.status}. Exact-printing matches: {listings.qualified.length}. Unverified candidates: {listings.candidates.length}. {listings.rejectedCount} rejected or unsafe records are excluded.</p><p>{view.printingStatus} Only the first six screened candidates are shown; not exhaustive market coverage.</p>{(Array.isArray(data.scanNotices)?data.scanNotices:[]).map(safeScanFailure).filter(n=>['MARKETPLACE_UNAVAILABLE','VERIFICATION_UNRESOLVED'].includes(n?.code)).map(n=><p key={n.code} role="status">{n.error}</p>)}</div></details>
-      <details><summary>Completed-sales comparisons</summary><CompletedSalesSection evidence={completedSalesEvidence} demo={demo} sectionId={prefix+'-market'}/></details><details><summary>What is needed for grading economics?</summary><div className="gp-detail-body"><p>{WITHHELD_MESSAGE}</p><p>PSA outlook not available yet. PSA Submission Fee Unavailable in automatic report economics. Grade probabilities and automatic submission advice are not supported.</p></div></details><details><summary>Explore manual PSA scenarios</summary><p className="gp-fine">Optional hypothetical assumptions only. Inputs never change this report's evidence or protected financial status.</p><div className="gp-legacy-details"><GradingScenarioCalculator embedded/></div></details></div>
+      <details><summary>Completed-sales comparisons</summary><CompletedSalesSection evidence={completedSalesEvidence} demo={demo} sectionId={prefix+'-market'}/></details><section id={prefix+'-psa'} aria-label="Grading economics"><h3>Grading break-even</h3>
+       <p>Compare against selling raw using your own costs and raw resale assumption. Graded resale prices are optional for break-even. No prices are filled from unverified market evidence.</p>
+       <details><summary>Explore manual PSA scenarios</summary><div className="gp-legacy-details"><GradingScenarioCalculator key={data.scanId||hero.title+'|'+hero.subtitle} embedded cardDescription={[hero.title,hero.subtitle].join(' · ')} cardCategory={['pokemon','sports'].includes(data.identityV2?.category)?data.identityV2.category:undefined}/></div></details>
+      </section></div>
    </div></section>
   </article>;
 }

@@ -9,7 +9,7 @@ import {CONTROLLED_CATEGORIES,validControlledCategory,controlledCategorySubmissi
 import {completedSalesView,SALES_COHORTS} from '../../lib/completedSales.mjs';
 import {attachReportPhotos,reportPhotos} from '../../lib/reportPhotos.mjs';
 import {reportListings} from '../../lib/reportListings.mjs';
-import {reportHero,conditionSnapshot,unifiedReportPresentation} from '../../lib/unifiedReportPresentation.mjs';
+import {collectorGradingAssessment,compactFindingLabel,reportHero,conditionSnapshot,unifiedReportPresentation} from '../../lib/unifiedReportPresentation.mjs';
 import * as economics from '../../lib/gradingScenarios.mjs';
 import * as feeReference from '../../lib/gradingFeeReference.mjs';
 import * as collector from '../../lib/collectorPresentation.mjs';
@@ -34,7 +34,7 @@ function components(file,bindings={},extra=''){
 }
 const {default:CompletedSalesSection}=components('src/components/CompletedSalesSection.jsx',{completedSalesView,SALES_COHORTS});
 const {default:ReportStyle}=components('src/components/ReportStyle.jsx');
-const {default:ConditionSnapshot}=components('src/components/ConditionSnapshot.jsx',{...collector,conditionSnapshot});
+const {default:ConditionSnapshot}=components('src/components/ConditionSnapshot.jsx',{...collector,compactFindingLabel,conditionSnapshot});
 const {default:ReportPhotos}=components('src/components/ReportPhotos.jsx',{useState:React.useState,useEffect:React.useEffect});
 const {default:GradingScenarioCalculator}=components('src/components/GradingScenarioCalculator.jsx',{...economics,...feeReference,useState:React.useState});
 const {default:AtlasPanel}=components('src/components/AtlasPanel.jsx');
@@ -45,7 +45,7 @@ const {default:MarketDashboard}=components('src/components/MarketDashboard.jsx',
  ...marketBindings,useState:React.useState,useRef:React.useRef,useEffect:React.useEffect,
 });
 const {default:CatalogIdentityEvidence}=components('src/components/CatalogIdentityEvidence.jsx',{identityClaimLabels,reportCatalogIdentityEvidence});
-const {ResultCard,ImageAnalysisCard}=components('src/App.jsx',{MarketDashboard,CatalogIdentityEvidence,controlledCategorySubmission,IdentityResult:ReportIdentityResult,attachReportPhotos,reportPhotos,reportListings,ReportPhotos,CompletedSalesSection,ConditionSnapshot,ReportStyle,reportHero,unifiedReportPresentation,GradingScenarioCalculator,...collector,safeScanFailure,conditionAssessmentLabels,...financial,identitySummary,reportTitle,verificationRows,buildGemPredictScore,AtlasPanel,useState:React.useState});
+const {ResultCard,ImageAnalysisCard}=components('src/App.jsx',{MarketDashboard,CatalogIdentityEvidence,controlledCategorySubmission,IdentityResult:ReportIdentityResult,attachReportPhotos,reportPhotos,reportListings,ReportPhotos,CompletedSalesSection,ConditionSnapshot,ReportStyle,collectorGradingAssessment,reportHero,unifiedReportPresentation,GradingScenarioCalculator,...collector,safeScanFailure,conditionAssessmentLabels,...financial,identitySummary,reportTitle,verificationRows,buildGemPredictScore,AtlasPanel,useState:React.useState});
 export function renderReports(report,completedSalesEvidence=null,props={}){
  return {upper:renderToStaticMarkup(React.createElement(ResultCard,{data:report,index:0,onSave(){},isSaved:false,completedSalesEvidence,...props})),lower:renderToStaticMarkup(React.createElement(ImageAnalysisCard,{report}))};
 }
@@ -66,7 +66,7 @@ export function renderIdentityResult(report){
 export function appInteraction(bindings={}){
  const slots=[];let index=0;
  const hook=initial=>{const i=index++;if(!(i in slots))slots[i]=typeof initial==='function'?initial():initial;return [slots[i],value=>{slots[i]=typeof value==='function'?value(slots[i]):value;}];};
- const {default:App}=components('src/App.jsx',{requireOwnerDiagnosticAccess:async()=>({enabled:true,authorized:true,conditionValidationAvailable:true,expiresAt:Date.now()+60000}),controlledCategorySubmission,attachReportPhotos,reportPhotos,reportListings,ReportPhotos,CompletedSalesSection,ConditionSnapshot,ReportStyle,reportHero,unifiedReportPresentation,GradingScenarioCalculator,...collector,...financial,identitySummary,reportTitle,verificationRows,safeScanFailure,conditionAssessmentLabels,buildGemPredictScore,AtlasPanel,IdentityResult:()=>null,ScanDiagnostics:()=>null,ControlledValidation:()=>null,DemoReportAction:()=>null,MyCardLibrary:()=>null,useState:hook,useRef:initial=>hook({current:initial})[0],useEffect(){},track(){},...bindings});
+ const {default:App}=components('src/App.jsx',{requireOwnerDiagnosticAccess:async()=>({enabled:true,authorized:true,conditionValidationAvailable:true,expiresAt:Date.now()+60000}),controlledCategorySubmission,attachReportPhotos,reportPhotos,reportListings,ReportPhotos,CompletedSalesSection,ConditionSnapshot,ReportStyle,collectorGradingAssessment,reportHero,unifiedReportPresentation,GradingScenarioCalculator,...collector,...financial,identitySummary,reportTitle,verificationRows,safeScanFailure,conditionAssessmentLabels,buildGemPredictScore,AtlasPanel,IdentityResult:()=>null,ScanDiagnostics:()=>null,ControlledValidation:()=>null,DemoReportAction:()=>null,MyCardLibrary:()=>null,useState:hook,useRef:initial=>hook({current:initial})[0],useEffect(){},track(){},...bindings});
  function render(){index=0;return App();}
  function nodes(root,predicate){const found=[];function walk(node){if(!node||typeof node!=='object')return;if(Array.isArray(node)){node.forEach(walk);return;}if(predicate(node))found.push(node);walk(node.props?.children);}walk(root);return found;}
  return {render,nodes};
@@ -82,19 +82,19 @@ export function controlledValidationInteraction(props,bindings){
 }
 
 // Local-only economics UI: drive real input callbacks without a browser/provider.
-export async function scenarioCalculatorInteraction(bindings={}){
+export async function scenarioCalculatorInteraction(bindings={},props={}){
  const economics=await import('../../lib/gradingScenarios.mjs');
  const feeReference=await import('../../lib/gradingFeeReference.mjs');
  const slots=[];let index=0;
  const useState=initial=>{const i=index++;if(!(i in slots))slots[i]=typeof initial==='function'?initial():initial;return [slots[i],v=>{slots[i]=typeof v==='function'?v(slots[i]):v;}];};
  const {default:View}=components('src/components/GradingScenarioCalculator.jsx',{...economics,...feeReference,useState,...bindings});
  const nodes=(root,predicate)=>{const out=[];const walk=n=>{if(!n||typeof n!=='object')return;if(Array.isArray(n)){n.forEach(walk);return;}if(predicate(n))out.push(n);walk(n.props?.children);};walk(root);return out;};
- return {render(){index=0;return View();},nodes,html(tree){return renderToStaticMarkup(tree);}};
+ return {render(){index=0;return View(props);},nodes,html(tree){return renderToStaticMarkup(tree);}};
 }
 
 export function unifiedReportInteraction(report,bindings={}){
  const slots=[];let index=0;const hook=initial=>{const i=index++;if(!(i in slots))slots[i]=typeof initial==='function'?initial():initial;return [slots[i],v=>{slots[i]=typeof v==='function'?v(slots[i]):v;}];};
- const {ResultCard:View}=components('src/App.jsx',{controlledCategorySubmission,IdentityResult:ReportIdentityResult,...collector,...financial,attachReportPhotos,reportPhotos,reportListings,ReportPhotos,CompletedSalesSection,ConditionSnapshot,ReportStyle,reportHero,unifiedReportPresentation,GradingScenarioCalculator,safeScanFailure,conditionAssessmentLabels,identitySummary,reportTitle,verificationRows,buildGemPredictScore,AtlasPanel,useState:hook,setTimeout(){},...bindings});
+ const {ResultCard:View}=components('src/App.jsx',{controlledCategorySubmission,IdentityResult:ReportIdentityResult,...collector,...financial,attachReportPhotos,reportPhotos,reportListings,ReportPhotos,CompletedSalesSection,ConditionSnapshot,ReportStyle,collectorGradingAssessment,reportHero,unifiedReportPresentation,GradingScenarioCalculator,safeScanFailure,conditionAssessmentLabels,identitySummary,reportTitle,verificationRows,buildGemPredictScore,AtlasPanel,useState:hook,setTimeout(){},...bindings});
  const nodes=(root,predicate)=>{const found=[];function walk(n){if(!n||typeof n!=='object')return;if(Array.isArray(n)){n.forEach(walk);return;}if(predicate(n))found.push(n);walk(n.props?.children);}walk(root);return found;};
  return {render(props={}){index=0;return View({data:report,index:0,onSave(){},isSaved:false,...props});},nodes};
 }

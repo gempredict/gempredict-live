@@ -15,7 +15,7 @@ test('complete Pokémon handler feeds a single report with canonical core, quali
  assert.match(body,/Unified Minds.*Fraxure/);assert.match(body,/Collector number 155\/236/);assert.match(body,/Possible visible damage/);assert.match(body,/Back photo/);assert.match(body,/resolution/);
  for(const section of ['Card identification','Condition evidence','Completed sales evidence','eBay discovery','Grading economics'])assert.ok(html.includes(`aria-label="${section}"`));
  assert.ok(html.includes('econ-embedded'));assert.ok(!html.includes('<main'));assert.doesNotMatch(body,/GemPredict Score|Grade It|Consider It/);
- assert.match(body,/No qualified feed connected/);assert.match(body,/PSA Submission Fee Unavailable/);assert.equal(safe.financialDecision.allowed,false);for(const f of FINANCIAL_FIELDS)assert.equal(safe[f],null);
+ assert.match(body,/Inspect the flagged areas before deciding/);assert.match(body,/No qualified feed connected/);assert.match(body,/Grading break-even/);assert.equal(safe.financialDecision.allowed,false);for(const f of FINANCIAL_FIELDS)assert.equal(safe[f],null);
 });
 test('unrelated sports metadata cannot classify a Pokémon report as Baseball; category disagreements remain explicit',async()=>{
  const r=await fraxureScan();const safe=protectFinancialReport({...reportFromResponse(r.payload),sport:'Baseball',category:'Baseball',cardMeta:'Baseball · 2022',identityV2:{...r.payload.identityV2,sport:'Baseball'}});
@@ -54,4 +54,42 @@ test('mixed-side surface summary states front uncertainty and suspected back scr
  const response=await fraxureScan({model});const safe=reportFromResponse(response.payload),restored=protectFinancialReport(JSON.parse(JSON.stringify(safe)));
  for(const report of [safe,restored]){assert.equal(report.imageAnalysis.conditionAssessments.surface.state,'unassessable');const html=renderReports(report).upper;assert.match(clean(html),/Front surface: unable to assess reliably/);assert.match(clean(html),/Back surface: suspected scratches/);assert.match(clean(html),/Suspected defects require physical confirmation/);assert.equal(report.financialDecision.allowed,false);for(const f of FINANCIAL_FIELDS)assert.equal(report[f],null);assert.ok(report.imageAnalysis.conditionAssessments.surface.observations.some(o=>o.side==='back'&&o.certainty==='suspected'&&o.code==='scratches'));}
  assert.match(protectedCopySummary(restored),/surface|Surface/);assert.doesNotMatch(clean(renderReports(safe).upper),/Back surface: confirmed/);
+});
+
+test('Babe Ruth SV-40 historical reference does not turn a mocked scan proposal into runtime verification',async()=>{
+ const manifest=JSON.parse(fs.readFileSync('benchmarks/identity/manifest.json','utf8'));
+ const slot=manifest.cards.find(card=>card.id==='GP-ID-008');
+ assert.equal(slot.groundTruth.fields.subset.value,'Sweet Victory');
+ const result=await runScan({fields:{cardType:'sports'},vision:{
+  identifiedSubject:'Babe Ruth',identifiedYear:'2025',identifiedBrandSet:'2025 Topps Allen & Ginter - Storied Victories insert',
+  identifiedCardNumber:'SV-40',identityReadings:[],
+ },items:[],neutral:[]});
+ assert.equal(result.status,200);
+ const report=reportFromResponse(result.payload);
+ const html=clean(renderReports(report).upper);
+ assert.match(html,/Babe Ruth #SV-40/);
+ assert.match(html,/Storied Victories/);
+ assert.match(html,/Identification proposal/);
+ assert.match(html,/printing not verified/);
+ assert.match(html,/Get a clearer view before deciding/);
+ assert.match(html,/Grading break-even/);
+ assert.doesNotMatch(html,/Accuracy Lab|Sweet Victory|Card name or description|PSA 10 Odds/);
+ assert.equal(report.financialDecision.allowed,false);
+});
+
+test('compact observations distinguish localized defects, clear areas, uncertainty and limited photos',()=>{
+ const imageAnalysis={visualEvidenceVersion:4,inspectedSides:['front','back'],imageLimitations:['glare'],
+  compactPhotoObservations:[
+   {side:'back',region:'corner_bottom_right',status:'apparent',text:'bottom right corner: Mild whitening.'},
+   {side:'front',region:'edge_top',status:'apparent',text:'top edge: No obvious wear.'},
+   {side:'back',region:'surface',status:'possible',text:'surface, left: Possible scuff.'},
+   {side:'front',region:'centering',status:'not_assessable',text:'centering: Glare obscures the border.'},
+  ]};
+ const body=clean(renderReports({imageAnalysis}).upper);
+ assert.match(body,/Back · Reported visible defect: bottom right corner: Mild whitening/);
+ assert.match(body,/Front · No obvious defect: top edge: No obvious wear/);
+ assert.match(body,/Back · Possible defect or limitation: surface, left: Possible scuff/);
+ assert.match(body,/Front · Not assessable: centering: Glare obscures the border/);
+ assert.match(body,/Use sharp, straight-on photos of both sides/);
+ assert.doesNotMatch(body,/PSA 10 quality|Odds/);
 });

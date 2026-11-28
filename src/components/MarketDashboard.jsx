@@ -187,7 +187,7 @@ export default function MarketDashboard({report,reportId,token,today,name,compar
   return <section className="gp-reference-panel market-dashboard" aria-label="Market Intelligence Dashboard">
     <MarketEvidenceStyles/>
     <h3>Market Intelligence Dashboard</h3>
-    <p className="market-muted">Owner Preview · Temporary, noncommercial evaluation</p>
+    <p className="market-muted">Owner Preview · Temporary, noncommercial evaluation. Review the card details carried from this report before requesting evidence.</p>
     <form onSubmit={search} onChange={clear} noValidate>
       {Object.entries(names).map(([source,title])=><details key={source} className="market-dashboard-panel"
         onToggle={event=>{const open=event.currentTarget.open;setOpened(current=>({...current,[source]:open}));}}>

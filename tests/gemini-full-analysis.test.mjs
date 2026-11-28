@@ -384,8 +384,8 @@ test('synthetic Fraxure condition preserves eight photo groups and localized not
  assert.equal(safe.financialDecision.allowed,false);
  assert.equal(safe.imageAnalysis.estimatedGrade,null);
  const html=renderReports(restored).upper;
- assert.match(html,/Back · Reported: bottom right corner: Corner whitening/);
- assert.match(html,/Back · Possible: surface, lower edge: Fine surface marks/);
+ assert.match(html,/Back · Reported visible defect: bottom right corner: Corner whitening/);
+ assert.match(html,/Back · Possible defect or limitation: surface, lower edge: Fine surface marks/);
  assert.match(html,/Model photo observations/);
 });
 

@@ -33,6 +33,13 @@ test('live and historical report placements render collapsed sections without a 
   assert.doesNotMatch(upper,/Request eBay listings|Request recent sales|Authorize Preview owner|synthetic-library-token/);
   assert.match(upper,/Grading economics requires independently qualified evidence/);
   assert.match(upper,/Photo Condition Analysis/);
+  assert.match(upper,/Shohei Ohtani #700/);
+  assert.match(upper,/2018 · Topps Series 2/);
+  assert.match(upper,/<textarea[^>]*name="subjects"[^>]*>Shohei Ohtani<\/textarea>/);
+  assert.match(upper,/name="number"[^>]*value="700"/);
+  assert.match(upper,/printing not verified/);
+  assert.match(upper,/Grading break-even/);
+  assert.doesNotMatch(upper,/Card name or description|PSA 10 Odds|Accuracy Lab/);
  }
  assert.doesNotMatch(renderReports(report).upper,/Market Intelligence Dashboard/);
 });

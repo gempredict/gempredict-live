@@ -4,22 +4,21 @@ import fs from 'node:fs';
 import {demoExample} from '../lib/demoReportServer.mjs';
 import {renderReports,unifiedReportInteraction} from './helpers/renderReports.mjs';
 import {FINANCIAL_FIELDS,protectedCopySummary} from '../lib/financialSafety.mjs';
-const labels=['Most Likely Outcome','PSA 10 Odds','Expected Net','Decision Confidence','Potential Upside'];
 const clean=s=>s.replace(/<style[\s\S]*?<\/style>/g,'').replace(/<[^>]*>/g,' ').replace(/\s+/g,' ');
-test('approved original nine-part hierarchy is restored in both real and demo report renderings',()=>{
+test('real and demo reports lead with collector guidance and show condition before market evidence',()=>{
  for(const example of ['pokemon','sports'])for(const demo of [false,true]){
-  const data=demoExample(example).report,html=renderReports(data,null,{demo}).upper;
-  const markers=['gp-original-header','gp-decision-panel','id="gp-report-0-listings"','aria-label="Decision explanation"','aria-label="Raw and PSA values"','aria-label="Grading economics"','aria-label="Best use case"','aria-label="Recommended action"','class="gp-u-actions"'];
-  const positions=markers.map(x=>html.indexOf(x,html.indexOf('</style>')));assert.ok(positions.every(x=>x>=0));assert.deepEqual([...positions].sort((a,b)=>a-b),positions);
-  const metrics=html.match(/<dl class="gp-five-metrics"[\s\S]*?<\/dl>/)[0];assert.equal((metrics.match(/<dd>Unavailable<\/dd>/g)||[]).length,5);let previous=-1;for(const label of labels){const n=metrics.indexOf(label);assert.ok(n>previous);previous=n;}
-  const tiles=html.match(/<section class="gp-three-values"[\s\S]*?<\/section>/)[0];assert.equal((tiles.match(/class="gp-value-tile"/g)||[]).length,3);assert.match(tiles,/Raw Value/);assert.match(tiles,/PSA 9 Value/);assert.match(tiles,/PSA 10/);
-  assert.ok(html.indexOf('aria-label="Condition evidence"')>html.indexOf('class="gp-u-actions"'));
+  const html=renderReports(demoExample(example).report,null,{demo}).upper;
+  const markers=['aria-label="Card identification"','aria-label="Grading decision"','aria-label="Condition evidence"','aria-label="eBay discovery"','aria-label="Grading economics"'];
+  const positions=markers.map(label=>html.indexOf(label));
+  assert.ok(positions.every(x=>x>=0));
+  assert.deepEqual([...positions].sort((a,b)=>a-b),positions);
+  assert.doesNotMatch(clean(html),/PSA 10 Odds|Most Likely Outcome|Potential Upside/);
  }
 });
 test('forged scores, odds, profit, fees and submission advice never populate the original financial display',()=>{
  const original=demoExample('sports').report;
  const hostile={...original,gemPredictScore:99,psa10Probability:90,decisionConfidence:95,rawValue:750,psa9Value:900,psa10Value:1200,expectedNetValue:200,gradingUpside:300,psaFee:80,recommendation:'Submit now',financialDecision:{allowed:true}};
- const html=clean(renderReports(hostile).upper);assert.doesNotMatch(html,/99\/99|90%|95%|\$750|\$900|\$1200|\$200|\$300|-\$80|Submit now|Consider It|Grade It/);assert.match(html,/Not determined/);assert.match(html,/Evidence review only; not a grading or sale recommendation/);
+ const html=clean(renderReports(hostile).upper);assert.doesNotMatch(html,/99\/99|90%|95%|\$750|\$900|\$1200|\$200|\$300|-\$80|Submit now|Consider It|Grade It/);assert.match(html,/recommendation is withheld/);assert.match(html,/Explore break-even/);
  let saved;const ui=unifiedReportInteraction(hostile);const tree=ui.render({onSave:r=>{saved=r;}});ui.nodes(tree,n=>n.type==='button'&&n.props.children==='Save Report')[0].props.onClick();assert.equal(saved.financialDecision.allowed,false);for(const f of FINANCIAL_FIELDS)assert.equal(saved[f],null);assert.match(protectedCopySummary(saved),/withheld/);
 });
 test('original visual proportions keep all five metrics and all three value tiles on one row on mobile',()=>{
@@ -30,5 +29,5 @@ test('original appearance does not erase independent identity, original proposal
 });
 
 test('restored static style text remains identical across server rendering and browser hydration',()=>{
- const html=renderReports(demoExample('sports').report).upper;const style=html.match(/<style>([\s\S]*?)<\/style>/)[1];assert.doesNotMatch(style,/&#(?:x27|39);|&quot;/);assert.match(html,/class="gp-why-marker"/);
+ const html=renderReports(demoExample('sports').report).upper;const style=html.match(/<style>([\s\S]*?)<\/style>/)[1];assert.doesNotMatch(style,/&#(?:x27|39);|&quot;/);assert.match(html,/aria-label="Grading decision"/);
 });

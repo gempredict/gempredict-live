@@ -18,7 +18,7 @@ function checkRendering(report){
   for(const label of ['Catalog identity: Verified','Variant:','Artwork: Not verified','Physical printing: Not verified','Financial evidence: Unavailable'])assert.ok(clean(html).includes(label),label);
  }
  assert.doesNotMatch(clean(upper),/-\$80|0%|\$123|\$456|\$789/);
- assert.match(clean(upper),/PSA Submission Fee Unavailable/);
+ assert.match(clean(upper),/Grading break-even/);
  assert.match(clean(lower),/Unassessed/);
  assert.doesNotMatch(clean(lower),/Borderline Submission Risk|Confidence Level Moderate/);
 }

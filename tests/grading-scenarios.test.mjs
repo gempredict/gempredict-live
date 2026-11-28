@@ -62,3 +62,29 @@ test('actual PSA workflow loads explicit synthetic inputs and recalculates edita
  button('Adjust assumptions').props.onClick();tree=ui.render();ui.nodes(tree,n=>n.type==='input'&&n.props['aria-label']==='PSA 10 hypothetical resale price')[0].props.onChange({target:{value:''}});
  tree=ui.render();button('See Your Economics').props.onClick();tree=ui.render();assert.ok(ui.html(tree).includes('Unavailable'));
 });
+
+test('embedded calculator carries card and category and shows break-even without a graded resale assumption',async()=>{
+ const {scenarioCalculatorInteraction}=await import('./helpers/renderReports.mjs');
+ const ui=await scenarioCalculatorInteraction({}, {embedded:true,cardDescription:'Shohei Ohtani #700',cardCategory:'sports'});
+ let tree=ui.render();
+ const control=(type,test)=>ui.nodes(tree,node=>node.type===type&&test(node.props))[0];
+ const button=text=>control('button',p=>[p.children].flat().join('').includes(text));
+ const set=(label,value)=>control('input',p=>p['aria-label']===label).props.onChange({target:{value}});
+ assert.match(ui.html(tree),/Shohei Ohtani #700/);
+ assert.doesNotMatch(ui.html(tree),/Card name or description|Load synthetic example/);
+ set('Estimated raw resale price','50');
+ button('Confirm blank raw selling expenses are zero').props.onClick();
+ button('Continue to PSA Grading').props.onClick();
+ tree=ui.render();
+ const tier=control('select',p=>p['aria-label']==='PSA service tier');
+ tier.props.onChange({target:{value:tier.props.children[1][0].props.value}});
+ tree=ui.render();
+ assert.equal(control('select',p=>p['aria-label']==='Submission category').props.value,'sports');
+ set('Submission fee per card','20');
+ set('Graded selling fee (%)','10');
+ button('Mark blank extra costs as zero').props.onClick();
+ button('See Your Economics').props.onClick();
+ tree=ui.render();
+ assert.match(ui.html(tree),/\$77\.78 gross resale needed after grading, using your assumptions/);
+ assert.match(ui.html(tree),/Add a resale assumption/);
+});

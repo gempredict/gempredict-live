@@ -1,12 +1,11 @@
 import React from 'react';
 import {collectorConditions,collectorLimitations} from '../../lib/collectorPresentation.mjs';
-import {conditionSnapshot} from '../../lib/unifiedReportPresentation.mjs';
+import {compactFindingLabel,conditionSnapshot} from '../../lib/unifiedReportPresentation.mjs';
 export default function ConditionSnapshot({data=null,demo=false}){
  if(!data)return <p className="gp-empty">Condition analysis: not requested. No photographic condition assessment is available.</p>;
  const overview=conditionSnapshot(collectorConditions(data)),limitations=collectorLimitations(data);
  const compact=data.compactPhotoObservations||[];
  const photoNotes=data.modelPhotoNotes||[];
- const statusLabel={apparent:'Reported',possible:'Possible',not_assessable:'Not assessable'};
  const qualityLimited=data.photoSideUncertain?.length||data.imageLimitations?.some(code=>
   ['glare','blur','cropped','occluded','limited_resolution','sleeve'].includes(code));
  return <>{qualityLimited? <p className="gp-fine" role="status">Photo quality limits inspection. Check front and back order and retake affected photos with the entire card visible, in focus and free of strong reflections.</p>:null}
@@ -16,9 +15,8 @@ export default function ConditionSnapshot({data=null,demo=false}){
    return <div className="gp-condition" key={a.key}><h4>{a.name}</h4>
     <strong>{findings.length&&!a.groups.length?(data.conditionAssessments?.[a.key]?.state==='model_observations_available'?'Model photo observations':'Unable to assess reliably'):notes.length&&!a.groups.length?'Photo notes':a.state}</strong>
     {a.groups.length||(!notes.length&&!findings.length)?<p>{a.brief}</p>:null}
-    {findings.map((row,i)=><p key={i}>{row.side==='front'?'Front':'Back'} · {statusLabel[row.status]}: {row.text}</p>)}
+    {findings.map((row,i)=><p key={i}>{row.side==='front'?'Front':'Back'} · {compactFindingLabel(row)}: {row.text}</p>)}
     {!a.groups.length&&notes.map(note=><p key={note.text}>{note.side==='front'?'Front':note.side==='back'?'Back':'Side unclear'}: {note.text}</p>)}
-    <small/>
    </div>;
   })}</div>
   <p className="gp-fine">{demo?'Synthetic observations. ':''}Photo evidence only — no grade prediction. Regional findings do not establish whole-card cleanliness; unassessed areas remain unknown.{limitations.length?' Limits: '+collectorLimitations(data,{compact:true}).join('; ')+'.':''}</p>
